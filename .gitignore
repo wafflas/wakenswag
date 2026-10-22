@@ -4,6 +4,7 @@ node_modules/
 # Production and generated output
 dist/
 .react-router/
+*.tsbuildinfo
 
 # Local environment variables and secrets
 .env
