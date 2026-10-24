@@ -1,6 +1,16 @@
-/**
- * Configure Tailwind v4 in this file using CSS variables and directives:
- * https://tailwindcss.com/docs/v4-beta#css-first-configuration
- */
-
 @import 'tailwindcss';
+@import './ps2-effects.css';
+
+@theme {
+  --color-ps2-black: #000000;
+  --color-ps2-cyan: #28c8ff;
+  --color-ps2-yellow: #dddd55;
+  --color-ps2-gray: #828282;
+  --color-ps2-white: #f5f5f5;
+  --color-ps2-muted: #b9b9b9;
+  --color-ps2-burgundy: #590910;
+
+  --font-ps2: "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+  --ease-ps2: cubic-bezier(0.22, 1, 0.36, 1);
+}

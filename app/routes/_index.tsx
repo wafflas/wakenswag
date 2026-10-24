@@ -1,36 +1,35 @@
-import {Await, useLoaderData, Link} from 'react-router';
+import {Suspense, useCallback} from 'react';
+import {Await, useNavigate, useRouteLoaderData} from 'react-router';
 import type {Route} from './+types/_index';
-import {Suspense} from 'react';
-import {Image} from '@shopify/hydrogen';
-import type {
-  FeaturedCollectionFragment,
-  RecommendedProductsQuery,
-} from 'storefrontapi.generated';
-import {ProductItem} from '~/components/ProductItem';
-import {MockShopNotice} from '~/components/MockShopNotice';
+import type {RootLoader} from '~/root';
+import {ControllerFooter} from '~/components/ps2/ControllerFooter';
+import {MainMenu} from '~/components/ps2/MainMenu';
+import {PS2Shell} from '~/components/ps2/PS2Shell';
+import DesktopLogo from '~/components/shared/DesktopLogo';
+import Logo from '~/components/shared/Logo';
 
 export const meta: Route.MetaFunction = () => {
-  return [{title: 'Hydrogen | Home'}];
+  return [
+    {
+      title: 'Wake n Swag',
+    },
+    {
+      name: 'description',
+      content: 'Wake n Swag merch, drumkits, archive, and information.',
+    },
+  ];
 };
 
 export async function loader(args: Route.LoaderArgs) {
-  // Start fetching non-critical data without blocking time to first byte
   const deferredData = loadDeferredData(args);
-
-  // Await the critical data required to render initial state of the page
   const criticalData = await loadCriticalData(args);
 
   return {...deferredData, ...criticalData};
 }
 
-/**
- * Load data necessary for rendering content above the fold. This is the critical data
- * needed to render the page. If it's unavailable, the whole page should 400 or 500 error.
- */
 async function loadCriticalData({context}: Route.LoaderArgs) {
   const [{collections}] = await Promise.all([
     context.storefront.query(FEATURED_COLLECTION_QUERY),
-    // Add other queries here, so that they are loaded in parallel
   ]);
 
   return {
@@ -39,88 +38,87 @@ async function loadCriticalData({context}: Route.LoaderArgs) {
   };
 }
 
-/**
- * Load data for rendering content below the fold. This data is deferred and will be
- * fetched after the initial page load. If it's unavailable, the page should still 200.
- * Make sure to not throw any errors here, as it will cause the page to 500.
- */
 function loadDeferredData({context}: Route.LoaderArgs) {
   const recommendedProducts = context.storefront
     .query(RECOMMENDED_PRODUCTS_QUERY)
     .catch((error: Error) => {
-      // Log query errors, but don't throw them so the page can still render
       console.error(error);
       return null;
     });
 
-  return {
-    recommendedProducts,
-  };
+  return {recommendedProducts};
 }
 
 export default function Homepage() {
-  const data = useLoaderData<typeof loader>();
-  return (
-    <div className="home">
-      {data.isShopLinked ? null : <MockShopNotice />}
-      <FeaturedCollection collection={data.featuredCollection} />
-      <RecommendedProducts products={data.recommendedProducts} />
-    </div>
-  );
-}
+  const navigate = useNavigate();
 
-function FeaturedCollection({
-  collection,
-}: {
-  collection: FeaturedCollectionFragment;
-}) {
-  if (!collection) return null;
-  const image = collection?.image;
+  const openCart = useCallback(() => {
+    void navigate('/cart');
+  }, [navigate]);
+
   return (
-    <Link
-      className="featured-collection"
-      to={`/collections/${collection.handle}`}
-    >
-      {image && (
-        <div className="featured-collection-image">
-          <Image
-            data={image}
-            sizes="100vw"
-            alt={image.altText || collection.title}
-          />
+    <PS2Shell footer={<HomepageFooter onOpenCart={openCart} />}>
+      <div
+        className={[
+          'flex min-h-dvh flex-col items-center justify-center',
+          'gap-10 overflow-hidden pb-24',
+          'lg:flex-row lg:gap-[clamp(3rem,8vw,10rem)]',
+        ].join(' ')}
+      >
+        <div className="flex shrink-0 items-center justify-center">
+          <Logo />
+          <DesktopLogo />
         </div>
-      )}
-      <h1>{collection.title}</h1>
-    </Link>
+
+        <div className="flex shrink-0 items-center justify-center">
+          <MainMenu />
+        </div>
+      </div>
+    </PS2Shell>
   );
 }
 
-function RecommendedProducts({
-  products,
-}: {
-  products: Promise<RecommendedProductsQuery | null>;
-}) {
+interface HomepageFooterProps {
+  onOpenCart: () => void;
+}
+
+function HomepageFooter({onOpenCart}: HomepageFooterProps) {
+  const rootData = useRouteLoaderData<RootLoader>('root');
+
+  const fallback = (
+    <ControllerFooter
+      actions={[
+        {
+          count: 0,
+          label: 'Cart',
+          onActivate: onOpenCart,
+          symbol: 'square',
+        },
+      ]}
+    />
+  );
+
+  if (!rootData) {
+    return fallback;
+  }
+
   return (
-    <section
-      className="recommended-products"
-      aria-labelledby="recommended-products"
-    >
-      <h2 id="recommended-products">Recommended Products</h2>
-      <Suspense fallback={<div>Loading...</div>}>
-        <Await resolve={products}>
-          {(response) => (
-            <div className="recommended-products-grid">
-              {response
-                ? response.products.nodes.map((product) => (
-                    <ProductItem key={product.id} product={product} />
-                  ))
-                : null}
-            </div>
-          )}
-        </Await>
-      </Suspense>
-      <br />
-    </section>
+    <Suspense fallback={fallback}>
+      <Await resolve={rootData.cart}>
+        {(cart) => (
+          <ControllerFooter
+            actions={[
+              {
+                count: cart?.totalQuantity ?? 0,
+                label: 'Cart',
+                onActivate: onOpenCart,
+                symbol: 'square',
+              },
+            ]}
+          />
+        )}
+      </Await>
+    </Suspense>
   );
 }
 

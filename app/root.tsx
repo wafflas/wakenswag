@@ -17,6 +17,7 @@ import resetStyles from '~/styles/reset.css?url';
 import appStyles from '~/styles/app.css?url';
 import tailwindCss from './styles/tailwind.css?url';
 import {PageLayout} from './components/PageLayout';
+import {ButtonSound} from './components/ps2/ButtonSound';
 
 export type RootLoader = typeof loader;
 
@@ -178,6 +179,8 @@ export default function App() {
       shop={data.shop}
       consent={data.consent}
     >
+      {' '}
+      <ButtonSound />
       <PageLayout {...data}>
         <Outlet />
       </PageLayout>
