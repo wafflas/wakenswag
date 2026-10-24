@@ -40,6 +40,7 @@ export function ButtonSound({
     let lastActivatePlayedAt = 0;
     let disposed = false;
     let keyboardNavigationActive = false;
+    let activeHoverElement: HTMLElement | null = null;
 
     hoverGainNode.gain.value = volume;
     activateGainNode.gain.value = activateVolume;
@@ -88,6 +89,32 @@ export function ButtonSound({
       }
 
       startSound(hoverBuffer, hoverGainNode);
+    }
+
+    function playHoverForElement(interactiveElement: HTMLElement) {
+      if (activeHoverElement === interactiveElement) return;
+
+      activeHoverElement = interactiveElement;
+      playHoverSound();
+    }
+
+    function clearHoverElement(
+      target: EventTarget | null,
+      relatedTarget: EventTarget | null,
+    ) {
+      const interactiveElement = getInteractiveElement(target);
+      if (!interactiveElement || activeHoverElement !== interactiveElement) {
+        return;
+      }
+
+      if (
+        relatedTarget instanceof Node &&
+        interactiveElement.contains(relatedTarget)
+      ) {
+        return;
+      }
+
+      activeHoverElement = null;
     }
 
     function playActivateSound() {
@@ -145,14 +172,25 @@ export function ButtonSound({
         return;
       }
 
-      playHoverSound();
+      playHoverForElement(interactiveElement);
+    }
+
+    function handlePointerOut(event: PointerEvent) {
+      if (event.pointerType === 'touch') return;
+
+      clearHoverElement(event.target, event.relatedTarget);
     }
 
     function handleFocusIn(event: FocusEvent) {
       if (!keyboardNavigationActive) return;
-      if (!getInteractiveElement(event.target)) return;
+      const interactiveElement = getInteractiveElement(event.target);
+      if (!interactiveElement) return;
 
-      playHoverSound();
+      playHoverForElement(interactiveElement);
+    }
+
+    function handleFocusOut(event: FocusEvent) {
+      clearHoverElement(event.target, event.relatedTarget);
     }
 
     function handlePointerDown(event: PointerEvent) {
@@ -211,7 +249,9 @@ export function ButtonSound({
       });
 
     document.addEventListener('pointerover', handlePointerOver);
+    document.addEventListener('pointerout', handlePointerOut);
     document.addEventListener('focusin', handleFocusIn);
+    document.addEventListener('focusout', handleFocusOut);
     document.addEventListener('pointerdown', handlePointerDown, {
       capture: true,
     });
@@ -221,7 +261,9 @@ export function ButtonSound({
       disposed = true;
       abortController.abort();
       document.removeEventListener('pointerover', handlePointerOver);
+      document.removeEventListener('pointerout', handlePointerOut);
       document.removeEventListener('focusin', handleFocusIn);
+      document.removeEventListener('focusout', handleFocusOut);
       document.removeEventListener('pointerdown', handlePointerDown, {
         capture: true,
       });
