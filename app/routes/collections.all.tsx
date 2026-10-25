@@ -1,9 +1,10 @@
 import type {Route} from './+types/collections.all';
 import {useLoaderData} from 'react-router';
-import {getPaginationVariables, Image, Money} from '@shopify/hydrogen';
-import {PaginatedResourceSection} from '~/components/PaginatedResourceSection';
-import {ProductItem} from '~/components/ProductItem';
-import type {CollectionItemFragment} from 'storefrontapi.generated';
+import {getPaginationVariables} from '@shopify/hydrogen';
+import {ProductGrid} from '~/components/product-listing/ProductGrid';
+import {ProductListingShell} from '~/components/product-listing/ProductListingShell';
+import {useProductListingSelection} from '~/components/product-listing/useProductListingSelection';
+import {PRODUCT_ITEM_FRAGMENT} from '~/lib/fragments';
 
 export const meta: Route.MetaFunction = () => {
   return [{title: `Hydrogen | Products`}];
@@ -49,52 +50,25 @@ function loadDeferredData({context}: Route.LoaderArgs) {
 
 export default function Collection() {
   const {products} = useLoaderData<typeof loader>();
+  const {displayTitle, selectedProductId, loadingDurationMs, onSelect} =
+    useProductListingSelection({
+      initialProduct: products.nodes[0],
+      productCount: products.nodes.length,
+    });
 
   return (
-    <div className="collection">
-      <h1>Products</h1>
-      <PaginatedResourceSection<CollectionItemFragment>
+    <ProductListingShell
+      displayTitle={displayTitle}
+      loadingDurationMs={loadingDurationMs}
+    >
+      <ProductGrid
         connection={products}
-        resourcesClassName="products-grid"
-      >
-        {({node: product, index}) => (
-          <ProductItem
-            key={product.id}
-            product={product}
-            loading={index < 8 ? 'eager' : undefined}
-          />
-        )}
-      </PaginatedResourceSection>
-    </div>
+        onSelect={onSelect}
+        selectedProductId={selectedProductId}
+      />
+    </ProductListingShell>
   );
 }
-
-const COLLECTION_ITEM_FRAGMENT = `#graphql
-  fragment MoneyCollectionItem on MoneyV2 {
-    amount
-    currencyCode
-  }
-  fragment CollectionItem on Product {
-    id
-    handle
-    title
-    featuredImage {
-      id
-      altText
-      url
-      width
-      height
-    }
-    priceRange {
-      minVariantPrice {
-        ...MoneyCollectionItem
-      }
-      maxVariantPrice {
-        ...MoneyCollectionItem
-      }
-    }
-  }
-` as const;
 
 // NOTE: https://shopify.dev/docs/api/storefront/latest/objects/product
 const CATALOG_QUERY = `#graphql
@@ -108,7 +82,7 @@ const CATALOG_QUERY = `#graphql
   ) @inContext(country: $country, language: $language) {
     products(first: $first, last: $last, before: $startCursor, after: $endCursor) {
       nodes {
-        ...CollectionItem
+        ...ProductItem
       }
       pageInfo {
         hasPreviousPage
@@ -118,5 +92,5 @@ const CATALOG_QUERY = `#graphql
       }
     }
   }
-  ${COLLECTION_ITEM_FRAGMENT}
+  ${PRODUCT_ITEM_FRAGMENT}
 ` as const;

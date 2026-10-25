@@ -1,17 +1,16 @@
 import type {ReactNode} from 'react';
-import {CRTOverlay} from '~/components/ps2/CRTOverlay';
 
-interface PS2ShellProps {
+interface HomeShellProps {
   children: ReactNode;
   footer: ReactNode;
   className?: string;
 }
 
-export function PS2Shell({
+export function HomeShell({
   children,
   footer = null,
   className = '',
-}: PS2ShellProps) {
+}: HomeShellProps) {
   return (
     <div
       className={[
@@ -23,8 +22,6 @@ export function PS2Shell({
       <div className="relative z-10 min-h-dvh">{children}</div>
 
       {footer}
-
-      <CRTOverlay />
     </div>
   );
 }

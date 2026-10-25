@@ -16,8 +16,9 @@ import {FOOTER_QUERY, HEADER_QUERY} from '~/lib/fragments';
 import resetStyles from '~/styles/reset.css?url';
 import appStyles from '~/styles/app.css?url';
 import tailwindCss from './styles/tailwind.css?url';
-import {PageLayout} from './components/PageLayout';
-import {ButtonSound} from './components/ps2/ButtonSound';
+import {PageLayout} from './components/layout/PageLayout';
+import {ButtonSound} from './components/shared/ButtonSound';
+import {CRTOverlay} from './components/shared/CRTOverlay';
 
 export type RootLoader = typeof loader;
 
@@ -159,6 +160,7 @@ export function Layout({children}: {children?: React.ReactNode}) {
       </head>
       <body>
         {children}
+        <CRTOverlay />
         <ScrollRestoration nonce={nonce} />
         <Scripts nonce={nonce} />
       </body>

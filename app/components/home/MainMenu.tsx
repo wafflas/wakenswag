@@ -1,14 +1,5 @@
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type MouseEvent as ReactMouseEvent,
-  type PointerEvent as ReactPointerEvent,
-} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import {Link} from 'react-router';
-
-const MOBILE_MENU_QUERY = '(max-width: 1023px)';
 
 const MENU_ITEMS = [
   {
@@ -17,7 +8,7 @@ const MENU_ITEMS = [
   },
   {
     label: 'Merch',
-    to: '/collections/merch',
+    to: '/collections/all',
   },
   {
     label: 'Drumkits',
@@ -52,14 +43,10 @@ function isTypingTarget(target: EventTarget | null) {
 
 export function MainMenu() {
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [touchArmedIndex, setTouchArmedIndex] = useState<number | null>(null);
   const [navigationMode, setNavigationMode] =
     useState<NavigationMode>('directional');
 
   const selectedIndexRef = useRef(0);
-  const touchArmedIndexRef = useRef<number | null>(null);
-  const isMobileTouchPressRef = useRef(false);
-  const shouldActivateTouchRef = useRef(false);
   const linkRefs = useRef<Array<HTMLAnchorElement | null>>([]);
 
   const selectItem = useCallback((index: number, moveFocus = false) => {
@@ -80,45 +67,6 @@ export function MainMenu() {
       selectItem(nextIndex, true);
     },
     [selectItem],
-  );
-
-  const handlePointerDown = useCallback(
-    (event: ReactPointerEvent<HTMLAnchorElement>, index: number) => {
-      const isMobileTouch =
-        event.pointerType === 'touch' &&
-        window.matchMedia(MOBILE_MENU_QUERY).matches;
-
-      isMobileTouchPressRef.current = isMobileTouch;
-
-      if (!isMobileTouch) {
-        shouldActivateTouchRef.current = false;
-        touchArmedIndexRef.current = null;
-        setTouchArmedIndex(null);
-        return;
-      }
-
-      const isSecondTap = touchArmedIndexRef.current === index;
-      shouldActivateTouchRef.current = isSecondTap;
-
-      if (!isSecondTap) {
-        touchArmedIndexRef.current = index;
-        setTouchArmedIndex(index);
-        selectItem(index);
-      }
-    },
-    [selectItem],
-  );
-
-  const handleClick = useCallback(
-    (event: ReactMouseEvent<HTMLAnchorElement>) => {
-      if (isMobileTouchPressRef.current && !shouldActivateTouchRef.current) {
-        event.preventDefault();
-      }
-
-      isMobileTouchPressRef.current = false;
-      shouldActivateTouchRef.current = false;
-    },
-    [],
   );
 
   useEffect(() => {
@@ -164,6 +112,7 @@ export function MainMenu() {
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [moveSelection, selectItem]);
+
   return (
     <nav
       aria-label="Main navigation"
@@ -183,12 +132,8 @@ export function MainMenu() {
             <Link
               aria-current={item.to === '/' ? 'page' : undefined}
               className="ps2-main-menu-link px-3"
-              data-mobile-double-tap="true"
               data-selected={selectedIndex === index}
-              data-touch-armed={touchArmedIndex === index}
-              onClick={handleClick}
               onFocus={() => selectItem(index)}
-              onPointerDown={(event) => handlePointerDown(event, index)}
               onPointerEnter={() => selectItem(index)}
               ref={(element) => {
                 linkRefs.current[index] = element;

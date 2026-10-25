@@ -1,10 +1,19 @@
-.ps2-text {
-  text-shadow:
-    1px 1px 0 #000000,
-    -1px -1px 0 #000000,
-    -1px 1px 0 #000000,
-    1px -1px 0 #000000;
-}
+/* ===========================================================================
+   PS2 Visual Effects
+
+   1. Main menu navigation
+   2. Logo stack and glow
+   3. CRT screen overlay
+   4. Controller actions
+   5. Product item entrance + selection glow
+   6. Animations
+   7. Responsive adjustments
+   8. Reduced motion
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. Main menu navigation
+   -------------------------------------------------------------------------- */
 
 .ps2-main-menu-link {
   display: flex;
@@ -52,6 +61,13 @@
   outline-offset: 0.3rem;
 }
 
+/* --------------------------------------------------------------------------
+   2. Logo stack and glow
+
+   The base and glow logos share the same grid cell so their pulse animations
+   remain perfectly aligned.
+   -------------------------------------------------------------------------- */
+
 .ps2-logo-stack {
   display: grid;
   place-items: center;
@@ -92,6 +108,13 @@
   animation: ps2-logo-glow-pulse 6s ease-in-out infinite;
   will-change: opacity;
 }
+
+/* --------------------------------------------------------------------------
+   3. CRT screen overlay
+
+   The main layer adds edge darkening, ::before adds scanlines and RGB bands,
+   and ::after supplies the animated flicker.
+   -------------------------------------------------------------------------- */
 
 .crt-overlay {
   position: fixed;
@@ -138,6 +161,10 @@
   animation: flicker 0.15s infinite step-end;
 }
 
+/* --------------------------------------------------------------------------
+   4. Controller actions
+   -------------------------------------------------------------------------- */
+
 .ps2-controller-action {
   opacity: 0.62;
   transition:
@@ -162,7 +189,6 @@
     1.477px 1.477px 2.953px rgba(0, 0, 0, 0.6),
     inset 0.738px 0.738px 2.215px rgba(255, 255, 255, 0.2),
     inset -1.477px -1.477px 2.953px rgba(0, 0, 0, 0.8);
-  filter: blur(0.41px);
   pointer-events: none;
 }
 
@@ -181,10 +207,94 @@
   text-shadow: 0 0 7px rgba(245, 245, 245, 0.28);
 }
 
-.ps2-controller-action:focus-visible {
-  border-radius: 0.125rem;
-  outline: 1px solid rgba(40, 200, 255, 0.78);
-  outline-offset: 0.35rem;
+/* --------------------------------------------------------------------------
+   5. Product item entrance + selection glow
+
+   Layout for listing pages lives in Tailwind on the components.
+   This file only owns the effect layer (::after shine + scale-in).
+   -------------------------------------------------------------------------- */
+
+.ps2-product-item.scale-in {
+  opacity: 0;
+  transform: scale(0);
+  animation: item-scale-in 0.3s ease-out forwards;
+}
+
+.ps2-product-item-glow::after {
+  position: absolute;
+  bottom: -0.75rem;
+  left: 50%;
+  z-index: 2;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow:
+    0 0 20px 10px #ffffff,
+    0 0 50px 25px rgba(255, 255, 255, 0.9),
+    0 0 90px 40px rgba(200, 230, 255, 0.6);
+  content: '';
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) scale(0.5);
+  transform-origin: center;
+  transition: opacity 150ms var(--ease-ps2);
+}
+
+@media (min-width: 640px) {
+  .ps2-product-item-glow::after {
+    bottom: -1rem;
+    transform: translateX(-50%) scale(0.75);
+  }
+}
+
+@media (min-width: 768px) {
+  .ps2-product-item-glow::after {
+    bottom: -1.5rem;
+    transform: translateX(-50%) scale(1);
+  }
+}
+
+.ps2-product-item-glow[data-selected='true']::after {
+  animation: ps2-product-shine-pulse 3s ease-in-out infinite both;
+  opacity: 1;
+}
+
+/* --------------------------------------------------------------------------
+   6. Animations
+   -------------------------------------------------------------------------- */
+
+.anim-fade-in,
+.anim-fade-out {
+  will-change: opacity;
+}
+
+.anim-fade-out {
+  animation: fade-out 0.5s ease-in forwards;
+}
+
+.anim-fade-in {
+  animation: fade-in 0.5s ease-out both;
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes ps2-logo-core-pulse {
@@ -195,6 +305,39 @@
 
   50% {
     opacity: 1;
+  }
+}
+
+@keyframes ps2-product-shine-pulse {
+  0%,
+  100% {
+    opacity: 0.8;
+    background: #ffffff;
+    box-shadow:
+      0 0 18px 9px rgba(255, 255, 255, 0.85),
+      0 0 44px 22px rgba(255, 255, 255, 0.7),
+      0 0 76px 34px rgba(200, 230, 255, 0.48);
+  }
+
+  50% {
+    opacity: 1;
+    background: #ffffff;
+    box-shadow:
+      0 0 20px 10px #ffffff,
+      0 0 50px 25px rgba(255, 255, 255, 0.9),
+      0 0 90px 40px rgba(200, 230, 255, 0.6);
+  }
+}
+
+@keyframes item-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 
@@ -240,6 +383,10 @@
   }
 }
 
+/* --------------------------------------------------------------------------
+   7. Responsive adjustments
+   -------------------------------------------------------------------------- */
+
 @media (max-width: 767px) {
   .ps2-main-menu-link {
     min-height: 2.85rem;
@@ -256,16 +403,24 @@
   }
 }
 
+/* --------------------------------------------------------------------------
+   8. Reduced motion
+   -------------------------------------------------------------------------- */
+
 @media (prefers-reduced-motion: reduce) {
   .ps2-logo,
   .crt-overlay,
   .crt-overlay::before,
-  .crt-overlay::after {
+  .crt-overlay::after,
+  .anim-fade-in,
+  .anim-fade-out,
+  .ps2-product-item-glow::after {
     animation: none !important;
   }
 
   .ps2-main-menu-link,
-  .ps2-controller-action {
+  .ps2-controller-action,
+  .ps2-product-item-glow::after {
     transition-duration: 0.01ms;
   }
 }

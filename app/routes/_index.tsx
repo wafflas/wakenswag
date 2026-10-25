@@ -1,12 +1,11 @@
-import {Suspense, useCallback} from 'react';
-import {Await, useNavigate, useRouteLoaderData} from 'react-router';
+import {useCallback} from 'react';
+import {useNavigate} from 'react-router';
 import type {Route} from './+types/_index';
-import type {RootLoader} from '~/root';
-import {ControllerFooter} from '~/components/ps2/ControllerFooter';
-import {MainMenu} from '~/components/ps2/MainMenu';
-import {PS2Shell} from '~/components/ps2/PS2Shell';
-import DesktopLogo from '~/components/shared/DesktopLogo';
-import Logo from '~/components/shared/Logo';
+import DesktopLogo from '~/components/home/DesktopLogo';
+import {HomeShell} from '~/components/home/HomeShell';
+import Logo from '~/components/home/Logo';
+import {MainMenu} from '~/components/home/MainMenu';
+import {CartControllerFooter} from '~/components/shared/CartControllerFooter';
 
 export const meta: Route.MetaFunction = () => {
   return [
@@ -57,7 +56,7 @@ export default function Homepage() {
   }, [navigate]);
 
   return (
-    <PS2Shell footer={<HomepageFooter onOpenCart={openCart} />}>
+    <HomeShell footer={<HomepageFooter onOpenCart={openCart} />}>
       <div
         className={[
           'flex min-h-dvh flex-col items-center justify-center',
@@ -74,7 +73,7 @@ export default function Homepage() {
           <MainMenu />
         </div>
       </div>
-    </PS2Shell>
+    </HomeShell>
   );
 }
 
@@ -83,42 +82,17 @@ interface HomepageFooterProps {
 }
 
 function HomepageFooter({onOpenCart}: HomepageFooterProps) {
-  const rootData = useRouteLoaderData<RootLoader>('root');
-
-  const fallback = (
-    <ControllerFooter
-      actions={[
+  return (
+    <CartControllerFooter
+      actions={(cartCount) => [
         {
-          count: 0,
+          count: cartCount,
           label: 'Cart',
           onActivate: onOpenCart,
           symbol: 'square',
         },
       ]}
     />
-  );
-
-  if (!rootData) {
-    return fallback;
-  }
-
-  return (
-    <Suspense fallback={fallback}>
-      <Await resolve={rootData.cart}>
-        {(cart) => (
-          <ControllerFooter
-            actions={[
-              {
-                count: cart?.totalQuantity ?? 0,
-                label: 'Cart',
-                onActivate: onOpenCart,
-                symbol: 'square',
-              },
-            ]}
-          />
-        )}
-      </Await>
-    </Suspense>
   );
 }
 

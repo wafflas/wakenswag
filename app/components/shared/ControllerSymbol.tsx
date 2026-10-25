@@ -58,7 +58,7 @@ export function ControllerSymbol({symbol}: ControllerSymbolProps) {
   return (
     <span
       aria-hidden="true"
-      className={`ps2-controller-symbol ${symbolColors[symbol]}`}
+      className={`ps2-controller-symbol !size-5 !basis-5 sm:!size-6 sm:!basis-6 ${symbolColors[symbol]}`}
     >
       {symbolSVGs[symbol]}
     </span>

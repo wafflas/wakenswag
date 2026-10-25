@@ -1,10 +1,11 @@
 import {redirect, useLoaderData} from 'react-router';
 import type {Route} from './+types/collections.$handle';
 import {getPaginationVariables, Analytics} from '@shopify/hydrogen';
-import {PaginatedResourceSection} from '~/components/PaginatedResourceSection';
 import {redirectIfHandleIsLocalized} from '~/lib/redirect';
-import {ProductItem} from '~/components/ProductItem';
-import type {ProductItemFragment} from 'storefrontapi.generated';
+import {ProductGrid} from '~/components/product-listing/ProductGrid';
+import {ProductListingShell} from '~/components/product-listing/ProductListingShell';
+import {useProductListingSelection} from '~/components/product-listing/useProductListingSelection';
+import {PRODUCT_ITEM_FRAGMENT} from '~/lib/fragments';
 
 export const meta: Route.MetaFunction = ({data}) => {
   return [{title: `Hydrogen | ${data?.collection.title ?? ''} Collection`}];
@@ -43,6 +44,10 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
   ]);
 
   if (!collection) {
+    if (handle === 'merch') {
+      throw redirect('/collections/all');
+    }
+
     throw new Response(`Collection ${handle} not found`, {
       status: 404,
     });
@@ -67,61 +72,39 @@ function loadDeferredData({context}: Route.LoaderArgs) {
 
 export default function Collection() {
   const {collection} = useLoaderData<typeof loader>();
+  const {displayTitle, selectedProductId, loadingDurationMs, onSelect} =
+    useProductListingSelection({
+      initialProduct: collection.products.nodes[0],
+      fallbackTitle: collection.title,
+      productCount: collection.products.nodes.length,
+    });
 
   return (
-    <div className="collection">
-      <h1>{collection.title}</h1>
-      <p className="collection-description">{collection.description}</p>
-      <PaginatedResourceSection<ProductItemFragment>
-        connection={collection.products}
-        resourcesClassName="products-grid"
-      >
-        {({node: product, index}) => (
-          <ProductItem
-            key={product.id}
-            product={product}
-            loading={index < 8 ? 'eager' : undefined}
-          />
-        )}
-      </PaginatedResourceSection>
-      <Analytics.CollectionView
-        data={{
-          collection: {
-            id: collection.id,
-            handle: collection.handle,
-          },
-        }}
-      />
-    </div>
+    <ProductListingShell
+      displayTitle={displayTitle}
+      loadingDurationMs={loadingDurationMs}
+    >
+      <div>
+        {collection.description ? (
+          <p className="collection-description">{collection.description}</p>
+        ) : null}
+        <ProductGrid
+          connection={collection.products}
+          onSelect={onSelect}
+          selectedProductId={selectedProductId}
+        />
+        <Analytics.CollectionView
+          data={{
+            collection: {
+              id: collection.id,
+              handle: collection.handle,
+            },
+          }}
+        />
+      </div>
+    </ProductListingShell>
   );
 }
-
-const PRODUCT_ITEM_FRAGMENT = `#graphql
-  fragment MoneyProductItem on MoneyV2 {
-    amount
-    currencyCode
-  }
-  fragment ProductItem on Product {
-    id
-    handle
-    title
-    featuredImage {
-      id
-      altText
-      url
-      width
-      height
-    }
-    priceRange {
-      minVariantPrice {
-        ...MoneyProductItem
-      }
-      maxVariantPrice {
-        ...MoneyProductItem
-      }
-    }
-  }
-` as const;
 
 // NOTE: https://shopify.dev/docs/api/storefront/2022-04/objects/collection
 const COLLECTION_QUERY = `#graphql

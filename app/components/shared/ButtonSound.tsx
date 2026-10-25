@@ -14,7 +14,6 @@ type WindowWithWebkitAudio = Window &
   };
 
 const INTERACTIVE_SELECTOR = 'button, a[href]';
-const MOBILE_MENU_QUERY = '(max-width: 1023px)';
 
 export function ButtonSound({
   src = '/audio/select.mp3',
@@ -199,17 +198,6 @@ export function ButtonSound({
 
       const interactiveElement = getInteractiveElement(event.target);
       if (!interactiveElement) return;
-
-      const isFirstMobileMenuTap =
-        event.pointerType === 'touch' &&
-        window.matchMedia(MOBILE_MENU_QUERY).matches &&
-        interactiveElement.dataset.mobileDoubleTap === 'true' &&
-        interactiveElement.dataset.touchArmed !== 'true';
-
-      if (isFirstMobileMenuTap) {
-        playHoverSound();
-        return;
-      }
 
       playActivateSound();
     }

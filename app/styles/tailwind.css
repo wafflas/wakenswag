@@ -7,10 +7,28 @@
   --color-ps2-yellow: #dddd55;
   --color-ps2-gray: #828282;
   --color-ps2-white: #f5f5f5;
-  --color-ps2-muted: #b9b9b9;
+  --color-ps2-muted: ##c9c9c9;
   --color-ps2-burgundy: #590910;
 
-  --font-ps2: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-ps2: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 
   --ease-ps2: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@utility text-ps2-outline {
+  --ps2-outline-offset: clamp(1px, calc(0.75px + 0.1vw), 2px);
+  --ps2-outline-offset-negative: calc(0px - var(--ps2-outline-offset));
+
+  -webkit-text-stroke: clamp(0.75px, calc(0.5px + 0.05vw), 1.25px) #000000;
+  paint-order: stroke fill;
+  text-shadow:
+    var(--ps2-outline-offset) 0 0 #000000,
+    var(--ps2-outline-offset-negative) 0 0 #000000,
+    0 var(--ps2-outline-offset) 0 #000000,
+    0 var(--ps2-outline-offset-negative) 0 #000000,
+    var(--ps2-outline-offset) var(--ps2-outline-offset) 0 #000000,
+    var(--ps2-outline-offset-negative) var(--ps2-outline-offset-negative) 0
+      #000000,
+    var(--ps2-outline-offset) var(--ps2-outline-offset-negative) 0 #000000,
+    var(--ps2-outline-offset-negative) var(--ps2-outline-offset) 0 #000000;
 }
