@@ -1,5 +1,4 @@
 import type {Route} from './+types/_index';
-import DesktopLogo from '~/components/home/DesktopLogo';
 import {HomeShell} from '~/components/home/HomeShell';
 import Logo from '~/components/home/Logo';
 import {MainMenu} from '~/components/home/MainMenu';
@@ -57,7 +56,6 @@ export default function Homepage() {
       >
         <div className="flex shrink-0 items-center justify-center">
           <Logo />
-          <DesktopLogo />
         </div>
 
         <div className="flex shrink-0 items-center justify-center">

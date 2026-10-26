@@ -11,7 +11,13 @@ import {
   useRouteLoaderData,
 } from 'react-router';
 import type {Route} from './+types/root';
-import favicon from '~/assets/favicon.svg';
+import androidChrome192 from '~/assets/favicons/android-chrome-192x192.png?url';
+import androidChrome512 from '~/assets/favicons/android-chrome-512x512.png?url';
+import appleTouchIcon from '~/assets/favicons/apple-touch-icon.png?url';
+import favicon16 from '~/assets/favicons/favicon-16x16.png?url';
+import favicon32 from '~/assets/favicons/favicon-32x32.png?url';
+import favicon48 from '~/assets/favicons/favicon-48x48.png?url';
+import faviconIco from '~/assets/favicons/favicon.ico?url';
 import {FOOTER_QUERY, HEADER_QUERY} from '~/lib/fragments';
 import resetStyles from '~/styles/reset.css?url';
 import appStyles from '~/styles/app.css?url';
@@ -65,7 +71,13 @@ export function links() {
       rel: 'preconnect',
       href: 'https://shop.app',
     },
-    {rel: 'icon', type: 'image/svg+xml', href: favicon},
+    {rel: 'icon', type: 'image/x-icon', href: faviconIco},
+    {rel: 'icon', type: 'image/png', sizes: '512x512', href: androidChrome512},
+    {rel: 'icon', type: 'image/png', sizes: '192x192', href: androidChrome192},
+    {rel: 'icon', type: 'image/png', sizes: '48x48', href: favicon48},
+    {rel: 'icon', type: 'image/png', sizes: '32x32', href: favicon32},
+    {rel: 'icon', type: 'image/png', sizes: '16x16', href: favicon16},
+    {rel: 'apple-touch-icon', sizes: '180x180', href: appleTouchIcon},
   ];
 }
 

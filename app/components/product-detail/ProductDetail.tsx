@@ -164,16 +164,21 @@ export function ProductDetail({
               <div
                 aria-label="Quantity"
                 className={[
-                  'ps2-soft-copy flex items-center gap-4',
-                  'text-2xl leading-none text-ps2-gray/80 lg:text-3xl',
+                  'ps2-soft-copy flex items-center gap-2',
+                  'text-2xl leading-none text-ps2-muted lg:text-3xl',
                 ].join(' ')}
                 role="group"
               >
                 <button
                   aria-label="Decrease quantity"
                   className={[
-                    'cursor-pointer border-0 bg-transparent p-0',
-                    'disabled:cursor-not-allowed disabled:opacity-30',
+                    'inline-flex size-11 items-center justify-center opacity-80',
+                    'cursor-pointer border-0 bg-transparent p-0 text-4xl leading-none text-ps2-muted',
+                    'transition-[color,opacity,text-shadow] duration-[180ms] ease-ps2',
+                    'enabled:hover:text-ps2-white enabled:hover:opacity-100 enabled:hover:[text-shadow:0_0_7px_rgba(245,245,245,0.28)]',
+                    'focus-visible:text-ps2-white focus-visible:opacity-100 focus-visible:[text-shadow:0_0_7px_rgba(245,245,245,0.28)]',
+                    'lg:size-12 lg:text-5xl',
+                    'disabled:cursor-not-allowed disabled:opacity-10 disabled:[text-shadow:none]',
                   ].join(' ')}
                   disabled={quantity === 1}
                   onClick={() =>
@@ -192,7 +197,14 @@ export function ProductDetail({
 
                 <button
                   aria-label="Increase quantity"
-                  className="cursor-pointer border-0 bg-transparent p-0"
+                  className={[
+                    'inline-flex size-11 items-center justify-center opacity-80',
+                    'cursor-pointer border-0 bg-transparent p-0 text-4xl leading-none text-ps2-muted',
+                    'transition-[color,opacity,text-shadow] duration-[180ms] ease-ps2',
+                    'hover:text-ps2-white hover:opacity-100 hover:[text-shadow:0_0_7px_rgba(245,245,245,0.28)]',
+                    'focus-visible:text-ps2-white focus-visible:opacity-100 focus-visible:[text-shadow:0_0_7px_rgba(245,245,245,0.28)]',
+                    'lg:size-12 lg:text-5xl',
+                  ].join(' ')}
                   onClick={() =>
                     setQuantity((currentQuantity) => currentQuantity + 1)
                   }

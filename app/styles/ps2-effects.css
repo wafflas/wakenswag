@@ -74,25 +74,23 @@
   place-items: center;
 }
 
-.ps2-logo-stack--desktop {
-  display: none;
-}
-
 .ps2-logo {
+  display: block;
   grid-area: 1 / 1;
   width: auto;
-  height: clamp(9rem, 20vh, 11.6875rem);
+  height: clamp(10rem, 28vh, 14rem);
   overflow: visible;
-  color: #ffffff;
 }
 
-.ps2-logo--desktop {
-  height: clamp(15rem, 34vh, 22rem);
+@media (min-width: 1024px) {
+  .ps2-logo {
+    height: clamp(22rem, 58vh, 38rem);
+  }
 }
 
 .ps2-logo--base {
   opacity: 0.9;
-  filter: blur(0.5px) brightness(0.95)
+  filter: invert(1) blur(0.5px) brightness(0.95)
     drop-shadow(0 0 3px rgba(255, 255, 255, 0.82))
     drop-shadow(0 0 10px rgba(0, 204, 255, 0.7))
     drop-shadow(0 0 22px rgba(0, 85, 255, 0.52));
@@ -102,7 +100,7 @@
 
 .ps2-logo--glow {
   opacity: 0;
-  filter: blur(0.35px) brightness(1.12)
+  filter: invert(1) blur(0.35px) brightness(1.12)
     drop-shadow(0 0 5px rgba(255, 255, 255, 0.95))
     drop-shadow(0 0 16px rgba(0, 220, 255, 0.88))
     drop-shadow(0 0 34px rgba(0, 102, 255, 0.72));
@@ -450,16 +448,6 @@
 @media (max-width: 767px) {
   .ps2-main-menu-link {
     min-height: 2.85rem;
-  }
-}
-
-@media (min-width: 1024px) {
-  .ps2-logo-stack--mobile {
-    display: none;
-  }
-
-  .ps2-logo-stack--desktop {
-    display: grid;
   }
 }
 
