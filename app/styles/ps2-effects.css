@@ -5,10 +5,11 @@
    2. Logo stack and glow
    3. CRT screen overlay
    4. Controller actions
-   5. Product item entrance + selection glow
-   6. Animations
-   7. Responsive adjustments
-   8. Reduced motion
+   5. Product detail soft copy
+   6. Product item entrance + selection glow
+   7. Animations
+   8. Responsive adjustments
+   9. Reduced motion
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
@@ -208,7 +209,17 @@
 }
 
 /* --------------------------------------------------------------------------
-   5. Product item entrance + selection glow
+   5. Product detail soft copy
+
+   Slight CRT softness for product title / actions (replaces ad-hoc blur-[0.55px]).
+   -------------------------------------------------------------------------- */
+
+.ps2-soft-copy {
+  filter: blur(0.2px);
+}
+
+/* --------------------------------------------------------------------------
+   6. Product item entrance + selection glow
 
    Layout for listing pages lives in Tailwind on the components.
    This file only owns the effect layer (::after shine + scale-in).
@@ -261,20 +272,41 @@
 }
 
 /* --------------------------------------------------------------------------
-   6. Animations
+   7. Animations
    -------------------------------------------------------------------------- */
 
-.anim-fade-in,
-.anim-fade-out {
+.route-fade-transition {
   will-change: opacity;
 }
 
-.anim-fade-out {
+.route-fade-transition--out {
   animation: fade-out 0.5s ease-in forwards;
 }
 
-.anim-fade-in {
+.route-fade-transition--in {
   animation: fade-in 0.5s ease-out both;
+}
+
+.anim-fade-in {
+  will-change: opacity;
+  animation: 0.3s ease-out 0s 1 normal forwards running fade-in;
+}
+
+.anim-fade-out {
+  will-change: opacity;
+  animation: 0.3s ease-in 0s 1 normal forwards running fade-out;
+}
+
+.anim-genie-pop {
+  will-change: transform;
+  animation: 0.4s ease-out 0s 1 normal forwards running genie-pop;
+  transform-origin: center bottom;
+}
+
+.anim-genie-shrink {
+  will-change: transform;
+  animation: 0.4s ease-in 0s 1 normal forwards running genie-shrink;
+  transform-origin: center bottom;
 }
 
 @keyframes fade-out {
@@ -294,6 +326,34 @@
 
   to {
     opacity: 1;
+  }
+}
+
+@keyframes genie-pop {
+  0% {
+    transform: scale(0.2, 0.08) translateY(28%);
+  }
+
+  55% {
+    transform: scale(1.06, 1.1) translateY(-2%);
+  }
+
+  100% {
+    transform: scale(1, 1) translateY(0);
+  }
+}
+
+@keyframes genie-shrink {
+  0% {
+    transform: scale(1, 1) translateY(0);
+  }
+
+  45% {
+    transform: scale(1.04, 1.08) translateY(-2%);
+  }
+
+  100% {
+    transform: scale(0.2, 0.08) translateY(28%);
   }
 }
 
@@ -384,7 +444,7 @@
 }
 
 /* --------------------------------------------------------------------------
-   7. Responsive adjustments
+   8. Responsive adjustments
    -------------------------------------------------------------------------- */
 
 @media (max-width: 767px) {
@@ -404,7 +464,7 @@
 }
 
 /* --------------------------------------------------------------------------
-   8. Reduced motion
+   9. Reduced motion
    -------------------------------------------------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {
@@ -412,10 +472,17 @@
   .crt-overlay,
   .crt-overlay::before,
   .crt-overlay::after,
+  .route-fade-transition,
   .anim-fade-in,
   .anim-fade-out,
+  .anim-genie-pop,
+  .anim-genie-shrink,
   .ps2-product-item-glow::after {
     animation: none !important;
+  }
+
+  .ps2-soft-copy {
+    filter: none;
   }
 
   .ps2-main-menu-link,

@@ -1,10 +1,12 @@
-import {useCallback, useEffect} from 'react';
-import {useBlocker, useNavigation, type BlockerFunction} from 'react-router';
+import {useCallback} from 'react';
+import type {BlockerFunction} from 'react-router';
 import type {
   CartApiQueryFragment,
   FooterQuery,
   HeaderQuery,
 } from 'storefrontapi.generated';
+import {RouteFadeTransition} from '~/components/animations/RouteFadeTransition';
+import {AppControllerFooter} from '~/components/controller/AppControllerFooter';
 
 interface PageLayoutProps {
   cart: Promise<CartApiQueryFragment | null>;
@@ -15,8 +17,6 @@ interface PageLayoutProps {
   children?: React.ReactNode;
 }
 
-const FADE_OUT_DURATION_MS = 500;
-
 /**
  * Intentionally minimal storefront shell.
  *
@@ -25,34 +25,23 @@ const FADE_OUT_DURATION_MS = 500;
  */
 export function PageLayout({children = null}: PageLayoutProps) {
   const shouldFade = useCallback<BlockerFunction>(
-    ({currentLocation, nextLocation}) =>
-      currentLocation.pathname !== nextLocation.pathname ||
-      currentLocation.search !== nextLocation.search ||
-      currentLocation.hash !== nextLocation.hash,
+    ({currentLocation, nextLocation}) => {
+      const isLeavingMainMenu =
+        currentLocation.pathname === '/' && nextLocation.pathname !== '/';
+      const isReturningToMainMenu =
+        currentLocation.pathname !== '/' && nextLocation.pathname === '/';
+
+      return isLeavingMainMenu || isReturningToMainMenu;
+    },
     [],
   );
-  const blocker = useBlocker(shouldFade);
-  const navigation = useNavigation();
-  const proceed = blocker.state === 'blocked' ? blocker.proceed : undefined;
-  const isPageTransition =
-    blocker.state !== 'unblocked' || navigation.state !== 'idle';
-
-  useEffect(() => {
-    if (!proceed) return undefined;
-
-    const timeoutId = window.setTimeout(proceed, FADE_OUT_DURATION_MS);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [proceed]);
 
   return (
-    <main
-      aria-busy={isPageTransition}
-      className={
-        isPageTransition ? 'anim-fade-out pointer-events-none' : 'anim-fade-in'
-      }
-    >
-      {children}
-    </main>
+    <>
+      <RouteFadeTransition shouldTransition={shouldFade}>
+        {children}
+        <AppControllerFooter />
+      </RouteFadeTransition>
+    </>
   );
 }

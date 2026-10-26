@@ -208,7 +208,7 @@ function SearchResultsPredictiveProducts({
       <ul>
         {products.map((product) => {
           const productUrl = urlWithTrackingParams({
-            baseUrl: `/products/${product.handle}`,
+            baseUrl: `/merch/${product.handle}`,
             trackingParams: product.trackingParameters,
             term: term.current,
           });

@@ -108,7 +108,7 @@ function SearchResultsProducts({
         {({nodes, isLoading, NextLink, PreviousLink}) => {
           const ItemsMarkup = nodes.map((product) => {
             const productUrl = urlWithTrackingParams({
-              baseUrl: `/products/${product.handle}`,
+              baseUrl: `/merch/${product.handle}`,
               trackingParams: product.trackingParameters,
               term,
             });

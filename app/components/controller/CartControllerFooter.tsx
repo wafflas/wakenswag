@@ -4,12 +4,13 @@ import type {RootLoader} from '~/root';
 import {
   ControllerFooter,
   type ControllerFooterAction,
-} from '~/components/shared/ControllerFooter';
+} from './ControllerFooter';
 
 interface CartControllerFooterProps {
   actions: (cartCount: number) => ControllerFooterAction[];
 }
 
+/** Wraps ControllerFooter with live cart quantity from the root loader. */
 export function CartControllerFooter({actions}: CartControllerFooterProps) {
   const rootData = useRouteLoaderData<RootLoader>('root');
   const fallback = <ControllerFooter actions={actions(0)} />;

@@ -4,7 +4,6 @@ import type {
   ProductItemFragment,
   RecommendedProductFragment,
 } from 'storefrontapi.generated';
-import {useVariantUrl} from '~/lib/variants';
 
 const productImageClassName =
   'size-22 max-w-none object-cover md:size-24 lg:size-28 xl:size-32 2xl:size-40';
@@ -24,8 +23,8 @@ export function ProductItem({
   loading,
   onSelect,
 }: ProductItemProps) {
-  const variantUrl = useVariantUrl(product.handle);
   const image = product.featuredImage;
+  const productUrl = `/merch/${product.handle}`;
 
   return (
     <Link
@@ -39,8 +38,10 @@ export function ProductItem({
       onFocus={() => onSelect?.(product.id, product.title)}
       onPointerEnter={() => onSelect?.(product.id, product.title)}
       prefetch="intent"
-      style={{animationDelay: `${animationDelayMs}ms`}}
-      to={variantUrl}
+      style={{
+        animationDelay: `${animationDelayMs}ms`,
+      }}
+      to={productUrl}
     >
       {image ? (
         <Image

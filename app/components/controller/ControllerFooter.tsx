@@ -1,7 +1,7 @@
 import {
   ControllerSymbol,
   type ControllerSymbolName,
-} from '~/components/shared/ControllerSymbol';
+} from './ControllerSymbol';
 
 export type ControllerFooterPosition = 'start' | 'center' | 'end';
 
@@ -19,6 +19,7 @@ interface ControllerFooterProps {
   actions: ControllerFooterAction[];
 }
 
+/** Presentational HUD shell — fixed bottom toolbar. */
 export function ControllerFooter({actions}: ControllerFooterProps) {
   const actionsByPosition = {
     start: actions.filter((action) => action.position === 'start'),
@@ -31,7 +32,7 @@ export function ControllerFooter({actions}: ControllerFooterProps) {
   return (
     <footer
       className={[
-        'absolute inset-x-0 bottom-0 z-30',
+        'fixed inset-x-0 bottom-0 z-50',
         'px-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-5 sm:pb-[max(1.25rem,env(safe-area-inset-bottom))]',
         'md:pb-[max(1.75rem,env(safe-area-inset-bottom))]',
       ].join(' ')}
@@ -69,7 +70,7 @@ function ControllerFooterGroup({
   }[position];
 
   return (
-    <div className={`flex items-center gap-1.5 sm:gap-7 ${alignment}`}>
+    <div className={`flex items-center gap-3 sm:gap-7 px-2 ${alignment}`}>
       {actions.map((action) => {
         const visibleLabel =
           action.count === undefined

@@ -2,15 +2,10 @@ import type {ReactNode} from 'react';
 
 interface HomeShellProps {
   children: ReactNode;
-  footer: ReactNode;
   className?: string;
 }
 
-export function HomeShell({
-  children,
-  footer = null,
-  className = '',
-}: HomeShellProps) {
+export function HomeShell({children, className = ''}: HomeShellProps) {
   return (
     <div
       className={[
@@ -20,8 +15,6 @@ export function HomeShell({
       ].join(' ')}
     >
       <div className="relative z-10 min-h-dvh">{children}</div>
-
-      {footer}
     </div>
   );
 }

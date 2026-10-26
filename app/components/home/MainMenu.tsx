@@ -8,7 +8,7 @@ const MENU_ITEMS = [
   },
   {
     label: 'Merch',
-    to: '/collections/all',
+    to: '/merch',
   },
   {
     label: 'Drumkits',
@@ -71,7 +71,9 @@ export function MainMenu() {
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.defaultPrevented || isTypingTarget(event.target)) return;
+      if (event.defaultPrevented || isTypingTarget(event.target)) {
+        return;
+      }
 
       if (event.key === 'Tab') {
         setNavigationMode('tab');
@@ -123,7 +125,7 @@ export function MainMenu() {
         className={[
           'flex flex-col items-center',
           'text-[54px]',
-          'font-medium ',
+          'font-medium',
           'gap-1.25',
         ].join(' ')}
       >

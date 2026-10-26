@@ -1,11 +1,8 @@
-import {useCallback} from 'react';
-import {useNavigate} from 'react-router';
 import type {Route} from './+types/_index';
 import DesktopLogo from '~/components/home/DesktopLogo';
 import {HomeShell} from '~/components/home/HomeShell';
 import Logo from '~/components/home/Logo';
 import {MainMenu} from '~/components/home/MainMenu';
-import {CartControllerFooter} from '~/components/shared/CartControllerFooter';
 
 export const meta: Route.MetaFunction = () => {
   return [
@@ -49,14 +46,8 @@ function loadDeferredData({context}: Route.LoaderArgs) {
 }
 
 export default function Homepage() {
-  const navigate = useNavigate();
-
-  const openCart = useCallback(() => {
-    void navigate('/cart');
-  }, [navigate]);
-
   return (
-    <HomeShell footer={<HomepageFooter onOpenCart={openCart} />}>
+    <HomeShell>
       <div
         className={[
           'flex min-h-dvh flex-col items-center justify-center',
@@ -74,25 +65,6 @@ export default function Homepage() {
         </div>
       </div>
     </HomeShell>
-  );
-}
-
-interface HomepageFooterProps {
-  onOpenCart: () => void;
-}
-
-function HomepageFooter({onOpenCart}: HomepageFooterProps) {
-  return (
-    <CartControllerFooter
-      actions={(cartCount) => [
-        {
-          count: cartCount,
-          label: 'Cart',
-          onActivate: onOpenCart,
-          symbol: 'square',
-        },
-      ]}
-    />
   );
 }
 

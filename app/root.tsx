@@ -19,6 +19,7 @@ import tailwindCss from './styles/tailwind.css?url';
 import {PageLayout} from './components/layout/PageLayout';
 import {ButtonSound} from './components/shared/ButtonSound';
 import {CRTOverlay} from './components/shared/CRTOverlay';
+import {NotFoundPage} from './components/shared/NotFoundPage';
 
 export type RootLoader = typeof loader;
 
@@ -196,21 +197,28 @@ export function ErrorBoundary() {
   let errorStatus = 500;
 
   if (isRouteErrorResponse(error)) {
-    errorMessage = error?.data?.message ?? error.data;
+    errorMessage =
+      typeof error.data === 'string'
+        ? error.data
+        : (error.data?.message ?? String(error.data ?? ''));
     errorStatus = error.status;
   } else if (error instanceof Error) {
     errorMessage = error.message;
+  }
+
+  if (errorStatus === 404) {
+    return <NotFoundPage />;
   }
 
   return (
     <div className="route-error">
       <h1>Oops</h1>
       <h2>{errorStatus}</h2>
-      {errorMessage && (
+      {errorMessage ? (
         <fieldset>
           <pre>{errorMessage}</pre>
         </fieldset>
-      )}
+      ) : null}
     </div>
   );
 }

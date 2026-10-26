@@ -51,7 +51,7 @@ export function ProductForm({
                       prefetch="intent"
                       preventScrollReset
                       replace
-                      to={`/products/${handle}?${variantUriQuery}`}
+                      to={`/merch/${handle}?${variantUriQuery}`}
                       style={{
                         border: selected
                           ? '1px solid black'
