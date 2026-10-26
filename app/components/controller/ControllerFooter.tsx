@@ -1,7 +1,4 @@
-import {
-  ControllerSymbol,
-  type ControllerSymbolName,
-} from './ControllerSymbol';
+import {ControllerSymbol, type ControllerSymbolName} from './ControllerSymbol';
 
 export type ControllerFooterPosition = 'start' | 'center' | 'end';
 
