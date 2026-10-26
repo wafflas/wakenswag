@@ -35,8 +35,9 @@ export function getControllerFooterConfig(
     return {back: 'home'};
   }
 
+  // History keeps the listing mounted with its local page index when possible.
   if (/^\/merch\/[^/]+\/?$/.test(pathname)) {
-    return {back: '/merch'};
+    return {back: 'history'};
   }
 
   if (pathname === '/search' || pathname.startsWith('/search/')) {

@@ -1,9 +1,11 @@
 import {Outlet, useLoaderData} from 'react-router';
 import type {Route} from './+types/merch';
-import {getPaginationVariables} from '@shopify/hydrogen';
 import {ProductGrid} from '~/components/product-listing/ProductGrid';
 import {ProductListingShell} from '~/components/product-listing/ProductListingShell';
-import {useProductListingSelection} from '~/components/product-listing/useProductListingSelection';
+import {
+  PRODUCTS_PER_PAGE,
+  useProductListingSelection,
+} from '~/components/product-listing/useProductListingSelection';
 import {PRODUCT_ITEM_FRAGMENT} from '~/lib/fragments';
 
 export const meta: Route.MetaFunction = () => [
@@ -30,18 +32,12 @@ export async function loader(args: Route.LoaderArgs) {
   };
 }
 
-async function loadCriticalData({context, request}: Route.LoaderArgs) {
-  const paginationVariables = getPaginationVariables(request, {
-    pageBy: 8,
-  });
-
+async function loadCriticalData({context}: Route.LoaderArgs) {
   const {products} = await context.storefront.query(MERCH_QUERY, {
-    variables: paginationVariables,
+    variables: {first: PRODUCTS_PER_PAGE},
   });
 
-  return {
-    products,
-  };
+  return {products};
 }
 
 function loadDeferredData({context}: Route.LoaderArgs) {
@@ -55,7 +51,7 @@ export default function Merch() {
     useProductListingSelection({
       initialProduct: products.nodes[0],
       fallbackTitle: 'Merch',
-      productCount: products.nodes.length,
+      productCount: Math.min(products.nodes.length, PRODUCTS_PER_PAGE),
     });
 
   return (

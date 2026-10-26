@@ -6,7 +6,7 @@ import type {
 } from 'storefrontapi.generated';
 
 const productImageClassName =
-  'size-22 max-w-none object-cover md:size-24 lg:size-28 xl:size-32 2xl:size-40';
+  'size-22 max-w-none object-cover md:size-24 lg:size-[min(10vw,calc((100dvh-18rem)/3),10rem)]';
 
 interface ProductItemProps {
   product: ProductItemFragment | RecommendedProductFragment;
@@ -14,6 +14,7 @@ interface ProductItemProps {
   animationDelayMs?: number;
   loading?: 'eager' | 'lazy';
   onSelect?: (productId: string, title: string) => void;
+  shouldAnimate?: boolean;
 }
 
 export function ProductItem({
@@ -22,15 +23,17 @@ export function ProductItem({
   animationDelayMs = 0,
   loading,
   onSelect,
+  shouldAnimate = true,
 }: ProductItemProps) {
   const image = product.featuredImage;
   const productUrl = `/merch/${product.handle}`;
 
   return (
     <Link
-      aria-label={product.title}
+      aria-current={isSelected ? 'true' : undefined}
       className={[
-        'ps2-product-item scale-in ps2-product-item-glow group relative inline-flex w-fit shrink-0 justify-self-center',
+        'ps2-product-item ps2-product-item-glow group relative inline-flex h-fit w-fit shrink-0 place-self-center',
+        shouldAnimate ? 'scale-in' : '',
         'rounded-sm brightness-50 transition duration-150',
         'hover:brightness-100 focus:brightness-100 data-[selected=true]:brightness-100',
       ].join(' ')}
@@ -45,6 +48,7 @@ export function ProductItem({
     >
       {image ? (
         <Image
+          alt=""
           className={productImageClassName}
           data={image}
           loading={loading}
@@ -54,7 +58,9 @@ export function ProductItem({
       )}
 
       <span className="sr-only">
-        {product.title}, <Money data={product.priceRange.minVariantPrice} />
+        {product.title}
+        {isSelected ? ', selected' : ''},{' '}
+        <Money data={product.priceRange.minVariantPrice} />
       </span>
     </Link>
   );

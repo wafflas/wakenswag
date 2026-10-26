@@ -1,6 +1,7 @@
 import {useEffect, useState} from 'react';
 
 export const PRODUCT_LISTING_STAGGER_MS = 400;
+export const PRODUCTS_PER_PAGE = 12;
 
 interface ProductListingSelectionProduct {
   id: string;
@@ -32,7 +33,8 @@ export function useProductListingSelection({
   return {
     displayTitle,
     selectedProductId,
-    loadingDurationMs: productCount * PRODUCT_LISTING_STAGGER_MS,
+    loadingDurationMs:
+      Math.min(productCount, PRODUCTS_PER_PAGE) * PRODUCT_LISTING_STAGGER_MS,
     onSelect(productId: string, title: string) {
       setSelectedProductId(productId);
       setDisplayTitle(title);
