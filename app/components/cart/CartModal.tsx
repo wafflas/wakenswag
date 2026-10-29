@@ -10,7 +10,6 @@ interface CartModalProps {
 
 /**
  * Displays the existing Shopify cart inside a full-screen dialog.
- * Visual styling is intentionally minimal until the Figma pass.
  */
 export function CartModal({cart}: CartModalProps) {
   const {close, type} = useAside();
@@ -60,7 +59,7 @@ export function CartModal({cart}: CartModalProps) {
       <Suspense
         fallback={
           <div className="grid h-dvh place-items-center text-xl text-ps2-gray">
-            Loading inventory…
+            Loading cart…
           </div>
         }
       >

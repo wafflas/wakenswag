@@ -20,7 +20,7 @@ export function CartEmpty({
       ].join(' ')}
       hidden={hidden}
     >
-      <p>Your inventory is empty.</p>
+      <p>Your cart is empty.</p>
 
       <Link
         className={`${ps2CtaClassName} md:text-2xl`}
