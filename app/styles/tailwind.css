@@ -32,3 +32,66 @@
     var(--ps2-outline-offset) var(--ps2-outline-offset-negative) 0 #000000,
     var(--ps2-outline-offset-negative) var(--ps2-outline-offset) 0 #000000;
 }
+
+@utility ps2-cta {
+  color: color-mix(in oklab, var(--color-ps2-cyan) 80%, transparent);
+  transition-duration: 200ms;
+  transition-property: color, opacity, text-shadow;
+  transition-timing-function: var(--ease-ps2);
+
+  &:hover,
+  &:focus-visible {
+    color: var(--color-ps2-cyan);
+    text-shadow: 0 0 8px rgba(40, 200, 255, 0.3);
+  }
+
+  &:focus-visible {
+    outline: none;
+  }
+
+  &:disabled,
+  &[aria-disabled='true'] {
+    cursor: not-allowed;
+    opacity: 0.3;
+    text-shadow: none;
+  }
+}
+
+@utility cart-scroll {
+  scrollbar-color: #28c8ffb8 #8282821f;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+
+  &::-webkit-scrollbar {
+    width: 0.625rem;
+  }
+
+  &::-webkit-scrollbar-track {
+    background-color: color-mix(
+      in oklab,
+      var(--color-ps2-gray) 10%,
+      transparent
+    );
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-clip: content-box;
+    background-color: color-mix(
+      in oklab,
+      var(--color-ps2-cyan) 70%,
+      transparent
+    );
+    border: 3px solid transparent;
+    border-radius: 9999px;
+    box-shadow: 0 0 8px rgba(40, 200, 255, 0.28);
+  }
+
+  &:hover::-webkit-scrollbar-thumb {
+    background-color: var(--color-ps2-cyan);
+    box-shadow: 0 0 10px rgba(40, 200, 255, 0.5);
+  }
+
+  &::-webkit-scrollbar-corner {
+    background-color: transparent;
+  }
+}

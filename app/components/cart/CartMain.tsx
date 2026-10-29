@@ -4,7 +4,6 @@ import {CartLineItem, type CartLine} from '~/components/cart/CartLineItem';
 import {CartSummary} from './CartSummary';
 import {CartEmpty} from './CartEmpty';
 import {CartEmptyButton} from './CartEmptyButton';
-import {cartScrollClassName} from '~/styles/tailwindClassNames';
 
 export type CartLayout = 'page' | 'aside';
 
@@ -86,7 +85,7 @@ export function CartMain({layout, cart: originalCart}: CartMainProps) {
           <ul
             aria-labelledby="cart-lines"
             className={[
-              cartScrollClassName,
+              'cart-scroll',
               'grid min-h-0 w-full flex-1 grid-cols-2 items-start',
               'gap-x-4 gap-y-4 overflow-y-auto overscroll-contain',
               'rounded-md border border-ps2-gray/20 p-3',

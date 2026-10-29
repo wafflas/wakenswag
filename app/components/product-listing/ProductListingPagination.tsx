@@ -1,9 +1,8 @@
 import {useRef, useState, type ReactNode} from 'react';
 import type {ProductItemFragment} from 'storefrontapi.generated';
-import {ps2CtaClassName} from '~/styles/tailwindClassNames';
 
 const paginationActionClassName = [
-  ps2CtaClassName,
+  'ps2-cta',
   'inline-flex min-h-11 cursor-pointer items-center justify-center gap-1',
   'border-0 bg-transparent p-0',
 ].join(' ');

@@ -1,7 +1,6 @@
 import type {CartApiQueryFragment} from 'storefrontapi.generated';
 import type {CartLayout} from '~/components/cart/CartMain';
 import {type OptimisticCart} from '@shopify/hydrogen';
-import {ps2CtaClassName} from '~/styles/tailwindClassNames';
 
 type CartSummaryProps = {
   cart: OptimisticCart<CartApiQueryFragment | null>;
@@ -32,7 +31,7 @@ function CartCheckoutActions({checkoutUrl}: {checkoutUrl?: string}) {
   if (!checkoutUrl) return null;
 
   return (
-    <a className={ps2CtaClassName} href={checkoutUrl} target="_self">
+    <a className="ps2-cta" href={checkoutUrl} target="_self">
       Go to checkout
     </a>
   );

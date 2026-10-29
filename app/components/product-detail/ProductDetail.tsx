@@ -3,7 +3,6 @@ import {Image} from '@shopify/hydrogen';
 import type {ProductFragment} from 'storefrontapi.generated';
 import {GenieTransition} from '~/components/animations/GenieTransition';
 import {AddToCartButton} from '~/components/cart/AddToCartButton';
-import {ps2CtaClassName} from '~/styles/tailwindClassNames';
 import {getProductDescriptionBullets} from '~/components/product-detail/productDescription';
 import {getProductDetailTheme} from './productTheme';
 
@@ -153,7 +152,7 @@ export function ProductDetail({
           <div className="mt-8 flex flex-col items-center gap-3">
             <AddToCartButton
               className={[
-                ps2CtaClassName,
+                'ps2-cta',
                 'cursor-pointer border-0 bg-transparent p-0',
               ].join(' ')}
               disabled={!selectedVariant || !isAvailable}

@@ -1,7 +1,6 @@
 import {Link} from 'react-router';
 import {useAside} from '../layout/Aside';
 import {type CartMainProps} from './CartMain';
-import {ps2CtaClassName} from '~/styles/tailwindClassNames';
 
 export function CartEmpty({
   hidden = false,
@@ -23,7 +22,7 @@ export function CartEmpty({
       <p>Your cart is empty.</p>
 
       <Link
-        className={`${ps2CtaClassName} md:text-2xl`}
+        className="ps2-cta md:text-2xl"
         to="/merch"
         onClick={layout === 'aside' ? close : undefined}
         prefetch="viewport"

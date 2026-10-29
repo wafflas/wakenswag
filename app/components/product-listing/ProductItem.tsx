@@ -49,9 +49,11 @@ export function ProductItem({
       {image ? (
         <Image
           alt=""
+          aspectRatio="1/1"
           className={productImageClassName}
           data={image}
           loading={loading}
+          sizes="(min-width: 1024px) min(10vw, calc((100dvh - 18rem) / 3), 10rem), (min-width: 768px) 96px, 88px"
         />
       ) : (
         <span aria-hidden="true" className={`block ${productImageClassName}`} />

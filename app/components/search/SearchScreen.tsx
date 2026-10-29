@@ -4,7 +4,6 @@ import {Analytics} from '@shopify/hydrogen';
 import {type PredictiveSearchReturn} from '~/lib/search';
 import {normalizeSearchProduct} from './normalizeSearchProduct';
 import {SearchProductItem} from './SearchProductItem';
-import {cartScrollClassName} from '~/styles/tailwindClassNames';
 import {Input} from '~/components/search/SearchInput';
 
 const SEARCH_ENDPOINT = '/search';
@@ -123,7 +122,7 @@ export function SearchScreen({onClose}: SearchScreenProps) {
           {products.length > 0 ? (
             <ul
               aria-label="Search results"
-              className={`${cartScrollClassName} grid min-h-0 w-full flex-1 grid-cols-2 items-start gap-x-4 gap-y-6 overflow-y-auto overscroll-contain rounded-md border border-ps2-gray/20 p-3 sm:grid-cols-2`}
+              className="cart-scroll grid min-h-0 w-full flex-1 grid-cols-2 items-start gap-x-4 gap-y-6 overflow-y-auto overscroll-contain rounded-md border border-ps2-gray/20 p-3 sm:grid-cols-2"
             >
               {products.map((product) => (
                 <SearchProductItem

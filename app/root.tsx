@@ -19,7 +19,6 @@ import favicon32 from '~/assets/favicons/favicon-32x32.png?url';
 import favicon48 from '~/assets/favicons/favicon-48x48.png?url';
 import faviconIco from '~/assets/favicons/favicon.ico?url';
 import {FOOTER_QUERY, HEADER_QUERY} from '~/lib/fragments';
-import resetStyles from '~/styles/reset.css?url';
 import appStyles from '~/styles/app.css?url';
 import tailwindCss from './styles/tailwind.css?url';
 import {PageLayout} from './components/layout/PageLayout';
@@ -165,7 +164,6 @@ export function Layout({children}: {children?: React.ReactNode}) {
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <link rel="stylesheet" href={tailwindCss}></link>
-        <link rel="stylesheet" href={resetStyles}></link>
         <link rel="stylesheet" href={appStyles}></link>
         <Meta />
         <Links />
