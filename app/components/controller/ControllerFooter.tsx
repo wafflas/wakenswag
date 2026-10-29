@@ -31,8 +31,7 @@ export function ControllerFooter({actions}: ControllerFooterProps) {
     <footer
       className={[
         'fixed inset-x-0 bottom-0 z-50',
-        'px-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-5 sm:pb-[max(1.25rem,env(safe-area-inset-bottom))]',
-        'md:pb-[max(1.75rem,env(safe-area-inset-bottom))]',
+        'px-2 pb-[max(1.75rem,env(safe-area-inset-bottom))] sm:px-5',
       ].join(' ')}
     >
       <div
@@ -107,7 +106,7 @@ function ControllerActionCount({count}: {count: number}) {
 
   useEffect(() => {
     if (previousCountRef.current === count) return;
-
+    
     previousCountRef.current = count;
     setAnimationVersion((version) => version + 1);
   }, [count]);

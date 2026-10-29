@@ -5,7 +5,7 @@ import {type PredictiveSearchReturn} from '~/lib/search';
 import {normalizeSearchProduct} from './normalizeSearchProduct';
 import {SearchProductItem} from './SearchProductItem';
 import {cartScrollClassName} from '~/styles/tailwindClassNames';
-import {Input} from '~/components/ui/input';
+import {Input} from '~/components/search/SearchInput';
 
 const SEARCH_ENDPOINT = '/search';
 const PREDICTIVE_LIMIT = 8;
