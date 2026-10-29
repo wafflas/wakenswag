@@ -1,16 +1,17 @@
 import {useRef, useState, type ReactNode} from 'react';
 import type {ProductItemFragment} from 'storefrontapi.generated';
+import {ps2CtaClassName} from '~/styles/tailwindClassNames';
 
 const paginationActionClassName = [
-  'group inline-flex min-h-11 cursor-pointer items-center justify-center gap-1',
+  ps2CtaClassName,
+  'inline-flex min-h-11 cursor-pointer items-center justify-center gap-1',
   'border-0 bg-transparent p-0',
 ].join(' ');
 
 const paginationNextActionClassName = `${paginationActionClassName} ml-auto`;
 
 const paginationActionLabelClassName = [
-  'ps2-soft-copy text-xl leading-none text-ps2-cyan/80 lg:text-3xl',
-  'transition-opacity group-hover:text-ps2-cyan group-hover:opacity-100',
+  'ps2-soft-copy text-xl leading-none lg:text-3xl',
 ].join(' ');
 
 export interface ProductListingPageChangeEvent {

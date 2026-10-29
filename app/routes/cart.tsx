@@ -1,12 +1,7 @@
-import {useLoaderData, data, type HeadersFunction} from 'react-router';
+import {data, type HeadersFunction} from 'react-router';
 import type {Route} from './+types/cart';
 import type {CartQueryDataReturn} from '@shopify/hydrogen';
 import {CartForm} from '@shopify/hydrogen';
-import {CartMain} from '~/components/cart/CartMain';
-
-export const meta: Route.MetaFunction = () => {
-  return [{title: `Hydrogen | Cart`}];
-};
 
 export const headers: HeadersFunction = ({actionHeaders}) => actionHeaders;
 
@@ -93,21 +88,5 @@ export async function action({request, context}: Route.ActionArgs) {
       },
     },
     {status, headers},
-  );
-}
-
-export async function loader({context}: Route.LoaderArgs) {
-  const {cart} = context;
-  return await cart.get();
-}
-
-export default function Cart() {
-  const cart = useLoaderData<typeof loader>();
-
-  return (
-    <div className="cart">
-      <h1>Cart</h1>
-      <CartMain layout="page" cart={cart} />
-    </div>
   );
 }

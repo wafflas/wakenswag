@@ -10,7 +10,7 @@ export const meta: Route.MetaFunction = () => {
     },
     {
       name: 'description',
-      content: 'Wake n Swag merch, drumkits, archive, and information.',
+      content: 'Wake n Swag merch, drumkits, and information.',
     },
   ];
 };

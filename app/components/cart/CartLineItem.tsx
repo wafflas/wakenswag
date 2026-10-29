@@ -1,17 +1,10 @@
 import type {CartLineUpdateInput} from '@shopify/hydrogen/storefront-api-types';
-import type {
-  CartLayout,
-  LineItemChildrenMap,
-} from '~/components/cart/CartMain';
+import type {CartLayout, LineItemChildrenMap} from '~/components/cart/CartMain';
 import {CartForm, Image, type OptimisticCartLine} from '@shopify/hydrogen';
 import {useVariantUrl} from '~/lib/variants';
 import {Link} from 'react-router';
 import {useAside} from '~/components/layout/Aside';
-import {ProductPrice} from '~/components/product/ProductPrice';
-import type {
-  CartApiQueryFragment,
-  CartLineFragment,
-} from 'storefrontapi.generated';
+import type {CartApiQueryFragment} from 'storefrontapi.generated';
 
 export type CartLine = OptimisticCartLine<CartApiQueryFragment>;
 
@@ -38,49 +31,55 @@ export function CartLineItem({
   const childrenLabelId = `cart-line-children-${id}`;
 
   return (
-    <li key={id} className="cart-line">
-      <div className="cart-line-inner">
-        {image && (
-          <Image
-            alt={title}
-            aspectRatio="1/1"
-            data={image}
-            height={100}
-            loading="lazy"
-            width={100}
-          />
-        )}
-
-        <div>
-          <Link
-            prefetch="intent"
-            to={lineItemUrl}
-            onClick={() => {
-              if (layout === 'aside') {
-                close();
-              }
-            }}
-          >
-            <p>
-              <strong>{product.title}</strong>
-            </p>
-          </Link>
-          <ProductPrice price={line?.cost?.totalAmount} />
-          <ul>
-            {selectedOptions.map((option) => (
-              <li key={option.name}>
-                <small>
-                  {option.name}: {option.value}
-                </small>
-              </li>
-            ))}
-          </ul>
-          <CartLineQuantity line={line} />
+    <li
+      key={id}
+      className="relative flex min-h-64 min-w-0 w-full flex-col items-center justify-center gap-3 justify-self-stretch p-3 text-center sm:min-h-72 sm:p-4"
+    >
+      <Link
+        aria-label={`View ${product.title}`}
+        className="group flex min-h-0 w-full flex-1 flex-col items-center justify-center gap-3 rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ps2-cyan"
+        prefetch="intent"
+        to={lineItemUrl}
+        onClick={() => {
+          if (layout === 'aside') close();
+        }}
+      >
+        <div className="flex h-28 w-full items-center justify-center sm:h-36">
+          {image ? (
+            <Image
+              alt={image.altText ?? title}
+              className="h-28 w-auto max-w-full object-contain sm:h-36"
+              data={image}
+              loading="lazy"
+              sizes="(min-width: 640px) 192px, 160px"
+            />
+          ) : null}
         </div>
+
+        <p className="w-full break-words text-base leading-6 text-ps2-muted transition-colors group-hover:text-ps2-white sm:text-lg">
+          {product.title}
+        </p>
+
+        <p className="whitespace-nowrap text-base leading-6 text-ps2-muted sm:text-lg">
+          {formatCartMoney(line.cost.totalAmount.amount)} EURO
+        </p>
+
+        {selectedOptions.some((option) => option.name !== 'Title') ? (
+          <p className="max-w-40 text-sm leading-5 text-ps2-gray sm:max-w-48">
+            {selectedOptions
+              .filter((option) => option.name !== 'Title')
+              .map((option) => option.value)
+              .join(' / ')}
+          </p>
+        ) : null}
+      </Link>
+
+      <div className="relative z-20 flex w-full items-center justify-center">
+        <CartLineQuantity line={line} />
       </div>
 
       {lineItemChildren ? (
-        <div>
+        <div className="relative z-20">
           <p id={childrenLabelId} className="sr-only">
             Line items with {product.title}
           </p>
@@ -107,37 +106,69 @@ export function CartLineItem({
  */
 function CartLineQuantity({line}: {line: CartLine}) {
   if (!line || typeof line?.quantity === 'undefined') return null;
-  const {id: lineId, quantity, isOptimistic} = line;
+  const {id: lineId, merchandise, quantity, isOptimistic} = line;
+  const stockLimit = merchandise.quantityAvailable ?? null;
+  const hasReachedStockLimit = stockLimit !== null && quantity >= stockLimit;
   const prevQuantity = Number(Math.max(0, quantity - 1).toFixed(0));
   const nextQuantity = Number((quantity + 1).toFixed(0));
 
   return (
-    <div className="cart-line-quantity">
-      <small>Quantity: {quantity} &nbsp;&nbsp;</small>
-      <CartLineUpdateButton lines={[{id: lineId, quantity: prevQuantity}]}>
-        <button
-          aria-label="Decrease quantity"
-          disabled={quantity <= 1 || !!isOptimistic}
-          name="decrease-quantity"
-          value={prevQuantity}
-        >
-          <span>&#8722; </span>
-        </button>
-      </CartLineUpdateButton>
-      &nbsp;
+    <div className="ps2-soft-copy flex items-center justify-center gap-4 text-2xl leading-none text-ps2-gray sm:text-3xl">
+      {quantity === 1 ? (
+        <CartLineRemoveButton lineIds={[lineId]}>
+          <QuantityButton ariaLabel="Remove item" disabled={!!isOptimistic}>
+            −
+          </QuantityButton>
+        </CartLineRemoveButton>
+      ) : (
+        <CartLineUpdateButton lines={[{id: lineId, quantity: prevQuantity}]}>
+          <QuantityButton
+            ariaLabel="Decrease quantity"
+            disabled={!!isOptimistic}
+          >
+            −
+          </QuantityButton>
+        </CartLineUpdateButton>
+      )}
+
+      <output aria-live="polite" className="min-w-3 text-center">
+        {quantity}
+      </output>
+
       <CartLineUpdateButton lines={[{id: lineId, quantity: nextQuantity}]}>
-        <button
-          aria-label="Increase quantity"
-          name="increase-quantity"
-          value={nextQuantity}
-          disabled={!!isOptimistic}
+        <QuantityButton
+          ariaLabel={
+            stockLimit === null
+              ? 'Increase quantity'
+              : `Increase quantity (maximum ${stockLimit})`
+          }
+          disabled={!!isOptimistic || hasReachedStockLimit}
         >
-          <span>&#43;</span>
-        </button>
+          +
+        </QuantityButton>
       </CartLineUpdateButton>
-      &nbsp;
-      <CartLineRemoveButton lineIds={[lineId]} disabled={!!isOptimistic} />
     </div>
+  );
+}
+
+function QuantityButton({
+  ariaLabel,
+  children,
+  disabled,
+}: {
+  ariaLabel: string;
+  children: React.ReactNode;
+  disabled: boolean;
+}) {
+  return (
+    <button
+      aria-label={ariaLabel}
+      className="ps2-controller-action border-0 bg-transparent p-0 text-inherit enabled:cursor-pointer disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-20"
+      disabled={disabled}
+      type="submit"
+    >
+      {children}
+    </button>
   );
 }
 
@@ -147,11 +178,11 @@ function CartLineQuantity({line}: {line: CartLine}) {
  * that it was successfully added to the cart.
  */
 function CartLineRemoveButton({
+  children,
   lineIds,
-  disabled,
 }: {
+  children: React.ReactNode;
   lineIds: string[];
-  disabled: boolean;
 }) {
   return (
     <CartForm
@@ -160,9 +191,7 @@ function CartLineRemoveButton({
       action={CartForm.ACTIONS.LinesRemove}
       inputs={{lineIds}}
     >
-      <button disabled={disabled} type="submit">
-        Remove
-      </button>
+      {children}
     </CartForm>
   );
 }
@@ -197,4 +226,11 @@ function CartLineUpdateButton({
  */
 function getUpdateKey(lineIds: string[]) {
   return [CartForm.ACTIONS.LinesUpdate, ...lineIds].join('-');
+}
+
+function formatCartMoney(amount: string) {
+  return new Intl.NumberFormat('en', {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 0,
+  }).format(Number(amount));
 }

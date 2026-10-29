@@ -12,19 +12,15 @@ const MENU_ITEMS = [
   },
   {
     label: 'Drumkits',
-    to: '/collections/drumkits',
-  },
-  {
-    label: 'Archive',
-    to: '/pages/archive',
+    to: '/drumkits',
   },
   {
     label: 'Socials',
-    to: '/pages/socials',
+    to: '/socials',
   },
   {
     label: 'Info',
-    to: '/pages/info',
+    to: '/info',
   },
 ] as const;
 

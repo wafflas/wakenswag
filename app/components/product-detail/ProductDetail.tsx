@@ -3,6 +3,7 @@ import {Image} from '@shopify/hydrogen';
 import type {ProductFragment} from 'storefrontapi.generated';
 import {GenieTransition} from '~/components/animations/GenieTransition';
 import {AddToCartButton} from '~/components/cart/AddToCartButton';
+import {ps2CtaClassName} from '~/styles/tailwindClassNames';
 import {getProductDescriptionBullets} from '~/components/product-detail/productDescription';
 import {getProductDetailTheme} from './productTheme';
 
@@ -29,20 +30,39 @@ export function ProductDetail({
     [product, selectedVariant],
   );
 
-  const descriptionBullets = useMemo(
-    () =>
-      getProductDescriptionBullets({
-        description: product.description,
-        descriptionHtml: product.descriptionHtml,
-      }),
-    [product.description, product.descriptionHtml],
-  );
+  const descriptionBullets = useMemo(() => {
+    const duplicateCounts = new Map<string, number>();
+    const bullets = getProductDescriptionBullets({
+      description: product.description,
+      descriptionHtml: product.descriptionHtml,
+    });
+
+    return bullets.map((text) => {
+      const occurrence = (duplicateCounts.get(text) ?? 0) + 1;
+      duplicateCounts.set(text, occurrence);
+
+      return {
+        id: `${text}-${occurrence}`,
+        text,
+      };
+    });
+  }, [product.description, product.descriptionHtml]);
 
   useEffect(() => {
     setQuantity(1);
   }, [selectedVariant?.id]);
 
   const isAvailable = Boolean(selectedVariant?.availableForSale);
+  const stockLimit = selectedVariant?.quantityAvailable ?? null;
+  const hasReachedStockLimit = stockLimit !== null && quantity >= stockLimit;
+
+  useEffect(() => {
+    if (stockLimit === null) return;
+
+    setQuantity((currentQuantity) =>
+      Math.max(1, Math.min(currentQuantity, stockLimit)),
+    );
+  }, [stockLimit]);
 
   return (
     <div
@@ -107,10 +127,10 @@ export function ProductDetail({
 
             {descriptionBullets.length > 0 ? (
               <ul className="mt-1 flex flex-col items-center text-xl leading-snug text-ps2-muted lg:text-2xl">
-                {descriptionBullets.map((line, index) => (
-                  <li key={`${index}-${line}`} className="flex gap-2">
+                {descriptionBullets.map((bullet) => (
+                  <li key={bullet.id} className="flex gap-2">
                     <span aria-hidden="true">-</span>
-                    <span>{line}</span>
+                    <span>{bullet.text}</span>
                   </li>
                 ))}
               </ul>
@@ -133,8 +153,8 @@ export function ProductDetail({
           <div className="mt-8 flex flex-col items-center gap-3">
             <AddToCartButton
               className={[
+                ps2CtaClassName,
                 'cursor-pointer border-0 bg-transparent p-0',
-                'disabled:cursor-not-allowed',
               ].join(' ')}
               disabled={!selectedVariant || !isAvailable}
               lines={
@@ -151,9 +171,7 @@ export function ProductDetail({
             >
               <span
                 className={[
-                  'ps2-soft-copy text-2xl leading-none text-ps2-cyan/80',
-                  'transition-opacity hover:text-ps2-cyan hover:opacity-100',
-                  'lg:text-3xl',
+                  'ps2-soft-copy text-2xl leading-none lg:text-3xl',
                 ].join(' ')}
               >
                 {isAvailable ? 'Add to cart' : 'Sold out'}
@@ -196,17 +214,27 @@ export function ProductDetail({
                 </output>
 
                 <button
-                  aria-label="Increase quantity"
+                  aria-label={
+                    stockLimit === null
+                      ? 'Increase quantity'
+                      : `Increase quantity (maximum ${stockLimit})`
+                  }
                   className={[
                     'inline-flex size-11 items-center justify-center opacity-80',
                     'cursor-pointer border-0 bg-transparent p-0 text-4xl leading-none text-ps2-muted',
                     'transition-[color,opacity,text-shadow] duration-[180ms] ease-ps2',
-                    'hover:text-ps2-white hover:opacity-100 hover:[text-shadow:0_0_7px_rgba(245,245,245,0.28)]',
+                    'enabled:hover:text-ps2-white enabled:hover:opacity-100 enabled:hover:[text-shadow:0_0_7px_rgba(245,245,245,0.28)]',
                     'focus-visible:text-ps2-white focus-visible:opacity-100 focus-visible:[text-shadow:0_0_7px_rgba(245,245,245,0.28)]',
                     'lg:size-12 lg:text-5xl',
+                    'disabled:cursor-not-allowed disabled:opacity-10 disabled:[text-shadow:none]',
                   ].join(' ')}
+                  disabled={hasReachedStockLimit}
                   onClick={() =>
-                    setQuantity((currentQuantity) => currentQuantity + 1)
+                    setQuantity((currentQuantity) =>
+                      stockLimit === null
+                        ? currentQuantity + 1
+                        : Math.min(currentQuantity + 1, stockLimit),
+                    )
                   }
                   type="button"
                 >

@@ -1,3 +1,4 @@
+import {useEffect, useRef, useState} from 'react';
 import {ControllerSymbol, type ControllerSymbolName} from './ControllerSymbol';
 
 export type ControllerFooterPosition = 'start' | 'center' | 'end';
@@ -68,33 +69,62 @@ function ControllerFooterGroup({
 
   return (
     <div className={`flex items-center gap-3 sm:gap-7 px-2 ${alignment}`}>
-      {actions.map((action) => {
-        const visibleLabel =
-          action.count === undefined
-            ? action.label
-            : `${action.label} (${action.count})`;
-
-        return (
-          <button
-            key={
-              action.ariaLabel ?? `${position}-${action.symbol}-${action.label}`
-            }
-            aria-label={action.ariaLabel}
-            className={[
-              'ps2-controller-action flex min-h-9 items-center gap-1 whitespace-nowrap sm:min-h-11 sm:gap-1.5',
-              'border-0 bg-transparent p-0',
-              'text-[0.625rem] text-ps2-muted sm:text-xs',
-              'enabled:cursor-pointer',
-              'disabled:cursor-not-allowed disabled:opacity-30',
-            ].join(' ')}
-            disabled={action.disabled}
-            onClick={action.onActivate}
-          >
-            <ControllerSymbol symbol={action.symbol} />
-            <span>{visibleLabel}</span>
-          </button>
-        );
-      })}
+      {actions.map((action) => (
+        <button
+          key={
+            action.ariaLabel ?? `${position}-${action.symbol}-${action.label}`
+          }
+          aria-label={action.ariaLabel}
+          className={[
+            'ps2-controller-action flex min-h-9 items-center gap-1 whitespace-nowrap sm:min-h-11 sm:gap-1.5',
+            'border-0 bg-transparent p-0',
+            'text-[0.625rem] text-ps2-muted sm:text-xs',
+            'enabled:cursor-pointer',
+            'disabled:cursor-not-allowed disabled:opacity-30',
+          ].join(' ')}
+          disabled={action.disabled}
+          onClick={action.onActivate}
+        >
+          <ControllerSymbol symbol={action.symbol} />
+          <span>
+            {action.label}
+            {action.count !== undefined ? (
+              <>
+                {' '}
+                <ControllerActionCount count={action.count} />
+              </>
+            ) : null}
+          </span>
+        </button>
+      ))}
     </div>
+  );
+}
+
+function ControllerActionCount({count}: {count: number}) {
+  const previousCountRef = useRef(count);
+  const [animationVersion, setAnimationVersion] = useState(0);
+
+  useEffect(() => {
+    if (previousCountRef.current === count) return;
+
+    previousCountRef.current = count;
+    setAnimationVersion((version) => version + 1);
+  }, [count]);
+
+  return (
+    <span
+      key={animationVersion}
+      aria-atomic="true"
+      aria-live="polite"
+      className={[
+        'inline-block',
+        animationVersion > 0
+          ? 'animate-[ping_520ms_var(--ease-ps2)_1] motion-reduce:animate-none'
+          : '',
+      ].join(' ')}
+    >
+      ({count})
+    </span>
   );
 }

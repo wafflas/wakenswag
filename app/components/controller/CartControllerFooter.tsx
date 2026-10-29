@@ -1,5 +1,7 @@
 import {Suspense} from 'react';
+import {useOptimisticCart} from '@shopify/hydrogen';
 import {Await, useRouteLoaderData} from 'react-router';
+import type {CartApiQueryFragment} from 'storefrontapi.generated';
 import type {RootLoader} from '~/root';
 import {
   ControllerFooter,
@@ -22,10 +24,17 @@ export function CartControllerFooter({actions}: CartControllerFooterProps) {
   return (
     <Suspense fallback={fallback}>
       <Await resolve={rootData.cart}>
-        {(cart) => (
-          <ControllerFooter actions={actions(cart?.totalQuantity ?? 0)} />
-        )}
+        {(cart) => <OptimisticControllerFooter actions={actions} cart={cart} />}
       </Await>
     </Suspense>
   );
+}
+
+function OptimisticControllerFooter({
+  actions,
+  cart: originalCart,
+}: CartControllerFooterProps & {cart: CartApiQueryFragment | null}) {
+  const cart = useOptimisticCart(originalCart);
+
+  return <ControllerFooter actions={actions(cart?.totalQuantity ?? 0)} />;
 }

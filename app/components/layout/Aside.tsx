@@ -1,8 +1,10 @@
 import {
+  useCallback,
   createContext,
   type ReactNode,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from 'react';
 import {useId} from 'react';
@@ -78,17 +80,12 @@ const AsideContext = createContext<AsideContextValue | null>(null);
 
 Aside.Provider = function AsideProvider({children}: {children: ReactNode}) {
   const [type, setType] = useState<AsideType>('closed');
+  const open = useCallback((mode: AsideType) => setType(mode), []);
+  const close = useCallback(() => setType('closed'), []);
+  const value = useMemo(() => ({type, open, close}), [close, open, type]);
 
   return (
-    <AsideContext.Provider
-      value={{
-        type,
-        open: setType,
-        close: () => setType('closed'),
-      }}
-    >
-      {children}
-    </AsideContext.Provider>
+    <AsideContext.Provider value={value}>{children}</AsideContext.Provider>
   );
 };
 

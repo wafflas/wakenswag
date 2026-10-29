@@ -11,18 +11,12 @@ import {useAside} from '~/components/layout/Aside';
 interface HeaderProps {
   header: HeaderQuery;
   cart: Promise<CartApiQueryFragment | null>;
-  isLoggedIn: Promise<boolean>;
   publicStoreDomain: string;
 }
 
 type Viewport = 'desktop' | 'mobile';
 
-export function Header({
-  header,
-  isLoggedIn,
-  cart,
-  publicStoreDomain,
-}: HeaderProps) {
+export function Header({header, cart, publicStoreDomain}: HeaderProps) {
   const {shop, menu} = header;
   return (
     <header className="header">
@@ -35,7 +29,7 @@ export function Header({
         primaryDomainUrl={header.shop.primaryDomain.url}
         publicStoreDomain={publicStoreDomain}
       />
-      <HeaderCtas isLoggedIn={isLoggedIn} cart={cart} />
+      <HeaderCtas cart={cart} />
     </header>
   );
 }
@@ -95,20 +89,10 @@ export function HeaderMenu({
   );
 }
 
-function HeaderCtas({
-  isLoggedIn,
-  cart,
-}: Pick<HeaderProps, 'isLoggedIn' | 'cart'>) {
+function HeaderCtas({cart}: Pick<HeaderProps, 'cart'>) {
   return (
     <nav className="header-ctas" role="navigation">
       <HeaderMenuMobileToggle />
-      <NavLink prefetch="intent" to="/account" style={activeLinkStyle}>
-        <Suspense fallback="Sign in">
-          <Await resolve={isLoggedIn} errorElement="Sign in">
-            {(isLoggedIn) => (isLoggedIn ? 'Account' : 'Sign in')}
-          </Await>
-        </Suspense>
-      </NavLink>
       <SearchToggle />
       <CartToggle cart={cart} />
     </nav>
@@ -141,10 +125,10 @@ function CartBadge({count}: {count: number}) {
   const {publish, shop, cart, prevCart} = useAnalytics();
 
   return (
-    <a
-      href="/cart"
-      onClick={(e) => {
-        e.preventDefault();
+    <button
+      className="reset"
+      type="button"
+      onClick={() => {
         open('cart');
         publish('cart_viewed', {
           cart,
@@ -155,7 +139,7 @@ function CartBadge({count}: {count: number}) {
       }}
     >
       Cart <span aria-label={`(items: ${count})`}>{count}</span>
-    </a>
+    </button>
   );
 }
 
@@ -182,36 +166,36 @@ const FALLBACK_HEADER_MENU = {
       id: 'gid://shopify/MenuItem/461609500728',
       resourceId: null,
       tags: [],
-      title: 'Collections',
+      title: 'Merch',
       type: 'HTTP',
-      url: '/collections',
+      url: '/merch',
       items: [],
     },
     {
       id: 'gid://shopify/MenuItem/461609533496',
       resourceId: null,
       tags: [],
-      title: 'Blog',
+      title: 'Drumkits',
       type: 'HTTP',
-      url: '/blogs/journal',
+      url: '/drumkits',
       items: [],
     },
     {
       id: 'gid://shopify/MenuItem/461609566264',
       resourceId: null,
       tags: [],
-      title: 'Policies',
+      title: 'Socials',
       type: 'HTTP',
-      url: '/policies',
+      url: '/socials',
       items: [],
     },
     {
       id: 'gid://shopify/MenuItem/461609599032',
-      resourceId: 'gid://shopify/Page/92591030328',
+      resourceId: null,
       tags: [],
-      title: 'About',
+      title: 'Info',
       type: 'PAGE',
-      url: '/pages/about',
+      url: '/info',
       items: [],
     },
   ],

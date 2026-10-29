@@ -1,11 +1,8 @@
 import {useCallback} from 'react';
-import {
-  useLocation,
-  useNavigate,
-  type NavigateFunction,
-} from 'react-router';
+import {useLocation, useNavigate, type NavigateFunction} from 'react-router';
 import {CartControllerFooter} from './CartControllerFooter';
 import type {ControllerFooterAction} from './ControllerFooter';
+import {useAside} from '~/components/layout/Aside';
 
 /** `'home'` → `/`; `'history'` → `-1`; any other string → that path. */
 export type ControllerBackTarget = 'home' | 'history' | (string & {});
@@ -31,25 +28,22 @@ export function getControllerFooterConfig(
     };
   }
 
-  if (pathname === '/merch' || pathname === '/merch/') {
+  if (
+    pathname === '/merch' ||
+    pathname === '/merch/' ||
+    pathname === '/drumkits' ||
+    pathname === '/drumkits/' ||
+    pathname === '/socials' ||
+    pathname === '/socials/' ||
+    pathname === '/info' ||
+    pathname === '/info/'
+  ) {
     return {back: 'home'};
   }
 
-  // History keeps the listing mounted with its local page index when possible.
+  // A fixed parent route also works when a product URL is opened directly.
   if (/^\/merch\/[^/]+\/?$/.test(pathname)) {
-    return {back: 'history'};
-  }
-
-  if (pathname === '/search' || pathname.startsWith('/search/')) {
-    return {back: 'history', showSearch: false};
-  }
-
-  if (pathname === '/cart' || pathname.startsWith('/cart/')) {
-    return {back: 'history', showCart: false};
-  }
-
-  if (pathname.startsWith('/collections')) {
-    return {back: 'home'};
+    return {back: '/merch'};
   }
 
   // 404 and other screens — Back returns to the main menu.
@@ -80,10 +74,22 @@ export function resolveControllerBack(
 export function AppControllerFooter() {
   const location = useLocation();
   const navigate = useNavigate();
+  const {close, open, type} = useAside();
   const config = getControllerFooterConfig(location.pathname);
 
   const getActions = useCallback(
     (cartCount: number): ControllerFooterAction[] => {
+      if (type === 'cart' || type === 'search') {
+        return [
+          {
+            label: 'Back',
+            onActivate: close,
+            position: 'start',
+            symbol: 'circle',
+          },
+        ];
+      }
+
       const actions: ControllerFooterAction[] = [];
 
       if (config.back) {
@@ -99,7 +105,7 @@ export function AppControllerFooter() {
       if (config.showSearch !== false) {
         actions.push({
           label: 'Search',
-          onActivate: () => void navigate('/search'),
+          onActivate: () => open('search'),
           position: 'end',
           symbol: 'triangle',
         });
@@ -109,7 +115,7 @@ export function AppControllerFooter() {
         actions.push({
           count: cartCount,
           label: 'Cart',
-          onActivate: () => void navigate('/cart'),
+          onActivate: () => open('cart'),
           position: 'end',
           symbol: 'square',
         });
@@ -117,7 +123,15 @@ export function AppControllerFooter() {
 
       return actions;
     },
-    [config.back, config.showCart, config.showSearch, navigate],
+    [
+      close,
+      config.back,
+      config.showCart,
+      config.showSearch,
+      navigate,
+      open,
+      type,
+    ],
   );
 
   return <CartControllerFooter actions={getActions} />;
