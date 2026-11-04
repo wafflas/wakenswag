@@ -1,129 +1,96 @@
-import {useEffect, useRef, useState} from 'react';
-import {ControllerSymbol, type ControllerSymbolName} from './ControllerSymbol';
+import type {MouseEvent} from 'react';
+import {useOptimisticCart} from '@shopify/hydrogen';
+import {useLocation, useNavigate} from 'react-router';
+import type {CartApiQueryFragment} from 'storefrontapi.generated';
+import {useAside} from '~/components/layout/Aside';
+import {ControllerActionCount} from './ControllerActionCount';
+import {ControllerSymbol} from './ControllerSymbol';
+import {getControllerBackPath} from './controllerUtils';
 
-export type ControllerFooterPosition = 'start' | 'center' | 'end';
-
-export interface ControllerFooterAction {
-  label: string;
-  symbol: ControllerSymbolName;
-  onActivate: () => void;
-  ariaLabel?: string;
-  count?: number;
-  disabled?: boolean;
-  position?: ControllerFooterPosition;
-}
+const ACTION_CLASS_NAME = [
+  'ps2-controller-action flex min-h-9 items-center gap-1 whitespace-nowrap sm:min-h-11 sm:gap-1.5',
+  'border-0 bg-transparent p-0',
+  'text-[0.625rem] text-ps2-muted sm:text-xs',
+  'cursor-pointer',
+].join(' ');
 
 interface ControllerFooterProps {
-  actions: ControllerFooterAction[];
+  cart: CartApiQueryFragment | null;
 }
 
-/** Presentational HUD shell — fixed bottom toolbar. */
-export function ControllerFooter({actions}: ControllerFooterProps) {
-  const actionsByPosition = {
-    start: actions.filter((action) => action.position === 'start'),
-    center: actions.filter(
-      (action) => !action.position || action.position === 'center',
-    ),
-    end: actions.filter((action) => action.position === 'end'),
-  };
+/** The storefront's Back, Search and Cart controls. */
+export function ControllerFooter({cart}: ControllerFooterProps) {
+  const optimisticCart = useOptimisticCart(cart);
+  const {pathname} = useLocation();
+  const navigate = useNavigate();
+  const {close, open, type} = useAside();
+  const isDialogOpen = type !== 'closed';
+  const backPath = getControllerBackPath(pathname);
+
+  function handleBack(event: MouseEvent<HTMLButtonElement>) {
+    event.currentTarget.focus();
+    if (isDialogOpen) {
+      close();
+    } else if (backPath) {
+      void navigate(backPath);
+    }
+  }
 
   return (
-    <footer
-      className={[
-        'fixed inset-x-0 bottom-0 z-50',
-        'px-2 pb-[max(1.75rem,env(safe-area-inset-bottom))] sm:px-5',
-      ].join(' ')}
+    <div
+      aria-label="Screen actions"
+      className="flex w-full items-center justify-between"
+      role="toolbar"
     >
-      <div
-        aria-label="Screen actions"
-        className="grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center"
-        role="toolbar"
-      >
-        <ControllerFooterGroup
-          actions={actionsByPosition.start}
-          position="start"
-        />
-        <ControllerFooterGroup
-          actions={actionsByPosition.center}
-          position="center"
-        />
-        <ControllerFooterGroup actions={actionsByPosition.end} position="end" />
+      <div className="flex items-center gap-3 px-2 sm:gap-7">
+        {isDialogOpen || backPath ? (
+          <button
+            className={ACTION_CLASS_NAME}
+            data-controller-action="Back"
+            onClick={handleBack}
+            type="button"
+          >
+            <ControllerSymbol symbol="circle" />
+            <span>Back</span>
+          </button>
+        ) : null}
       </div>
-    </footer>
-  );
-}
 
-function ControllerFooterGroup({
-  actions,
-  position,
-}: {
-  actions: ControllerFooterAction[];
-  position: ControllerFooterPosition;
-}) {
-  const alignment = {
-    start: 'justify-self-start',
-    center: 'justify-self-center',
-    end: 'justify-self-end',
-  }[position];
-
-  return (
-    <div className={`flex items-center gap-3 sm:gap-7 px-2 ${alignment}`}>
-      {actions.map((action) => (
-        <button
-          key={
-            action.ariaLabel ?? `${position}-${action.symbol}-${action.label}`
-          }
-          aria-label={action.ariaLabel}
-          className={[
-            'ps2-controller-action flex min-h-9 items-center gap-1 whitespace-nowrap sm:min-h-11 sm:gap-1.5',
-            'border-0 bg-transparent p-0',
-            'text-[0.625rem] text-ps2-muted sm:text-xs',
-            'enabled:cursor-pointer',
-            'disabled:cursor-not-allowed disabled:opacity-30',
-          ].join(' ')}
-          disabled={action.disabled}
-          onClick={action.onActivate}
-        >
-          <ControllerSymbol symbol={action.symbol} />
-          <span>
-            {action.label}
-            {action.count !== undefined ? (
-              <>
-                {' '}
-                <ControllerActionCount count={action.count} />
-              </>
-            ) : null}
-          </span>
-        </button>
-      ))}
+      <div className="flex items-center gap-3 px-2 sm:gap-7">
+        {!isDialogOpen ? (
+          <>
+            <button
+              className={ACTION_CLASS_NAME}
+              data-controller-action="Search"
+              onClick={(event) => {
+                event.currentTarget.focus();
+                open('search');
+              }}
+              type="button"
+            >
+              <ControllerSymbol symbol="triangle" />
+              <span>Search</span>
+            </button>
+            <button
+              className={ACTION_CLASS_NAME}
+              data-controller-action="Cart"
+              onClick={(event) => {
+                event.currentTarget.focus();
+                open('cart');
+              }}
+              type="button"
+            >
+              <ControllerSymbol symbol="square" />
+              <span>
+                Cart{' '}
+                <ControllerActionCount
+                  count={optimisticCart?.totalQuantity ?? 0}
+                />
+              </span>
+            </button>
+          </>
+        ) : null}
+      </div>
     </div>
-  );
-}
-
-function ControllerActionCount({count}: {count: number}) {
-  const previousCountRef = useRef(count);
-  const [animationVersion, setAnimationVersion] = useState(0);
-
-  useEffect(() => {
-    if (previousCountRef.current === count) return;
-    
-    previousCountRef.current = count;
-    setAnimationVersion((version) => version + 1);
-  }, [count]);
-
-  return (
-    <span
-      key={animationVersion}
-      aria-atomic="true"
-      aria-live="polite"
-      className={[
-        'inline-block',
-        animationVersion > 0
-          ? 'animate-[ping_520ms_var(--ease-ps2)_1] motion-reduce:animate-none'
-          : '',
-      ].join(' ')}
-    >
-      ({count})
-    </span>
   );
 }

@@ -10,6 +10,7 @@ export const meta: Route.MetaFunction = () => [
     content: 'About Wake n Swag.',
   },
   {
+    tagName: 'link',
     rel: 'canonical',
     href: '/info',
   },

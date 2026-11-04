@@ -2,11 +2,10 @@ import {Outlet, useLoaderData} from 'react-router';
 import type {Route} from './+types/merch';
 import {ProductGrid} from '~/components/product-listing/ProductGrid';
 import {ProductListingShell} from '~/components/product-listing/ProductListingShell';
-import {
-  PRODUCTS_PER_PAGE,
-  useProductListingSelection,
-} from '~/components/product-listing/useProductListingSelection';
+import {useProductListingSelection} from '~/components/product-listing/useProductListingSelection';
+import {PRODUCTS_PER_PAGE} from '~/components/product-listing/productListingUtils';
 import {PRODUCT_ITEM_FRAGMENT} from '~/lib/fragments';
+import {getPaginationVariables} from '@shopify/hydrogen';
 
 export const meta: Route.MetaFunction = () => [
   {
@@ -17,31 +16,18 @@ export const meta: Route.MetaFunction = () => [
     content: 'Wake n Swag merchandise.',
   },
   {
+    tagName: 'link',
     rel: 'canonical',
     href: '/merch',
   },
 ];
 
-export async function loader(args: Route.LoaderArgs) {
-  const deferredData = loadDeferredData(args);
-  const criticalData = await loadCriticalData(args);
-
-  return {
-    ...deferredData,
-    ...criticalData,
-  };
-}
-
-async function loadCriticalData({context}: Route.LoaderArgs) {
+export async function loader({context, request}: Route.LoaderArgs) {
   const {products} = await context.storefront.query(MERCH_QUERY, {
-    variables: {first: PRODUCTS_PER_PAGE},
+    variables: getPaginationVariables(request, {pageBy: PRODUCTS_PER_PAGE}),
   });
 
   return {products};
-}
-
-function loadDeferredData({context}: Route.LoaderArgs) {
-  return {};
 }
 
 export default function Merch() {

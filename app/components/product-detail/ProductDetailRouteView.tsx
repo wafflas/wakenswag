@@ -1,17 +1,18 @@
-import {useCallback, useEffect, useRef} from 'react';
+import {useCallback, useRef} from 'react';
 import {
   Analytics,
   getAdjacentAndFirstAvailableVariants,
   useOptimisticVariant,
   useSelectedOptionInUrlParam,
 } from '@shopify/hydrogen';
-import {useNavigate, type BlockerFunction} from 'react-router';
+import {useNavigate} from 'react-router';
 import type {ProductFragment} from 'storefrontapi.generated';
-import {PRODUCT_DETAIL_EXIT_MS} from '~/components/animations/constants';
 import {FadeTransition} from '~/components/animations/FadeTransition';
-import {useRouteExitTransition} from '~/components/animations/useRouteExitTransition';
+import {useProductExitTransition} from '~/components/animations/RouteFadeTransition';
 import {isDefaultTitleOption} from '~/lib/variants';
 import {ProductDetail} from './ProductDetail';
+import {useModalDialog} from '~/components/layout/useModalDialog';
+import {useAside} from '~/components/layout/Aside';
 
 interface ProductDetailRouteViewProps {
   product: ProductFragment;
@@ -24,57 +25,29 @@ export function ProductDetailRouteView({
 }: ProductDetailRouteViewProps) {
   const navigate = useNavigate();
   const modalRef = useRef<HTMLDivElement>(null);
+  const {type} = useAside();
+  const closeProduct = useCallback(() => {
+    void navigate('/merch');
+  }, [navigate]);
 
-  const shouldFadeOut = useCallback<BlockerFunction>(
-    ({currentLocation, nextLocation}) => {
-      if (currentLocation.pathname === nextLocation.pathname) {
-        return false;
-      }
-
-      if (nextLocation.pathname === '/') {
-        return false;
-      }
-
-      return true;
-    },
-    [],
-  );
-
-  const {isExiting} = useRouteExitTransition(
-    shouldFadeOut,
-    PRODUCT_DETAIL_EXIT_MS,
-  );
+  const isExiting = useProductExitTransition();
 
   const selectedVariant = useOptimisticVariant(
     product.selectedOrFirstAvailableVariant,
     getAdjacentAndFirstAvailableVariants(product),
   );
 
-  const urlSelectedOptions = selectedVariant.selectedOptions.filter(
+  const urlSelectedOptions = (selectedVariant?.selectedOptions ?? []).filter(
     (option) => !isDefaultTitleOption(option),
   );
 
   useSelectedOptionInUrlParam(urlSelectedOptions);
 
-  useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    modalRef.current?.focus();
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key !== 'Escape') return;
-
-      event.preventDefault();
-      void navigate('/merch');
-    }
-
-    document.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [navigate]);
+  useModalDialog({
+    dialogRef: modalRef,
+    isOpen: type === 'closed',
+    onClose: closeProduct,
+  });
 
   const structuredData = {
     '@context': 'https://schema.org',
@@ -112,7 +85,7 @@ export function ProductDetailRouteView({
   return (
     <FadeTransition
       aria-label={product.title}
-      aria-modal="true"
+      aria-modal={type === 'closed' ? 'true' : undefined}
       className="fixed inset-0 z-40 overflow-auto"
       isExiting={isExiting}
       key={product.handle}

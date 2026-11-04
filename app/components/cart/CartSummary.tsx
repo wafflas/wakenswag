@@ -1,6 +1,7 @@
 import type {CartApiQueryFragment} from 'storefrontapi.generated';
-import type {CartLayout} from '~/components/cart/CartMain';
+import type {CartLayout} from './cartUtils';
 import {type OptimisticCart} from '@shopify/hydrogen';
+import {formatMoneyAmount} from '~/lib/money';
 
 type CartSummaryProps = {
   cart: OptimisticCart<CartApiQueryFragment | null>;
@@ -18,28 +19,20 @@ export function CartSummary({cart, layout}: CartSummaryProps) {
       <p className="text-ps2-gray">
         Total{' '}
         <span className="text-ps2-white">
-          {subtotal?.amount ? formatCartMoney(subtotal.amount) : '0'}
+          {subtotal?.amount && subtotal.currencyCode
+            ? formatMoneyAmount({
+                amount: subtotal.amount,
+                currencyCode: subtotal.currencyCode,
+              })
+            : '—'}
         </span>{' '}
-        EURO
+        {subtotal?.currencyCode === 'EUR' ? 'EURO' : subtotal?.currencyCode}
       </p>
-      <CartCheckoutActions checkoutUrl={cart?.checkoutUrl} />
+      {!cart?.isOptimistic && cart?.checkoutUrl ? (
+        <a className="ps2-cta" href={cart.checkoutUrl} target="_self">
+          Go to checkout
+        </a>
+      ) : null}
     </div>
   );
-}
-
-function CartCheckoutActions({checkoutUrl}: {checkoutUrl?: string}) {
-  if (!checkoutUrl) return null;
-
-  return (
-    <a className="ps2-cta" href={checkoutUrl} target="_self">
-      Go to checkout
-    </a>
-  );
-}
-
-function formatCartMoney(amount: string) {
-  return new Intl.NumberFormat('en', {
-    maximumFractionDigits: 2,
-    minimumFractionDigits: 0,
-  }).format(Number(amount));
 }

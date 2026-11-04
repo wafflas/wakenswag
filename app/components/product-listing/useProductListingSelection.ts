@@ -1,7 +1,9 @@
 import {useEffect, useState} from 'react';
 
-export const PRODUCT_LISTING_STAGGER_MS = 400;
-export const PRODUCTS_PER_PAGE = 12;
+import {
+  PRODUCT_LISTING_STAGGER_MS,
+  PRODUCTS_PER_PAGE,
+} from './productListingUtils';
 
 interface ProductListingSelectionProduct {
   id: string;

@@ -27,6 +27,7 @@ export async function loader({
       type: 'predictive',
       term,
       result: getEmptyPredictiveSearchResult(),
+      error: 'Search is unavailable. Please try again.',
     };
   }
 }
@@ -97,7 +98,9 @@ async function predictiveSearch({
   const url = new URL(request.url);
   const term = String(url.searchParams.get('q') ?? '').trim();
   const requestedLimit = Number(url.searchParams.get('limit') ?? 8);
-  const limit = Number.isFinite(requestedLimit) ? requestedLimit : 8;
+  const limit = Number.isInteger(requestedLimit)
+    ? Math.max(1, Math.min(requestedLimit, 10))
+    : 8;
   const {storefront} = context;
 
   const {predictiveSearch: result, errors} = await storefront.query(

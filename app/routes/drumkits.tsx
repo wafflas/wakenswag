@@ -2,11 +2,10 @@ import {useLoaderData} from 'react-router';
 import type {Route} from './+types/drumkits';
 import {ProductGrid} from '~/components/product-listing/ProductGrid';
 import {ProductListingShell} from '~/components/product-listing/ProductListingShell';
-import {
-  PRODUCTS_PER_PAGE,
-  useProductListingSelection,
-} from '~/components/product-listing/useProductListingSelection';
+import {useProductListingSelection} from '~/components/product-listing/useProductListingSelection';
+import {PRODUCTS_PER_PAGE} from '~/components/product-listing/productListingUtils';
 import {PRODUCT_ITEM_FRAGMENT} from '~/lib/fragments';
+import {getPaginationVariables} from '@shopify/hydrogen';
 
 const DRUMKITS_HANDLE = 'drumkits';
 
@@ -19,6 +18,7 @@ export const meta: Route.MetaFunction = ({data}) => [
     content: data?.collection?.description || 'Wake n Swag drumkits.',
   },
   {
+    tagName: 'link',
     rel: 'canonical',
     href: '/drumkits',
   },
@@ -34,21 +34,11 @@ const EMPTY_PRODUCTS = {
   },
 };
 
-export async function loader(args: Route.LoaderArgs) {
-  const deferredData = loadDeferredData(args);
-  const criticalData = await loadCriticalData(args);
-
-  return {
-    ...deferredData,
-    ...criticalData,
-  };
-}
-
-async function loadCriticalData({context}: Route.LoaderArgs) {
+export async function loader({context, request}: Route.LoaderArgs) {
   const {collection} = await context.storefront.query(DRUMKITS_QUERY, {
     variables: {
       handle: DRUMKITS_HANDLE,
-      first: PRODUCTS_PER_PAGE,
+      ...getPaginationVariables(request, {pageBy: PRODUCTS_PER_PAGE}),
     },
   });
 
@@ -61,10 +51,6 @@ async function loadCriticalData({context}: Route.LoaderArgs) {
       products: EMPTY_PRODUCTS,
     },
   };
-}
-
-function loadDeferredData(_args: Route.LoaderArgs) {
-  return {};
 }
 
 export default function Drumkits() {

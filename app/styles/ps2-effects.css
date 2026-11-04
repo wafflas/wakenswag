@@ -456,6 +456,12 @@
    -------------------------------------------------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {
+  .ps2-product-item.scale-in {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
+  }
+
   .ps2-logo,
   .crt-overlay,
   .crt-overlay::before,

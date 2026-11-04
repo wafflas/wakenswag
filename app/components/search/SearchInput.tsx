@@ -1,9 +1,9 @@
 import {forwardRef, type ComponentPropsWithoutRef} from 'react';
 
-export const Input = forwardRef<
+export const SearchInput = forwardRef<
   HTMLInputElement,
   ComponentPropsWithoutRef<'input'>
->(function Input({className, type, ...props}, ref) {
+>(function SearchInput({className, type, ...props}, ref) {
   return (
     <input
       {...props}

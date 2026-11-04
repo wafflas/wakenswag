@@ -5,6 +5,9 @@ node_modules/
 dist/
 .react-router/
 *.tsbuildinfo
+coverage/
+playwright-report/
+test-results/
 
 # Local environment variables and secrets
 .env

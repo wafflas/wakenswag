@@ -1,8 +1,14 @@
-import type {ReactNode} from 'react';
-import type {BlockerFunction} from 'react-router';
-import {ROUTE_FADE_DURATION_MS} from './constants';
+import {createContext, useCallback, useContext, type ReactNode} from 'react';
+import {useLocation, type BlockerFunction} from 'react-router';
+import {PRODUCT_DETAIL_EXIT_MS, ROUTE_FADE_DURATION_MS} from './animationUtils';
 import {FadeTransition} from './FadeTransition';
 import {useRouteExitTransition} from './useRouteExitTransition';
+
+const ProductExitContext = createContext(false);
+
+export function useProductExitTransition() {
+  return useContext(ProductExitContext);
+}
 
 interface RouteFadeTransitionProps {
   children: ReactNode;
@@ -19,18 +25,32 @@ export function RouteFadeTransition({
   shouldTransition,
   duration = ROUTE_FADE_DURATION_MS,
 }: RouteFadeTransitionProps) {
-  const {isBusy, isExiting} = useRouteExitTransition(
-    shouldTransition,
-    duration,
+  const {pathname} = useLocation();
+  const isProductRoute = /^\/merch\/[^/]+\/?$/.test(pathname);
+  const shouldBlock = useCallback<BlockerFunction>(
+    (args) =>
+      shouldTransition(args) ||
+      (/^\/merch\/[^/]+\/?$/.test(args.currentLocation.pathname) &&
+        args.currentLocation.pathname !== args.nextLocation.pathname),
+    [shouldTransition],
   );
+  // React Router supports one blocker. Both visual effects share this owner.
+  const {isBusy, isExiting, nextPathname} = useRouteExitTransition(
+    shouldBlock,
+    (next) =>
+      isProductRoute && next !== '/' ? PRODUCT_DETAIL_EXIT_MS : duration,
+  );
+  const isProductExiting = isExiting && isProductRoute && nextPathname !== '/';
 
   return (
-    <FadeTransition
-      aria-busy={isBusy}
-      isExiting={isExiting}
-      variant="route"
-    >
-      {children}
-    </FadeTransition>
+    <ProductExitContext.Provider value={isProductExiting}>
+      <FadeTransition
+        aria-busy={isBusy}
+        isExiting={isExiting && !isProductExiting}
+        variant="route"
+      >
+        {children}
+      </FadeTransition>
+    </ProductExitContext.Provider>
   );
 }

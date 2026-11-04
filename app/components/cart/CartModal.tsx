@@ -1,8 +1,9 @@
-import {Suspense, useEffect, useRef} from 'react';
+import {Suspense, useRef} from 'react';
 import {Await} from 'react-router';
 import type {CartApiQueryFragment} from 'storefrontapi.generated';
 import {useAside} from '~/components/layout/Aside';
 import {CartMain} from './CartMain';
+import {useModalDialog} from '~/components/layout/useModalDialog';
 
 interface CartModalProps {
   cart: Promise<CartApiQueryFragment | null>;
@@ -12,34 +13,11 @@ interface CartModalProps {
  * Displays the existing Shopify cart inside a full-screen dialog.
  */
 export function CartModal({cart}: CartModalProps) {
-  const {close, type} = useAside();
+  const {close, type, openerRef} = useAside();
   const dialogRef = useRef<HTMLDivElement>(null);
   const isOpen = type === 'cart';
 
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const previouslyFocusedElement = document.activeElement;
-    const previousBodyOverflow = document.body.style.overflow;
-
-    document.body.style.overflow = 'hidden';
-    dialogRef.current?.focus();
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') close();
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      document.body.style.overflow = previousBodyOverflow;
-      document.removeEventListener('keydown', handleKeyDown);
-
-      if (previouslyFocusedElement instanceof HTMLElement) {
-        previouslyFocusedElement.focus();
-      }
-    };
-  }, [close, isOpen]);
+  useModalDialog({dialogRef, isOpen, onClose: close, openerRef});
 
   if (!isOpen) return null;
 
@@ -63,7 +41,17 @@ export function CartModal({cart}: CartModalProps) {
           </div>
         }
       >
-        <Await resolve={cart}>
+        <Await
+          resolve={cart}
+          errorElement={
+            <p
+              role="alert"
+              className="grid h-dvh place-items-center text-xl text-ps2-gray"
+            >
+              Could not load your cart. Close it and try again.
+            </p>
+          }
+        >
           {(resolvedCart) => <CartMain cart={resolvedCart} layout="aside" />}
         </Await>
       </Suspense>

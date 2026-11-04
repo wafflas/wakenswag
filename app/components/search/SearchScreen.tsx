@@ -2,9 +2,9 @@ import {useEffect, useRef, useState} from 'react';
 import {useFetcher} from 'react-router';
 import {Analytics} from '@shopify/hydrogen';
 import {type PredictiveSearchReturn} from '~/lib/search';
-import {normalizeSearchProduct} from './normalizeSearchProduct';
+import {normalizeSearchProduct} from './searchUtils';
 import {SearchProductItem} from './SearchProductItem';
-import {Input} from '~/components/search/SearchInput';
+import {SearchInput} from '~/components/search/SearchInput';
 
 const SEARCH_ENDPOINT = '/search';
 const PREDICTIVE_LIMIT = 8;
@@ -35,7 +35,21 @@ export function SearchScreen({onClose}: SearchScreenProps) {
   const products = predictive?.items.products.map(normalizeSearchProduct) ?? [];
   const showEmptyPrompt = trimmedQuery.length === 0;
   const showNoResults =
-    !isPredictivePending && predictive !== null && products.length === 0;
+    !isPredictivePending &&
+    predictive !== null &&
+    !fetcher.data?.error &&
+    products.length === 0;
+  const error = predictive ? fetcher.data?.error : undefined;
+  const isScanning = !showEmptyPrompt && (isPredictivePending || !predictive);
+
+  let statusMessage: string | null = null;
+  if (showEmptyPrompt) {
+    statusMessage = 'Insert search term';
+  } else if (isScanning && products.length === 0) {
+    statusMessage = 'Scanning memory...';
+  } else if (showNoResults) {
+    statusMessage = 'No memory found';
+  }
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -55,15 +69,6 @@ export function SearchScreen({onClose}: SearchScreenProps) {
 
     return () => window.clearTimeout(timeoutId);
   }, [trimmedQuery]);
-
-  const selectSuggestion = (suggestion: string) => {
-    if (inputRef.current) {
-      inputRef.current.value = suggestion;
-      inputRef.current.focus();
-    }
-
-    setQuery(suggestion);
-  };
 
   return (
     <section
@@ -85,7 +90,7 @@ export function SearchScreen({onClose}: SearchScreenProps) {
           }}
           role="search"
         >
-          <Input
+          <SearchInput
             aria-label="Search memory"
             autoComplete="off"
             autoCorrect="off"
@@ -103,20 +108,38 @@ export function SearchScreen({onClose}: SearchScreenProps) {
             ref={inputRef}
             spellCheck={false}
             type="search"
+            value={query}
           />
         </form>
 
         <div className="flex min-h-0 w-full max-w-2xl flex-1">
-          {showEmptyPrompt ? (
-            <SearchStatusMessage>Insert search term</SearchStatusMessage>
+          {statusMessage ? (
+            <p
+              role="status"
+              className="grid w-full flex-1 place-items-center rounded-md border border-ps2-gray/20 text-center text-sm tracking-widest text-ps2-gray sm:text-base"
+            >
+              {statusMessage}
+            </p>
           ) : null}
 
-          {!showEmptyPrompt && isPredictivePending && products.length === 0 ? (
-            <SearchStatusMessage>Scanning memory...</SearchStatusMessage>
-          ) : null}
-
-          {showNoResults ? (
-            <SearchStatusMessage>No memory found</SearchStatusMessage>
+          {error ? (
+            <div
+              className="flex w-full flex-col items-center justify-center gap-4"
+              role="alert"
+            >
+              <p>{error}</p>
+              <button
+                className="ps2-cta"
+                type="button"
+                onClick={() => {
+                  void fetcher.load(
+                    `${SEARCH_ENDPOINT}?${new URLSearchParams({q: trimmedQuery, limit: String(PREDICTIVE_LIMIT)})}`,
+                  );
+                }}
+              >
+                Try again
+              </button>
+            </div>
           ) : null}
 
           {products.length > 0 ? (
@@ -137,7 +160,7 @@ export function SearchScreen({onClose}: SearchScreenProps) {
         </div>
       </div>
 
-      {trimmedQuery && predictive ? (
+      {trimmedQuery && predictive && !error ? (
         <Analytics.SearchView
           data={{
             searchTerm: trimmedQuery,
@@ -159,13 +182,5 @@ export function SearchScreen({onClose}: SearchScreenProps) {
         />
       ) : null}
     </section>
-  );
-}
-
-function SearchStatusMessage({children}: {children: string}) {
-  return (
-    <p className="grid w-full flex-1 place-items-center rounded-md border border-ps2-gray/20 text-center text-sm tracking-widest text-ps2-gray sm:text-base">
-      {children}
-    </p>
   );
 }

@@ -1,9 +1,5 @@
 import type {CodegenConfig} from '@graphql-codegen/cli';
-import {
-  getSchema,
-  pluckConfig,
-  preset,
-} from '@shopify/hydrogen-codegen';
+import {getSchema, pluckConfig, preset} from '@shopify/hydrogen-codegen';
 
 export default {
   overwrite: true,
@@ -17,11 +13,6 @@ export default {
         './app/**/*.{ts,tsx}',
         '!./app/graphql/customer-account/*.{ts,tsx}',
       ],
-    },
-    'customer-accountapi.generated.d.ts': {
-      preset,
-      schema: getSchema('customer-account'),
-      documents: ['./app/graphql/customer-account/*.{ts,tsx}'],
     },
   },
 } satisfies CodegenConfig;

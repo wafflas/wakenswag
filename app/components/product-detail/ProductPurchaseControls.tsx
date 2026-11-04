@@ -1,0 +1,104 @@
+import {useState} from 'react';
+import type {ProductFragment} from 'storefrontapi.generated';
+import {AddToCartButton} from '~/components/cart/AddToCartButton';
+
+export function ProductPurchaseControls({
+  selectedVariant,
+}: {
+  selectedVariant: ProductFragment['selectedOrFirstAvailableVariant'];
+}) {
+  const [requestedQuantity, setQuantity] = useState(1);
+  const stockLimit = selectedVariant?.quantityAvailable ?? null;
+  const quantity =
+    stockLimit === null
+      ? requestedQuantity
+      : Math.max(1, Math.min(requestedQuantity, stockLimit));
+
+  const isAvailable = Boolean(selectedVariant?.availableForSale);
+  const hasReachedStockLimit = stockLimit !== null && quantity >= stockLimit;
+  return (
+    <div className="mt-8 flex flex-col items-center gap-3">
+      <AddToCartButton
+        className={[
+          'ps2-cta',
+          'cursor-pointer border-0 bg-transparent p-0',
+        ].join(' ')}
+        disabled={!selectedVariant || !isAvailable}
+        lines={
+          selectedVariant
+            ? [
+                {
+                  merchandiseId: selectedVariant.id,
+                  quantity,
+                  selectedVariant,
+                },
+              ]
+            : []
+        }
+      >
+        <span
+          className={['ps2-soft-copy text-2xl leading-none lg:text-3xl'].join(
+            ' ',
+          )}
+        >
+          {isAvailable ? 'Add to cart' : 'Sold out'}
+        </span>
+      </AddToCartButton>
+
+      {isAvailable && (
+        <div
+          aria-label="Quantity"
+          className={[
+            'ps2-soft-copy flex items-center gap-2',
+            'text-2xl leading-none text-ps2-muted lg:text-3xl',
+          ].join(' ')}
+          role="group"
+        >
+          <button
+            aria-label="Decrease quantity"
+            className={[
+              'inline-flex size-11 items-center justify-center opacity-80',
+              'cursor-pointer border-0 bg-transparent p-0 text-4xl leading-none text-ps2-muted',
+              'transition-[color,opacity,text-shadow] duration-[180ms] ease-ps2',
+              'enabled:hover:text-ps2-white enabled:hover:opacity-100 enabled:hover:[text-shadow:0_0_7px_rgba(245,245,245,0.28)]',
+              'focus-visible:text-ps2-white focus-visible:opacity-100 focus-visible:[text-shadow:0_0_7px_rgba(245,245,245,0.28)]',
+              'lg:size-12 lg:text-5xl',
+              'disabled:cursor-not-allowed disabled:opacity-10 disabled:[text-shadow:none]',
+            ].join(' ')}
+            disabled={quantity === 1}
+            onClick={() => setQuantity(Math.max(1, quantity - 1))}
+            type="button"
+          >
+            −
+          </button>
+
+          <output aria-live="polite" className="min-w-[1ch]">
+            {quantity}
+          </output>
+
+          <button
+            aria-label={
+              stockLimit === null
+                ? 'Increase quantity'
+                : `Increase quantity (maximum ${stockLimit})`
+            }
+            className={[
+              'inline-flex size-11 items-center justify-center opacity-80',
+              'cursor-pointer border-0 bg-transparent p-0 text-4xl leading-none text-ps2-muted',
+              'transition-[color,opacity,text-shadow] duration-[180ms] ease-ps2',
+              'enabled:hover:text-ps2-white enabled:hover:opacity-100 enabled:hover:[text-shadow:0_0_7px_rgba(245,245,245,0.28)]',
+              'focus-visible:text-ps2-white focus-visible:opacity-100 focus-visible:[text-shadow:0_0_7px_rgba(245,245,245,0.28)]',
+              'lg:size-12 lg:text-5xl',
+              'disabled:cursor-not-allowed disabled:opacity-10 disabled:[text-shadow:none]',
+            ].join(' ')}
+            disabled={hasReachedStockLimit}
+            onClick={() => setQuantity(quantity + 1)}
+            type="button"
+          >
+            +
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}

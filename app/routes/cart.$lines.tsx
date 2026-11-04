@@ -26,15 +26,23 @@ export async function loader({request, context, params}: Route.LoaderArgs) {
     throw new Response('Cart lines are required.', {status: 400});
   }
   const linesMap = lines.split(',').map((line) => {
-    const lineDetails = line.split(':');
-    const variantId = lineDetails[0];
-    const quantity = parseInt(lineDetails[1], 10);
+    const match = /^([1-9]\d*):([1-9]\d*)$/.exec(line);
+    const quantity = match ? Number(match[2]) : NaN;
+    if (!match || !Number.isSafeInteger(quantity) || quantity > 2_147_483_647) {
+      throw new Response('Invalid cart link. Check the variant and quantity.', {
+        status: 400,
+      });
+    }
+    const variantId = match[1];
 
     return {
       merchandiseId: `gid://shopify/ProductVariant/${variantId}`,
       quantity,
     };
   });
+  if (linesMap.length > 250) {
+    throw new Response('Too many cart items.', {status: 400});
+  }
 
   const url = new URL(request.url);
   const searchParams = new URLSearchParams(url.search);

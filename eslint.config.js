@@ -7,7 +7,7 @@ import globals from 'globals';
 import typescriptEslint from '@typescript-eslint/eslint-plugin';
 import _import from 'eslint-plugin-import';
 import tsParser from '@typescript-eslint/parser';
-import jest from 'eslint-plugin-jest';
+import prettier from 'eslint-config-prettier';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import js from '@eslint/js';
@@ -31,6 +31,9 @@ export default [
       '**/*.graphql.ts',
       '**/*.generated.d.ts',
       '**/.react-router/',
+      '**/coverage/',
+      '**/playwright-report/',
+      '**/test-results/',
       '**/packages/hydrogen/dist/',
     ],
   },
@@ -204,10 +207,10 @@ export default [
       '@typescript-eslint/no-empty-function': 'off',
       '@typescript-eslint/no-empty-interface': 'off',
       '@typescript-eslint/no-empty-object-type': 'off',
-      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/no-non-null-asserted-optional-chain': 'off',
-      '@typescript-eslint/no-unused-vars': 'off',
+      '@typescript-eslint/no-unused-vars': ['error', {argsIgnorePattern: '^_'}],
       '@typescript-eslint/no-floating-promises': 'error',
       '@typescript-eslint/no-misused-promises': 'error',
       'react/prop-types': 'off',
@@ -222,26 +225,30 @@ export default [
       },
     },
   },
-  ...compat.extends('plugin:jest/recommended').map((config) => ({
-    ...config,
-    files: ['**/*.test.*'],
-  })),
-  {
-    files: ['**/*.test.*'],
-    plugins: {
-      jest,
-    },
-    languageOptions: {
-      globals: {
-        ...globals.node,
-        ...globals.jest,
-      },
-    },
-  },
   {
     files: ['**/*.server.*'],
     rules: {
       'react-hooks/rules-of-hooks': 'off',
     },
   },
+  {
+    files: ['app/components/**/*.{jsx,tsx}'],
+    rules: {
+      'react/no-multi-comp': 'error',
+    },
+  },
+  {
+    files: ['app/**/*.{test,spec}.{js,jsx,ts,tsx}'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'Program',
+          message:
+            'Keep tests in the centralized tests/ directory, not alongside application source.',
+        },
+      ],
+    },
+  },
+  prettier,
 ];

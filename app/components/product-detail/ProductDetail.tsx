@@ -1,15 +1,15 @@
-import {useEffect, useMemo, useState} from 'react';
-import {Image} from '@shopify/hydrogen';
+import {useMemo} from 'react';
+import {Image, getProductOptions} from '@shopify/hydrogen';
+import {Link} from 'react-router';
 import type {ProductFragment} from 'storefrontapi.generated';
 import {GenieTransition} from '~/components/animations/GenieTransition';
-import {AddToCartButton} from '~/components/cart/AddToCartButton';
-import {getProductDescriptionBullets} from '~/components/product-detail/productDescription';
-import {getProductDetailTheme} from './productTheme';
-
-const euroAmountFormatter = new Intl.NumberFormat('en', {
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 2,
-});
+import {ProductPurchaseControls} from './ProductPurchaseControls';
+import {
+  getProductDescriptionBullets,
+  getProductDetailTheme,
+} from './productDetailUtils';
+import {formatMoney} from '~/lib/money';
+import {isDefaultTitleOption} from '~/lib/variants';
 
 interface ProductDetailProps {
   isClosing?: boolean;
@@ -22,11 +22,14 @@ export function ProductDetail({
   product,
   selectedVariant,
 }: ProductDetailProps) {
-  const [quantity, setQuantity] = useState(1);
-
-  const theme = useMemo(
-    () => getProductDetailTheme(product, selectedVariant),
-    [product, selectedVariant],
+  const theme = getProductDetailTheme(product, selectedVariant);
+  const productOptions = getProductOptions({
+    ...product,
+    selectedOrFirstAvailableVariant: selectedVariant,
+  }).filter((option) =>
+    option.optionValues.some(
+      (value) => !isDefaultTitleOption({name: option.name, value: value.name}),
+    ),
   );
 
   const descriptionBullets = useMemo(() => {
@@ -46,22 +49,6 @@ export function ProductDetail({
       };
     });
   }, [product.description, product.descriptionHtml]);
-
-  useEffect(() => {
-    setQuantity(1);
-  }, [selectedVariant?.id]);
-
-  const isAvailable = Boolean(selectedVariant?.availableForSale);
-  const stockLimit = selectedVariant?.quantityAvailable ?? null;
-  const hasReachedStockLimit = stockLimit !== null && quantity >= stockLimit;
-
-  useEffect(() => {
-    if (stockLimit === null) return;
-
-    setQuantity((currentQuantity) =>
-      Math.max(1, Math.min(currentQuantity, stockLimit)),
-    );
-  }, [stockLimit]);
 
   return (
     <div
@@ -137,111 +124,55 @@ export function ProductDetail({
 
             <div className="mt-8 text-xl leading-8 text-ps2-muted">
               {selectedVariant?.price ? (
-                <span>
-                  {euroAmountFormatter.format(
-                    Number(selectedVariant.price.amount),
-                  )}{' '}
-                  EURO
-                </span>
+                <span>{formatMoney(selectedVariant.price)}</span>
               ) : (
                 <span>&nbsp;</span>
               )}
             </div>
           </div>
 
-          <div className="mt-8 flex flex-col items-center gap-3">
-            <AddToCartButton
-              className={[
-                'ps2-cta',
-                'cursor-pointer border-0 bg-transparent p-0',
-              ].join(' ')}
-              disabled={!selectedVariant || !isAvailable}
-              lines={
-                selectedVariant
-                  ? [
-                      {
-                        merchandiseId: selectedVariant.id,
-                        quantity,
-                        selectedVariant,
-                      },
-                    ]
-                  : []
-              }
+          {productOptions.map((option) => (
+            <fieldset
+              key={option.name}
+              className="ps2-soft-copy mt-4 text-lg text-ps2-muted"
             >
-              <span
-                className={[
-                  'ps2-soft-copy text-2xl leading-none lg:text-3xl',
-                ].join(' ')}
-              >
-                {isAvailable ? 'Add to cart' : 'Sold out'}
-              </span>
-            </AddToCartButton>
-
-            {isAvailable && (
-              <div
-                aria-label="Quantity"
-                className={[
-                  'ps2-soft-copy flex items-center gap-2',
-                  'text-2xl leading-none text-ps2-muted lg:text-3xl',
-                ].join(' ')}
-                role="group"
-              >
-                <button
-                  aria-label="Decrease quantity"
-                  className={[
-                    'inline-flex size-11 items-center justify-center opacity-80',
-                    'cursor-pointer border-0 bg-transparent p-0 text-4xl leading-none text-ps2-muted',
-                    'transition-[color,opacity,text-shadow] duration-[180ms] ease-ps2',
-                    'enabled:hover:text-ps2-white enabled:hover:opacity-100 enabled:hover:[text-shadow:0_0_7px_rgba(245,245,245,0.28)]',
-                    'focus-visible:text-ps2-white focus-visible:opacity-100 focus-visible:[text-shadow:0_0_7px_rgba(245,245,245,0.28)]',
-                    'lg:size-12 lg:text-5xl',
-                    'disabled:cursor-not-allowed disabled:opacity-10 disabled:[text-shadow:none]',
-                  ].join(' ')}
-                  disabled={quantity === 1}
-                  onClick={() =>
-                    setQuantity((currentQuantity) =>
-                      Math.max(1, currentQuantity - 1),
-                    )
-                  }
-                  type="button"
-                >
-                  −
-                </button>
-
-                <output aria-live="polite" className="min-w-[1ch]">
-                  {quantity}
-                </output>
-
-                <button
-                  aria-label={
-                    stockLimit === null
-                      ? 'Increase quantity'
-                      : `Increase quantity (maximum ${stockLimit})`
-                  }
-                  className={[
-                    'inline-flex size-11 items-center justify-center opacity-80',
-                    'cursor-pointer border-0 bg-transparent p-0 text-4xl leading-none text-ps2-muted',
-                    'transition-[color,opacity,text-shadow] duration-[180ms] ease-ps2',
-                    'enabled:hover:text-ps2-white enabled:hover:opacity-100 enabled:hover:[text-shadow:0_0_7px_rgba(245,245,245,0.28)]',
-                    'focus-visible:text-ps2-white focus-visible:opacity-100 focus-visible:[text-shadow:0_0_7px_rgba(245,245,245,0.28)]',
-                    'lg:size-12 lg:text-5xl',
-                    'disabled:cursor-not-allowed disabled:opacity-10 disabled:[text-shadow:none]',
-                  ].join(' ')}
-                  disabled={hasReachedStockLimit}
-                  onClick={() =>
-                    setQuantity((currentQuantity) =>
-                      stockLimit === null
-                        ? currentQuantity + 1
-                        : Math.min(currentQuantity + 1, stockLimit),
-                    )
-                  }
-                  type="button"
-                >
-                  +
-                </button>
+              <legend className="text-center">{option.name}</legend>
+              <div className="flex flex-wrap justify-center gap-4">
+                {option.optionValues.map((value) =>
+                  value.exists ? (
+                    <Link
+                      key={value.name}
+                      to={`/merch/${value.handle}?${value.variantUriQuery}`}
+                      aria-current={value.selected ? 'true' : undefined}
+                      className={
+                        value.selected
+                          ? 'text-ps2-white underline underline-offset-4'
+                          : 'ps2-cta'
+                      }
+                      preventScrollReset
+                      replace
+                    >
+                      {value.name}
+                      {value.available ? '' : ' (Sold out)'}
+                    </Link>
+                  ) : (
+                    <span
+                      key={value.name}
+                      aria-disabled="true"
+                      className="opacity-30"
+                    >
+                      {value.name} (Unavailable)
+                    </span>
+                  ),
+                )}
               </div>
-            )}
-          </div>
+            </fieldset>
+          ))}
+
+          <ProductPurchaseControls
+            key={selectedVariant?.id ?? product.id}
+            selectedVariant={selectedVariant}
+          />
         </div>
       </section>
     </div>

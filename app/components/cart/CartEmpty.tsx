@@ -1,13 +1,13 @@
 import {Link} from 'react-router';
 import {useAside} from '../layout/Aside';
-import {type CartMainProps} from './CartMain';
+import type {CartLayout} from './cartUtils';
 
 export function CartEmpty({
   hidden = false,
   layout,
 }: {
   hidden: boolean;
-  layout?: CartMainProps['layout'];
+  layout?: CartLayout;
 }) {
   const {close} = useAside();
 

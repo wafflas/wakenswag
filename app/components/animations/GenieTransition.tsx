@@ -16,10 +16,7 @@ export function GenieTransition({
 }: GenieTransitionProps) {
   return (
     <div
-      className={[
-        className,
-        isExiting ? 'anim-genie-shrink' : 'anim-genie-pop',
-      ]
+      className={[className, isExiting ? 'anim-genie-shrink' : 'anim-genie-pop']
         .filter(Boolean)
         .join(' ')}
     >

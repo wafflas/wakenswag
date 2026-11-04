@@ -1,5 +1,23 @@
 import {redirect} from 'react-router';
 
+/** Only root-relative paths are accepted from forms or query parameters. */
+export function getSafeRedirectPath(value: unknown): string | null {
+  if (
+    typeof value !== 'string' ||
+    !value.startsWith('/') ||
+    value.startsWith('//') ||
+    value.includes('\\') ||
+    [...value].some(
+      (character) =>
+        character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127,
+    )
+  ) {
+    return null;
+  }
+
+  return value;
+}
+
 export function redirectIfHandleIsLocalized(
   request: Request,
   ...localizedResources: Array<{

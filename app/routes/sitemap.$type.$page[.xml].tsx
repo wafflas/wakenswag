@@ -11,7 +11,7 @@ export async function loader({
     request,
     params,
     locales: ['EN-US'],
-    getLink: ({type, baseUrl, handle}) => `${baseUrl}/${type}/${handle}`,
+    getLink: ({baseUrl, handle}) => `${baseUrl}/merch/${handle}`,
   });
 
   response.headers.set('Cache-Control', `max-age=${60 * 60 * 24}`);

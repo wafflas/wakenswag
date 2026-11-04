@@ -1,6 +1,8 @@
 import {type FetcherWithComponents} from 'react-router';
 import {CartForm, type OptimisticCartLineInput} from '@shopify/hydrogen';
-import {cloneElement, isValidElement, type ReactNode} from 'react';
+import {getSubmittingContent} from './cartUtils';
+
+type CartActionData = {errors?: Array<{message: string}>};
 
 interface AddToCartButtonProps {
   analytics?: unknown;
@@ -19,50 +21,34 @@ export function AddToCartButton({
 }: AddToCartButtonProps) {
   return (
     <CartForm action={CartForm.ACTIONS.LinesAdd} inputs={{lines}} route="/cart">
-      {(fetcher: FetcherWithComponents<unknown>) => (
-        <AddToCartSubmitButton
-          analytics={analytics}
-          className={className}
-          disabled={disabled}
-          fetcher={fetcher}
-        >
-          {children}
-        </AddToCartSubmitButton>
-      )}
+      {(fetcher: FetcherWithComponents<CartActionData>) => {
+        const isSubmitting = fetcher.state !== 'idle';
+
+        return (
+          <>
+            <input
+              name="analytics"
+              type="hidden"
+              value={JSON.stringify(analytics)}
+            />
+            <button
+              className={className}
+              disabled={Boolean(disabled) || isSubmitting}
+              type="submit"
+            >
+              {isSubmitting ? getSubmittingContent(children) : children}
+            </button>
+            {!isSubmitting && fetcher.data?.errors?.length ? (
+              <p
+                role="alert"
+                className="ps2-soft-copy mt-2 text-sm text-ps2-muted"
+              >
+                Could not add this item. Please try again.
+              </p>
+            ) : null}
+          </>
+        );
+      }}
     </CartForm>
   );
-}
-
-function AddToCartSubmitButton({
-  analytics,
-  children,
-  className,
-  disabled,
-  fetcher,
-}: Omit<AddToCartButtonProps, 'lines'> & {
-  fetcher: FetcherWithComponents<unknown>;
-}) {
-  const isSubmitting = fetcher.state !== 'idle';
-
-  return (
-    <>
-      <input name="analytics" type="hidden" value={JSON.stringify(analytics)} />
-
-      <button
-        className={className}
-        disabled={Boolean(disabled) || isSubmitting}
-        type="submit"
-      >
-        {isSubmitting ? getSubmittingContent(children) : children}
-      </button>
-    </>
-  );
-}
-
-function getSubmittingContent(children: ReactNode) {
-  if (isValidElement<{children?: ReactNode}>(children)) {
-    return cloneElement(children, undefined, 'Adding to cart...');
-  }
-
-  return 'Adding to cart...';
 }

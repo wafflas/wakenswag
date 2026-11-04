@@ -4,6 +4,7 @@ import {useBlocker, useNavigation, type BlockerFunction} from 'react-router';
 interface UseRouteExitTransitionResult {
   isBusy: boolean;
   isExiting: boolean;
+  nextPathname?: string;
 }
 
 /**
@@ -12,13 +13,16 @@ interface UseRouteExitTransitionResult {
  */
 export function useRouteExitTransition(
   shouldTransition: BlockerFunction,
-  duration: number,
+  duration: number | ((nextPathname: string) => number),
 ): UseRouteExitTransitionResult {
   const blocker = useBlocker(shouldTransition);
   const navigation = useNavigation();
   const proceed = blocker.state === 'blocked' ? blocker.proceed : undefined;
   const isExiting = blocker.state !== 'unblocked';
   const isBusy = isExiting || navigation.state !== 'idle';
+  const nextPathname = blocker.location?.pathname;
+  const durationMs =
+    typeof duration === 'function' ? duration(nextPathname ?? '') : duration;
 
   useEffect(() => {
     if (!proceed) return undefined;
@@ -28,11 +32,11 @@ export function useRouteExitTransition(
     ).matches;
     const timeoutId = window.setTimeout(
       proceed,
-      prefersReducedMotion ? 0 : duration,
+      prefersReducedMotion ? 0 : durationMs,
     );
 
     return () => window.clearTimeout(timeoutId);
-  }, [duration, proceed]);
+  }, [durationMs, proceed]);
 
-  return {isBusy, isExiting};
+  return {isBusy, isExiting, nextPathname};
 }

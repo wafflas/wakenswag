@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.react-router/
+coverage/
+test-results/
+playwright-report/
+*.generated.d.ts

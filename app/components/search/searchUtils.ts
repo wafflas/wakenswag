@@ -1,4 +1,25 @@
-import type {SearchProductCard} from './searchTypes';
+import type {MoneyV2} from '@shopify/hydrogen/storefront-api-types';
+
+type SearchMoney = Pick<MoneyV2, 'amount' | 'currencyCode'>;
+
+type SearchImage = {
+  url: string;
+  altText?: string | null;
+  width?: number | null;
+  height?: number | null;
+};
+
+/** Normalized product card used by predictive search results. */
+export type SearchProductCard = {
+  id: string;
+  handle: string;
+  title: string;
+  category: string;
+  availableForSale: boolean;
+  trackingParameters?: string | null;
+  image?: SearchImage | null;
+  price?: SearchMoney | null;
+};
 
 type SearchProductLike = {
   id: string;
@@ -21,10 +42,7 @@ type SearchProductLike = {
       width?: number | null;
       height?: number | null;
     } | null;
-    price?: {
-      amount: string;
-      currencyCode: string;
-    } | null;
+    price?: Pick<MoneyV2, 'amount' | 'currencyCode'> | null;
   } | null;
 };
 

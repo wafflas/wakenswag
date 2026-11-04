@@ -10,6 +10,7 @@ export const meta: Route.MetaFunction = () => [
     content: 'Wake n Swag on social media.',
   },
   {
+    tagName: 'link',
     rel: 'canonical',
     href: '/socials',
   },

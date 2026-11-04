@@ -1,31 +1,8 @@
-type SearchProductNode = {
-  id: string;
-  handle: string;
-  title: string;
-  productType?: string | null;
-  availableForSale?: boolean | null;
-  trackingParameters?: string | null;
-  featuredImage?: {
-    url: string;
-    altText?: string | null;
-    width?: number | null;
-    height?: number | null;
-  } | null;
-  selectedOrFirstAvailableVariant?: {
-    id: string;
-    availableForSale?: boolean | null;
-    image?: {
-      url: string;
-      altText?: string | null;
-      width?: number | null;
-      height?: number | null;
-    } | null;
-    price?: {
-      amount: string;
-      currencyCode: string;
-    } | null;
-  } | null;
-};
+import type {PredictiveSearchQuery} from 'storefrontapi.generated';
+
+export type SearchProductNode = NonNullable<
+  PredictiveSearchQuery['predictiveSearch']
+>['products'][number];
 
 type PredictiveSearchItems = {
   products: SearchProductNode[];
@@ -38,6 +15,7 @@ export type PredictiveSearchReturn = {
   type: 'predictive';
   term: string;
   result: {total: number; items: PredictiveSearchItems};
+  error?: string;
 };
 
 /**

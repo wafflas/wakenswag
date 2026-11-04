@@ -1,5 +1,7 @@
+import {isTypingTarget} from './homeUtils';
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {Link} from 'react-router';
+import {useAside} from '~/components/layout/Aside';
 
 const MENU_ITEMS = [
   {
@@ -26,18 +28,8 @@ const MENU_ITEMS = [
 
 type NavigationMode = 'directional' | 'pointer' | 'tab';
 
-function isTypingTarget(target: EventTarget | null) {
-  if (!(target instanceof HTMLElement)) return false;
-
-  return (
-    target.tagName === 'INPUT' ||
-    target.tagName === 'TEXTAREA' ||
-    target.tagName === 'SELECT' ||
-    target.isContentEditable
-  );
-}
-
 export function MainMenu() {
+  const {type} = useAside();
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [navigationMode, setNavigationMode] =
     useState<NavigationMode>('directional');
@@ -67,7 +59,11 @@ export function MainMenu() {
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.defaultPrevented || isTypingTarget(event.target)) {
+      if (
+        type !== 'closed' ||
+        event.defaultPrevented ||
+        isTypingTarget(event.target)
+      ) {
         return;
       }
 
@@ -109,7 +105,7 @@ export function MainMenu() {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [moveSelection, selectItem]);
+  }, [moveSelection, selectItem, type]);
 
   return (
     <nav

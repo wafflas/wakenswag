@@ -1,19 +1,13 @@
 import {Link} from 'react-router';
 import {Image} from '@shopify/hydrogen';
 import {urlWithTrackingParams} from '~/lib/search';
-import type {SearchProductCard} from './searchTypes';
+import type {SearchProductCard} from './searchUtils';
+import {formatMoney} from '~/lib/money';
 
 interface SearchProductItemProps {
   product: SearchProductCard;
   term: string;
   onNavigate: () => void;
-}
-
-function formatSearchMoney(amount: string) {
-  return new Intl.NumberFormat('en', {
-    maximumFractionDigits: 2,
-    minimumFractionDigits: 0,
-  }).format(Number(amount));
 }
 
 /** A search result styled like the product entries in the cart modal. */
@@ -58,9 +52,7 @@ export function SearchProductItem({
         </span>
 
         <span className="whitespace-nowrap text-base leading-6 text-ps2-muted sm:text-lg">
-          {product.price
-            ? `${formatSearchMoney(product.price.amount)} ${product.price.currencyCode}`
-            : '—'}
+          {product.price ? formatMoney(product.price) : '—'}
         </span>
 
         <span

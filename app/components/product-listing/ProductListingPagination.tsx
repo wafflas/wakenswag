@@ -1,5 +1,11 @@
-import {useRef, useState, type ReactNode} from 'react';
+import {useEffect, useRef, type ReactNode} from 'react';
+import {Link, useLocation, useNavigation} from 'react-router';
 import type {ProductItemFragment} from 'storefrontapi.generated';
+import {
+  getProductListingPageUrl,
+  type ProductListingConnection,
+  type ProductListingPageChangeEvent,
+} from './productListingUtils';
 
 const paginationActionClassName = [
   'ps2-cta',
@@ -13,19 +19,8 @@ const paginationActionLabelClassName = [
   'ps2-soft-copy text-xl leading-none lg:text-3xl',
 ].join(' ');
 
-export interface ProductListingPageChangeEvent {
-  firstNode: ProductItemFragment | undefined;
-  nodeCount: number;
-  shouldAnimate: boolean;
-}
-
-export type ProductListingConnection = {
-  nodes: ProductItemFragment[];
-};
-
 interface ProductListingPaginationProps {
   connection: ProductListingConnection;
-  pageSize: number;
   containerClassName?: string;
   resourcesClassName?: string;
   paginationClassName?: string;
@@ -38,58 +33,47 @@ interface ProductListingPaginationProps {
 }
 
 /**
- * Merch local pagination only — flips through `connection.nodes` in memory.
- * Does not write cursor params to the URL.
+ * Page-sized Shopify results with URL cursors. Native links support refresh,
+ * browser history and opening a page in another tab without loading the catalog.
  */
 export function ProductListingPagination({
   connection,
-  pageSize,
   containerClassName,
   resourcesClassName,
   paginationClassName,
   onPageChange,
   children,
 }: ProductListingPaginationProps) {
-  const {nodes} = connection;
-  const [pageIndex, setPageIndex] = useState(0);
+  const {nodes, pageInfo} = connection;
+  const location = useLocation();
+  const navigation = useNavigation();
   const visitedPageKeysRef = useRef(new Set<string>());
-
-  const pageCount = Math.max(1, Math.ceil(nodes.length / pageSize));
-  const currentPage = Math.min(pageIndex, pageCount - 1);
-  const pageStart = currentPage * pageSize;
-  const visibleNodes = nodes.slice(pageStart, pageStart + pageSize);
-  const hasPreviousPage = currentPage > 0;
-  const hasNextPage = currentPage < pageCount - 1;
-  const currentPageNumber = currentPage + 1;
-  const pageStatusLabel = `Page ${currentPageNumber} of ${pageCount}`;
-  const currentPageKey = getPageKey(nodes, currentPage, pageSize);
+  const currentPageKey = nodes[0]?.id ?? 'empty';
+  const previousPageKeyRef = useRef(currentPageKey);
+  const onPageChangeRef = useRef(onPageChange);
+  onPageChangeRef.current = onPageChange;
   const shouldAnimatePage = !visitedPageKeysRef.current.has(currentPageKey);
 
-  const changePage = (nextPage: number) => {
-    const nextPageNodes = nodes.slice(
-      nextPage * pageSize,
-      nextPage * pageSize + pageSize,
-    );
-    const nextPageKey = getPageKey(nodes, nextPage, pageSize);
-    const shouldAnimate = !visitedPageKeysRef.current.has(nextPageKey);
-
-    visitedPageKeysRef.current.add(currentPageKey);
-    setPageIndex(nextPage);
-    onPageChange?.({
-      firstNode: nextPageNodes[0],
-      nodeCount: nextPageNodes.length,
-      shouldAnimate,
+  useEffect(() => {
+    if (previousPageKeyRef.current === currentPageKey) return;
+    visitedPageKeysRef.current.add(previousPageKeyRef.current);
+    previousPageKeyRef.current = currentPageKey;
+    onPageChangeRef.current?.({
+      firstNode: nodes[0],
+      nodeCount: nodes.length,
+      shouldAnimate: !visitedPageKeysRef.current.has(currentPageKey),
     });
-  };
+  }, [currentPageKey, nodes]);
 
   return (
     <div className={containerClassName}>
       <div
-        aria-label={`Products, ${pageStatusLabel}`}
+        aria-label="Products"
+        aria-busy={navigation.state !== 'idle'}
         className={resourcesClassName}
         role="region"
       >
-        {visibleNodes.map((node, index) =>
+        {nodes.map((node, index) =>
           children({
             node,
             index,
@@ -106,58 +90,45 @@ export function ProductListingPagination({
         }
       >
         <span className="sr-only" aria-atomic="true" aria-live="polite">
-          {pageStatusLabel}
+          Showing {nodes.length} products
         </span>
 
-        {hasPreviousPage ? (
-          <button
-            aria-label={`Go to previous product page, ${pageStatusLabel}`}
+        {pageInfo.hasPreviousPage && pageInfo.startCursor ? (
+          <Link
+            aria-label="Go to previous product page"
             className={paginationActionClassName}
-            onClick={() => changePage(currentPage - 1)}
-            type="button"
+            to={getProductListingPageUrl({
+              pathname: location.pathname,
+              search: location.search,
+              direction: 'previous',
+              cursor: pageInfo.startCursor,
+            })}
+            preventScrollReset
           >
             <span aria-hidden="true" className={paginationActionLabelClassName}>
               Previous
             </span>
-          </button>
+          </Link>
         ) : null}
 
-        {hasNextPage ? (
-          <button
-            aria-label={`Go to next product page, ${pageStatusLabel}`}
+        {pageInfo.hasNextPage && pageInfo.endCursor ? (
+          <Link
+            aria-label="Go to next product page"
             className={paginationNextActionClassName}
-            onClick={() => changePage(currentPage + 1)}
-            type="button"
+            to={getProductListingPageUrl({
+              pathname: location.pathname,
+              search: location.search,
+              direction: 'next',
+              cursor: pageInfo.endCursor,
+            })}
+            preventScrollReset
           >
             <span aria-hidden="true" className={paginationActionLabelClassName}>
               Next
             </span>
-          </button>
+          </Link>
         ) : null}
       </nav>
     </div>
   );
-}
-
-function getNodeId(node: unknown) {
-  if (
-    node &&
-    typeof node === 'object' &&
-    'id' in node &&
-    typeof node.id === 'string'
-  ) {
-    return node.id;
-  }
-
-  return undefined;
-}
-
-function getPageKey(
-  nodes: ProductItemFragment[],
-  pageIndex: number,
-  pageSize: number,
-) {
-  const firstNodeId = getNodeId(nodes[pageIndex * pageSize]);
-
-  return firstNodeId ? `node:${firstNodeId}` : `page:${pageIndex}`;
 }

@@ -1,15 +1,12 @@
 import {Link} from 'react-router';
 import {Image, Money} from '@shopify/hydrogen';
-import type {
-  ProductItemFragment,
-  RecommendedProductFragment,
-} from 'storefrontapi.generated';
+import type {ProductItemFragment} from 'storefrontapi.generated';
 
 const productImageClassName =
   'size-22 max-w-none object-cover md:size-24 lg:size-[min(10vw,calc((100dvh-18rem)/3),10rem)]';
 
 interface ProductItemProps {
-  product: ProductItemFragment | RecommendedProductFragment;
+  product: ProductItemFragment;
   isSelected?: boolean;
   animationDelayMs?: number;
   loading?: 'eager' | 'lazy';

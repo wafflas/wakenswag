@@ -1,3 +1,4 @@
+import {getInteractiveElement} from './sharedUtils';
 import {useEffect} from 'react';
 
 interface ButtonSoundProps {
@@ -12,8 +13,6 @@ type WindowWithWebkitAudio = Window &
   typeof globalThis & {
     webkitAudioContext?: typeof AudioContext;
   };
-
-const INTERACTIVE_SELECTOR = 'button, a[href]';
 
 export function ButtonSound({
   src = '/audio/select.mp3',
@@ -137,24 +136,6 @@ export function ButtonSound({
       if (audioContext.state === 'suspended') {
         void audioContext.resume().catch(() => undefined);
       }
-    }
-
-    function getInteractiveElement(target: EventTarget | null) {
-      if (!(target instanceof Element)) return null;
-
-      const interactiveElement =
-        target.closest<HTMLElement>(INTERACTIVE_SELECTOR);
-
-      if (
-        !interactiveElement ||
-        interactiveElement.matches(
-          ':disabled, [aria-disabled="true"], [data-hover-sound="off"]',
-        )
-      ) {
-        return null;
-      }
-
-      return interactiveElement;
     }
 
     function handlePointerOver(event: PointerEvent) {

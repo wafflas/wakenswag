@@ -1,37 +1,16 @@
 import {useOptimisticCart} from '@shopify/hydrogen';
 import type {CartApiQueryFragment} from 'storefrontapi.generated';
-import {CartLineItem, type CartLine} from '~/components/cart/CartLineItem';
+import {CartLineItem} from '~/components/cart/CartLineItem';
 import {CartSummary} from './CartSummary';
 import {CartEmpty} from './CartEmpty';
 import {CartEmptyButton} from './CartEmptyButton';
-
-export type CartLayout = 'page' | 'aside';
+import {getLineItemChildrenMap, type CartLayout} from './cartUtils';
 
 export type CartMainProps = {
   cart: CartApiQueryFragment | null;
   layout: CartLayout;
 };
 
-export type LineItemChildrenMap = {[parentId: string]: CartLine[]};
-/** Returns a map of all line items and their children. */
-function getLineItemChildrenMap(lines: CartLine[]): LineItemChildrenMap {
-  const children: LineItemChildrenMap = {};
-  for (const line of lines) {
-    if ('parentRelationship' in line && line.parentRelationship?.parent) {
-      const parentId = line.parentRelationship.parent.id;
-      if (!children[parentId]) children[parentId] = [];
-      children[parentId].push(line);
-    }
-    if ('lineComponents' in line) {
-      const lineChildren = getLineItemChildrenMap(line.lineComponents);
-      for (const [parentId, childIds] of Object.entries(lineChildren)) {
-        if (!children[parentId]) children[parentId] = [];
-        children[parentId].push(...childIds);
-      }
-    }
-  }
-  return children;
-}
 /**
  * The main cart component that displays the cart items and summary.
  * It is rendered inside the cart modal and uses optimistic Shopify updates.

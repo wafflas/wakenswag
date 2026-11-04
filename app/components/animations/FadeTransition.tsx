@@ -1,17 +1,6 @@
 import {forwardRef, type HTMLAttributes, type ReactNode} from 'react';
 
-type FadeVariant = 'overlay' | 'route';
-
-const FADE_CLASSES: Record<FadeVariant, {enter: string; exit: string}> = {
-  overlay: {
-    enter: 'anim-fade-in',
-    exit: 'anim-fade-out pointer-events-none',
-  },
-  route: {
-    enter: 'route-fade-transition route-fade-transition--in',
-    exit: 'route-fade-transition route-fade-transition--out pointer-events-none',
-  },
-};
+import {FADE_CLASSES, type FadeVariant} from './animationUtils';
 
 interface FadeTransitionProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;

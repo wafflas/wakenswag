@@ -1,37 +1,15 @@
-import {useEffect, useRef} from 'react';
+import {useRef} from 'react';
 import {useAside} from '~/components/layout/Aside';
 import {SearchScreen} from './SearchScreen';
+import {useModalDialog} from '~/components/layout/useModalDialog';
 
 /** Full-screen PS2 system browser search dialog. */
 export function SearchModal() {
-  const {close, type} = useAside();
+  const {close, type, openerRef} = useAside();
   const dialogRef = useRef<HTMLDivElement>(null);
   const isOpen = type === 'search';
 
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const previouslyFocusedElement = document.activeElement;
-    const previousBodyOverflow = document.body.style.overflow;
-
-    document.body.style.overflow = 'hidden';
-    dialogRef.current?.focus();
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') close();
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      document.body.style.overflow = previousBodyOverflow;
-      document.removeEventListener('keydown', handleKeyDown);
-
-      if (previouslyFocusedElement instanceof HTMLElement) {
-        previouslyFocusedElement.focus();
-      }
-    };
-  }, [close, isOpen]);
+  useModalDialog({dialogRef, isOpen, onClose: close, openerRef});
 
   if (!isOpen) return null;
 

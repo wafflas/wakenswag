@@ -10,15 +10,16 @@ export const meta: Route.MetaFunction = ({data, params}) => {
   return [
     {
       title:
-        product?.seo.title ?? `${product?.title ?? 'Product'} | Wake n Swag`,
+        product?.seo.title || `${product?.title ?? 'Product'} | Wake n Swag`,
     },
     {
       name: 'description',
-      content: product?.seo.description ?? product?.description ?? '',
+      content: product?.seo.description || product?.description || '',
     },
     {
+      tagName: 'link',
       rel: 'canonical',
-      href: `/merch/${handle}`,
+      href: data?.productUrl ?? `/merch/${handle}`,
     },
   ];
 };

@@ -9,7 +9,7 @@ import {
 } from 'react';
 import {useLocation} from 'react-router';
 import {ProductListingHeader} from '~/components/product-listing/ProductListingHeader';
-import {PRODUCT_LISTING_STAGGER_MS} from '~/components/product-listing/useProductListingSelection';
+import {PRODUCT_LISTING_STAGGER_MS} from './productListingUtils';
 
 const ProductListingLoadingContext = createContext<
   (productCount: number) => void
@@ -45,6 +45,10 @@ export function ProductListingShell({
 
   const showLoadingScreen = useCallback((durationMs: number) => {
     window.clearTimeout(loadingTimerRef.current);
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setIsShowingLoadingScreen(false);
+      return;
+    }
     setIsShowingLoadingScreen(true);
     loadingTimerRef.current = window.setTimeout(() => {
       setIsShowingLoadingScreen(false);
