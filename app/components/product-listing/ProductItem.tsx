@@ -1,6 +1,8 @@
-import {Link} from 'react-router';
+import {useId} from 'react';
+import {Link, useLocation} from 'react-router';
 import {Image, Money} from '@shopify/hydrogen';
 import type {ProductItemFragment} from 'storefrontapi.generated';
+import {getProductListingPath, getProductPath} from '~/lib/variants';
 
 const productImageClassName =
   'size-22 max-w-none object-cover md:size-24 lg:size-[min(10vw,calc((100dvh-18rem)/3),10rem)]';
@@ -22,14 +24,26 @@ export function ProductItem({
   onSelect,
   shouldAnimate = true,
 }: ProductItemProps) {
+  const {pathname} = useLocation();
+  const descriptionId = useId();
+  const isDrumkit = getProductListingPath(pathname) === '/drumkits';
   const image = product.featuredImage;
-  const productUrl = `/merch/${product.handle}`;
+  const imageClassName = isDrumkit
+    ? 'ps2-drumkit-image'
+    : productImageClassName;
+  const productUrl = getProductPath(product.handle, pathname);
 
   return (
     <Link
       aria-current={isSelected ? 'true' : undefined}
+      aria-describedby={
+        isDrumkit && isSelected && product.description
+          ? descriptionId
+          : undefined
+      }
       className={[
-        'ps2-product-item ps2-product-item-glow group relative inline-flex h-fit w-fit shrink-0 place-self-center',
+        'ps2-product-item group relative inline-flex h-fit w-fit shrink-0 place-self-center',
+        isDrumkit ? 'ps2-drumkit-item' : 'ps2-product-item-glow',
         shouldAnimate ? 'scale-in' : '',
         'rounded-sm brightness-50 transition duration-150',
         'hover:brightness-100 focus:brightness-100 data-[selected=true]:brightness-100',
@@ -43,18 +57,39 @@ export function ProductItem({
       }}
       to={productUrl}
     >
+      {isDrumkit ? (
+        <span aria-hidden="true" className="ps2-drumkit-heading">
+          <span className="ps2-drumkit-title">{product.title}</span>
+          <span className="ps2-drumkit-indicator" />
+        </span>
+      ) : null}
+
       {image ? (
         <Image
           alt=""
-          aspectRatio="1/1"
-          className={productImageClassName}
+          aspectRatio={isDrumkit ? undefined : '1/1'}
+          className={imageClassName}
           data={image}
           loading={loading}
-          sizes="(min-width: 1024px) min(10vw, calc((100dvh - 18rem) / 3), 10rem), (min-width: 768px) 96px, 88px"
+          sizes={
+            isDrumkit
+              ? '(min-width: 1024px) 15vw, 45vw'
+              : '(min-width: 1024px) min(10vw, calc((100dvh - 18rem) / 3), 10rem), (min-width: 768px) 96px, 88px'
+          }
         />
       ) : (
-        <span aria-hidden="true" className={`block ${productImageClassName}`} />
+        <span aria-hidden="true" className={`block ${imageClassName}`} />
       )}
+
+      {isDrumkit ? (
+        <span
+          aria-hidden="true"
+          className="ps2-drumkit-description"
+          id={descriptionId}
+        >
+          {product.description}
+        </span>
+      ) : null}
 
       <span className="sr-only">
         {product.title}

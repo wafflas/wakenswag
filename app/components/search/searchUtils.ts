@@ -1,4 +1,5 @@
 import type {MoneyV2} from '@shopify/hydrogen/storefront-api-types';
+import {getProductListingPathForProduct} from '~/lib/variants';
 
 type SearchMoney = Pick<MoneyV2, 'amount' | 'currencyCode'>;
 
@@ -15,6 +16,7 @@ export type SearchProductCard = {
   handle: string;
   title: string;
   category: string;
+  listingPath: '/merch' | '/drumkits';
   availableForSale: boolean;
   trackingParameters?: string | null;
   image?: SearchImage | null;
@@ -26,6 +28,7 @@ type SearchProductLike = {
   handle: string;
   title: string;
   productType?: string | null;
+  collections?: {nodes: Array<{handle: string}>} | null;
   availableForSale?: boolean | null;
   trackingParameters?: string | null;
   featuredImage?: {
@@ -50,13 +53,18 @@ export function normalizeSearchProduct(
   product: SearchProductLike,
 ): SearchProductCard {
   const variant = product.selectedOrFirstAvailableVariant;
-  const category = product.productType?.trim() || 'MERCH';
+  const listingPath = getProductListingPathForProduct(product);
+  const category =
+    listingPath === '/drumkits'
+      ? 'DRUMKITS'
+      : product.productType?.trim() || 'MERCH';
 
   return {
     id: product.id,
     handle: product.handle,
     title: product.title,
     category: category.toUpperCase(),
+    listingPath,
     availableForSale:
       variant?.availableForSale ?? product.availableForSale ?? true,
     trackingParameters: product.trackingParameters,

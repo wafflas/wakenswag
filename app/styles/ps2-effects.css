@@ -206,6 +206,11 @@
   text-shadow: 0 0 7px rgba(245, 245, 245, 0.28);
 }
 
+[data-modal-controls][data-input-mode='pointer']
+  .ps2-controller-action:focus-visible {
+  outline: none;
+}
+
 /* --------------------------------------------------------------------------
    5. Product detail soft copy
 
@@ -220,7 +225,7 @@
    6. Product item entrance + selection glow
 
    Layout for listing pages lives in Tailwind on the components.
-   This file only owns the effect layer (::after shine + scale-in).
+   This file owns the entrance, Merch glow and Drumkits selection effects.
    -------------------------------------------------------------------------- */
 
 .ps2-product-item.scale-in {
@@ -267,6 +272,155 @@
 .ps2-product-item-glow[data-selected='true']::after {
   animation: ps2-product-shine-pulse 3s ease-in-out infinite both;
   opacity: 1;
+}
+
+.ps2-drumkit-item {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  align-items: center;
+  justify-items: center;
+  gap: 0.125rem;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-width: 22rem;
+  text-align: center;
+}
+
+.ps2-drumkit-image {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-width: 100%;
+  max-height: 9rem;
+  object-fit: contain;
+}
+
+.ps2-drumkit-heading,
+.ps2-drumkit-description {
+  visibility: hidden;
+  opacity: 0;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+  transition: opacity 150ms var(--ease-ps2);
+}
+
+.ps2-drumkit-heading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.125rem;
+  width: 100%;
+}
+
+.ps2-drumkit-title {
+  display: -webkit-box;
+  height: 1lh;
+  overflow: hidden;
+  color: var(--color-ps2-yellow);
+  font-size: clamp(1rem, 1.5vw, 1.375rem);
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: 0.03em;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.ps2-drumkit-indicator {
+  display: block;
+  flex-shrink: 0;
+  width: 25.3015px;
+  height: 18.626px;
+  background: url('../assets/drumkit-selection-indicator.svg') center no-repeat;
+  transform: rotate(180deg);
+}
+
+.ps2-drumkit-description {
+  display: -webkit-box;
+  width: 100%;
+  height: 3lh;
+  overflow: hidden;
+  color: var(--color-ps2-cyan);
+  font-size: clamp(0.7rem, 1vw, 0.8125rem);
+  line-height: 1.35;
+  white-space: pre-line;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.ps2-drumkit-item[data-selected='true'] .ps2-drumkit-heading,
+.ps2-drumkit-item[data-selected='true'] .ps2-drumkit-description {
+  visibility: visible;
+  opacity: 1;
+}
+
+.ps2-drumkit-item[data-selected='true'] .ps2-drumkit-heading {
+  animation: ps2-drumkit-bounce 1.5s ease-in-out infinite;
+}
+
+@keyframes ps2-drumkit-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@media (min-width: 768px) {
+  .ps2-drumkit-item {
+    max-height: 22rem;
+  }
+
+  .ps2-drumkit-image {
+    max-height: none;
+  }
+}
+
+@media (min-width: 1024px) {
+  .ps2-drumkit-title {
+    height: 2lh;
+    -webkit-line-clamp: 2;
+  }
+}
+
+@media (max-height: 600px) {
+  .ps2-drumkit-title {
+    font-size: 0.875rem;
+    line-height: 1.1;
+  }
+
+  .ps2-drumkit-description {
+    font-size: 0.625rem;
+    line-height: 1.3;
+  }
+
+  .ps2-drumkit-listing > header {
+    min-height: 3.5rem;
+    padding-block: 0.5rem;
+  }
+
+  .ps2-drumkit-listing > header p {
+    font-size: 0.875rem;
+  }
+
+  .ps2-drumkit-listing > header h1 {
+    font-size: 1rem;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .ps2-drumkit-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .ps2-drumkit-listing .ps2-drumkit-pagination {
+    grid-template-rows: minmax(0, 1fr) 2.5rem;
+    padding-bottom: 3.5rem;
+  }
 }
 
 /* --------------------------------------------------------------------------
@@ -471,6 +625,7 @@
   .anim-fade-out,
   .anim-genie-pop,
   .anim-genie-shrink,
+  .ps2-drumkit-heading,
   .ps2-product-item-glow::after {
     animation: none !important;
   }
@@ -481,6 +636,8 @@
 
   .ps2-main-menu-link,
   .ps2-controller-action,
+  .ps2-drumkit-heading,
+  .ps2-drumkit-description,
   .ps2-product-item-glow::after {
     transition-duration: 0.01ms;
   }

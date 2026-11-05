@@ -84,7 +84,11 @@ type SelectedVariant = ProductFragment['selectedOrFirstAvailableVariant'];
 export function getProductDetailTheme(
   product: Pick<ProductFragment, 'title' | 'options'>,
   selectedVariant: SelectedVariant,
+  themeKey?: ProductDetailTheme['key'],
 ): ProductDetailTheme {
+  const explicitTheme = PRODUCT_THEMES.find((theme) => theme.key === themeKey);
+  if (explicitTheme) return explicitTheme;
+
   const selectedColor = selectedVariant?.selectedOptions.find((option) =>
     /^colou?r$/i.test(option.name),
   );

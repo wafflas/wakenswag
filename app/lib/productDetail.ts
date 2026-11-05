@@ -81,6 +81,12 @@ const PRODUCT_FRAGMENT = `#graphql
     handle
     descriptionHtml
     description
+    productType
+    collections(first: 20) {
+      nodes {
+        handle
+      }
+    }
     encodedVariantExistence
     encodedVariantAvailability
     options {

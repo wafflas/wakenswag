@@ -10,8 +10,8 @@ interface FadeTransitionProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 /**
- * Applies enter/exit opacity classes. Pair with `useRouteExitTransition`
- * (or local closing state) to drive `isExiting`.
+ * Applies enter/exit opacity classes. Routes use `useRouteExitTransition`;
+ * dialogs keep their closing state until `useExiting` finishes the fade.
  */
 export const FadeTransition = forwardRef<HTMLDivElement, FadeTransitionProps>(
   function FadeTransition(

@@ -1,5 +1,9 @@
 import {describe, expect, it} from 'vitest';
-import {getVariantUrl, isDefaultTitleOption} from '~/lib/variants';
+import {
+  getVariantUrl,
+  isDefaultTitleOption,
+  isProductDetailPath,
+} from '~/lib/variants';
 import {
   getProductDescriptionBullets,
   getProductDetailTheme,
@@ -10,6 +14,22 @@ import {
   urlWithTrackingParams,
 } from '~/lib/search';
 import {createProduct, createVariant} from '../fixtures/catalog';
+
+describe('product detail route detection', () => {
+  it.each([
+    ['/merch/tee', true],
+    ['/merch/tee/', true],
+    ['/drumkits/wnb-vol-001', true],
+    ['/drumkits/wnb-vol-001/', true],
+    ['/', false],
+    ['/merch', false],
+    ['/drumkits/', false],
+    ['/drumkits-archive/wnb-vol-001', false],
+    ['/drumkits/wnb-vol-001/extra', false],
+  ])('recognizes %s as a product detail route: %s', (pathname, expected) => {
+    expect(isProductDetailPath(pathname)).toBe(expected);
+  });
+});
 
 describe('product variant links', () => {
   it('encodes selected options and preserves a locale prefix', () => {
@@ -34,6 +54,21 @@ describe('product variant links', () => {
         selectedOptions: [{name: 'Title', value: 'Default Title'}],
       }),
     ).toBe('/merch/tee');
+  });
+  it.each([
+    ['/drumkits', '/drumkits/wnb-vol-001?Format=WAV'],
+    ['/drumkits/wnb-vol-001', '/drumkits/wnb-vol-001?Format=WAV'],
+    ['/en-us/drumkits', '/en-us/drumkits/wnb-vol-001?Format=WAV'],
+    ['/drumkits-archive', '/merch/wnb-vol-001?Format=WAV'],
+  ])('keeps the correct listing section for %s', (pathname, expected) => {
+    expect(
+      getVariantUrl({
+        handle: 'wnb-vol-001',
+        pathname,
+        searchParams: new URLSearchParams(),
+        selectedOptions: [{name: 'Format', value: 'WAV'}],
+      }),
+    ).toBe(expected);
   });
 });
 
@@ -67,6 +102,23 @@ describe('product description and theme', () => {
   it('uses a neutral theme for unknown colors', () => {
     expect(getProductDetailTheme(createProduct(), null).key).toBe('gray');
   });
+  it('uses the requested theme ahead of product colors', () => {
+    const variant = {
+      ...createVariant(),
+      selectedOptions: [{name: 'Colour', value: 'Navy'}],
+    };
+    expect(
+      getProductDetailTheme(
+        createProduct({title: 'Red kit'}),
+        variant,
+        'black',
+      ),
+    ).toMatchObject({
+      key: 'black',
+      gradient:
+        'linear-gradient(145deg, #383838 0%, #181818 48%, #050505 100%)',
+    });
+  });
 });
 
 describe('predictive search data', () => {
@@ -90,6 +142,30 @@ describe('predictive search data', () => {
       items: {products: [], queries: []},
     });
   });
+  it('recognizes a drumkit collection even when Shopify product type is empty', () => {
+    expect(
+      normalizeSearchProduct({
+        id: 'drumkit',
+        handle: 'drumkit-vol-002',
+        title: 'Drumkit Vol. 002',
+        productType: '',
+        collections: {nodes: [{handle: 'merch'}, {handle: 'drumkits'}]},
+      }),
+    ).toMatchObject({category: 'DRUMKITS', listingPath: '/drumkits'});
+  });
+  it.each(['Drumkit', 'DRUMKITS', 'drum kit', ' drum kits '])(
+    'recognizes the drumkit product type %s',
+    (productType) => {
+      expect(
+        normalizeSearchProduct({
+          id: 'kit',
+          handle: 'kit',
+          title: 'Kit',
+          productType,
+        }),
+      ).toMatchObject({category: 'DRUMKITS', listingPath: '/drumkits'});
+    },
+  );
   it('encodes user search terms and preserves Shopify tracking', () => {
     expect(
       urlWithTrackingParams({

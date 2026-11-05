@@ -7,7 +7,13 @@ import {loader as drumkitsLoader} from '~/routes/drumkits';
 import {loader as discountLoader} from '~/routes/discount.$code';
 import {loader as permalinkLoader} from '~/routes/cart.$lines';
 import {loadProductDetail} from '~/lib/productDetail';
-import {createCart, createProduct} from '../fixtures/catalog';
+import {loader as productLoader} from '~/routes/merch.$handle';
+import {loader as drumkitProductLoader} from '~/routes/drumkits.$handle';
+import {
+  createCart,
+  createProduct,
+  createProductCard,
+} from '../fixtures/catalog';
 
 function createArgs(path = '/', inputs?: unknown, redirectTo?: string) {
   const form = new FormData();
@@ -166,7 +172,42 @@ describe('catalog pagination and product loading', () => {
     );
     await merchLoader(args as unknown as Parameters<typeof merchLoader>[0]);
     expect(context.storefront.query).toHaveBeenCalledWith(expect.any(String), {
-      variables: {first: 12, endCursor: 'cursor-12'},
+      variables: {handle: 'merch', first: 12, endCursor: 'cursor-12'},
+    });
+  });
+  it('uses only the merch collection even when unscoped products are also returned', async () => {
+    const {args, context} = createArgs('/merch');
+    const products = {
+      nodes: [createProductCard()],
+      pageInfo: {
+        hasPreviousPage: false,
+        hasNextPage: false,
+        startCursor: null,
+        endCursor: null,
+      },
+    };
+    context.storefront.query.mockResolvedValue({
+      collection: {products},
+      products: {nodes: [...products.nodes, createProductCard(2)]},
+    });
+    const result = await merchLoader(
+      args as unknown as Parameters<typeof merchLoader>[0],
+    );
+    expect(result.products).toEqual(products);
+  });
+  it('returns an empty listing when the merch collection is missing or unavailable', async () => {
+    const {args} = createArgs('/merch');
+    const result = await merchLoader(
+      args as unknown as Parameters<typeof merchLoader>[0],
+    );
+    expect(result.products).toEqual({
+      nodes: [],
+      pageInfo: {
+        hasPreviousPage: false,
+        hasNextPage: false,
+        startCursor: null,
+        endCursor: null,
+      },
     });
   });
   it('passes the previous cursor to the drumkits query and retains the empty fallback', async () => {
@@ -177,7 +218,7 @@ describe('catalog pagination and product loading', () => {
       args as unknown as Parameters<typeof drumkitsLoader>[0],
     );
     expect(context.storefront.query).toHaveBeenCalledWith(expect.any(String), {
-      variables: {handle: 'drumkits', last: 12, startCursor: 'cursor-12'},
+      variables: {handle: 'drumkits', last: 6, startCursor: 'cursor-12'},
     });
     expect(result.collection.products.nodes).toEqual([]);
   });
@@ -210,6 +251,49 @@ describe('catalog pagination and product loading', () => {
         >[0]['storefront'],
       }),
     ).rejects.toMatchObject({status: 404});
+  });
+});
+
+describe('product section routing', () => {
+  it('redirects a drumkit out of Merch and preserves search tracking', async () => {
+    const {args, context} = createArgs(
+      '/merch/drumkit-vol-002?q=drum&_pos=2&_psid=session',
+    );
+    Object.assign(args.params, {handle: 'drumkit-vol-002'});
+    context.storefront.query.mockResolvedValue({
+      product: createProduct({
+        handle: 'drumkit-vol-002',
+        productType: '',
+        collections: {nodes: [{handle: 'drumkits'}]},
+      }),
+    });
+    const response: unknown = await productLoader(
+      args as unknown as Parameters<typeof productLoader>[0],
+    ).catch((error: unknown) => error);
+    expect(response).toBeInstanceOf(Response);
+    if (!(response instanceof Response)) throw new Error('Expected a redirect');
+    expect(response.status).toBe(302);
+    expect(response.headers.get('Location')).toBe(
+      '/drumkits/drumkit-vol-002?q=drum&_pos=2&_psid=session',
+    );
+  });
+
+  it('gives drumkits their own canonical URL', async () => {
+    const {args, context} = createArgs('/drumkits/drumkit-vol-002');
+    Object.assign(args.params, {handle: 'drumkit-vol-002'});
+    context.storefront.query.mockResolvedValue({
+      product: createProduct({
+        handle: 'drumkit-vol-002',
+        productType: '',
+        collections: {nodes: [{handle: 'drumkits'}]},
+      }),
+    });
+    const result = await drumkitProductLoader(
+      args as unknown as Parameters<typeof drumkitProductLoader>[0],
+    );
+    expect(result.productUrl).toBe(
+      'https://store.example/drumkits/drumkit-vol-002',
+    );
   });
 });
 

@@ -14,13 +14,16 @@ const catalog = Array.from({length: 25}, (_, index) =>
   createProductCard(index + 1),
 );
 
-function productConnection(variables: Record<string, unknown>) {
+function productConnection(
+  variables: Record<string, unknown>,
+  products = catalog,
+) {
   const cursor = variables.endCursor ?? variables.startCursor;
   const cursorIndex = Number(cursor ?? -1);
   const start = variables.last
     ? Math.max(0, cursorIndex - Number(variables.last))
     : cursorIndex + 1;
-  const nodes = catalog.slice(
+  const nodes = products.slice(
     start,
     start + Number(variables.first ?? variables.last ?? 12),
   );
@@ -28,7 +31,7 @@ function productConnection(variables: Record<string, unknown>) {
     nodes,
     pageInfo: {
       hasPreviousPage: start > 0,
-      hasNextPage: start + nodes.length < catalog.length,
+      hasNextPage: start + nodes.length < products.length,
       startCursor: String(start),
       endCursor: String(start + nodes.length - 1),
     },
@@ -38,6 +41,7 @@ function productConnection(variables: Record<string, unknown>) {
 function query(
   queryText: string,
   options?: {variables?: Record<string, unknown>},
+  pathname = '/',
 ) {
   const variables = options?.variables ?? {};
   if (queryText.includes('query ShopData'))
@@ -65,34 +69,65 @@ function query(
   if (queryText.includes('query RecommendedProducts'))
     return Promise.resolve({products: {nodes: catalog.slice(0, 4)}});
   if (queryText.includes('query Merch'))
-    return Promise.resolve({products: productConnection(variables)});
-  if (queryText.includes('query Drumkits'))
+    return Promise.resolve({
+      collection:
+        variables.handle === 'merch'
+          ? {products: productConnection(variables)}
+          : null,
+    });
+  if (queryText.includes('query Drumkits')) {
+    const products = productConnection(variables, catalog.slice(0, 24));
     return Promise.resolve({
       collection: {
         id: 'collection-1',
         title: 'Drumkits',
         handle: 'drumkits',
         description: 'Fixture drumkits',
-        products: productConnection(variables),
+        products: {
+          ...products,
+          nodes: products.nodes.map((product) => ({
+            ...product,
+            description:
+              '808s so distorted your speakers might file a lawsuit.\nScientifically proven to NOT make you a better producer.',
+          })),
+        },
       },
     });
+  }
   if (queryText.includes('query PredictiveSearch')) {
     if (variables.term === 'outage')
       return Promise.reject(new Error('Simulated Storefront outage'));
     const products =
       variables.term === 'nothing'
         ? []
-        : [
-            {
-              ...catalog[0],
-              title:
-                variables.term === 'old' ? 'Old Fixture Tee' : catalog[0].title,
-              productType: 'Merch',
-              availableForSale: true,
-              trackingParameters: 'position=1',
-              selectedOrFirstAvailableVariant: createVariant(),
-            },
-          ];
+        : variables.term === 'drum'
+          ? [
+              {
+                ...catalog[0],
+                title: 'Fixture Drumkit',
+                handle: 'fixture-drumkit',
+                productType: '',
+                collections: {nodes: [{handle: 'drumkits'}]},
+                availableForSale: true,
+                trackingParameters:
+                  '_pos=2&_psid=fixture-session&_psq=drum&_ss=e',
+                selectedOrFirstAvailableVariant: createVariant(),
+              },
+            ]
+          : [
+              {
+                ...catalog[0],
+                title:
+                  variables.term === 'old'
+                    ? 'Old Fixture Tee'
+                    : catalog[0].title,
+                productType: 'Merch',
+                collections: {nodes: [{handle: 'merch'}]},
+                availableForSale: true,
+                trackingParameters: 'position=1',
+                selectedOrFirstAvailableVariant: createVariant(),
+              },
+            ];
     return Promise.resolve({predictiveSearch: {products, queries: []}});
   }
   if (queryText.includes('query Product(')) {
@@ -104,8 +139,17 @@ function query(
     }>;
     const size =
       options.find((option) => option.name === 'Size')?.value ?? 'Small';
+    const isDrumkit =
+      pathname.startsWith('/drumkits/') || handle === 'fixture-drumkit';
     const product = createProduct({
       handle,
+      title:
+        handle === 'fixture-drumkit'
+          ? 'Fixture Drumkit'
+          : (catalog.find((product) => product.handle === handle)?.title ??
+            'Fixture Tee'),
+      productType: '',
+      collections: {nodes: [{handle: isDrumkit ? 'drumkits' : 'merch'}]},
       selectedOrFirstAvailableVariant:
         handle === 'no-variant'
           ? null
@@ -133,7 +177,10 @@ export default {
       );
     };
     Object.assign(context.storefront, {
-      query,
+      query: (
+        queryText: string,
+        options?: {variables?: Record<string, unknown>},
+      ) => query(queryText, options, new URL(request.url).pathname),
       mutate: rejectExternalApi,
       forward: rejectExternalApi,
       forwardMcp: rejectExternalApi,

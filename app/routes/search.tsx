@@ -32,7 +32,7 @@ export async function loader({
   }
 }
 
-export default function SearchResource() {
+export default function SearchResource(): null {
   return null;
 }
 
@@ -54,6 +54,11 @@ const PREDICTIVE_SEARCH_QUERY = `#graphql
         title
         handle
         productType
+        collections(first: 20) {
+          nodes {
+            handle
+          }
+        }
         availableForSale
         trackingParameters
         featuredImage {

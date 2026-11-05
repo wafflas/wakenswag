@@ -1,5 +1,5 @@
-import {useEffect} from 'react';
 import {useBlocker, useNavigation, type BlockerFunction} from 'react-router';
+import {useExiting} from './useExiting';
 
 interface UseRouteExitTransitionResult {
   isBusy: boolean;
@@ -24,19 +24,7 @@ export function useRouteExitTransition(
   const durationMs =
     typeof duration === 'function' ? duration(nextPathname ?? '') : duration;
 
-  useEffect(() => {
-    if (!proceed) return undefined;
-
-    const prefersReducedMotion = window.matchMedia(
-      '(prefers-reduced-motion: reduce)',
-    ).matches;
-    const timeoutId = window.setTimeout(
-      proceed,
-      prefersReducedMotion ? 0 : durationMs,
-    );
-
-    return () => window.clearTimeout(timeoutId);
-  }, [durationMs, proceed]);
+  useExiting(proceed, durationMs);
 
   return {isBusy, isExiting, nextPathname};
 }

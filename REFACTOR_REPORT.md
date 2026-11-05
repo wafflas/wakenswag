@@ -98,15 +98,25 @@ Added twelve centralized component cases. Eleven characterized existing behavior
 
 All 104 Vitest cases and 28 desktop/mobile Chromium journeys passed after this change. Before/after screenshot comparisons found zero changed pixels in all eight footer regions (home, product, search and cart at both viewports). Compared the bottom 100 image pixels on desktop and 300 on mobile to include the entire footer at the device pixel ratio; this was a focused footer comparison, not a full application visual-diff suite. Lint, typecheck, formatting and the production build also passed.
 
+## Shared overlay entry and exit fades
+
+CartModal and SearchModal now use the same `FadeTransition` overlay variant as product detail: a 300 ms ease-out entry and 300 ms ease-in exit. `AsideProvider.close` starts an `isExiting` phase while keeping the selected overlay mounted. The shared `useExiting` hook finishes the close after the animation, or with no animation delay for reduced motion. The route-exit helper also uses this hook, retaining the existing product/main-menu durations and single router blocker.
+
+Focus containment and body scroll locking remain active throughout the overlay exit. Repeated close requests do not restart the timer; opening another overlay cancels it, and unmounting clears it. Back, Escape and existing product-link close callbacks all use the provider's close path. Centralized provider tests cover the timing/cancellation boundaries; browser checks cover entry/exit CSS timing, reduced motion, focus restoration and nested product overlays.
+
+The full browser run also exposed a pending-add race: Hydrogen's temporary optimistic line has no calculated `cost` yet, so opening Cart before the server responds could throw in CartLineItem. A regression reproduced this before the fix. CartLineItem now displays an em dash until Shopify supplies the total, preserving server-calculated pricing and rollback after failure.
+
+Exit-change validation used an isolated copy of the committed baseline plus this change because listing/merch files were being edited concurrently in the shared workspace. Those separate edits were preserved and excluded from this validation snapshot. All 109 Vitest cases, 30 desktop/mobile Chromium journeys, lint, TypeScript, formatting and the production build passed there. The isolated dev server allowed the existing shared node_modules path; no production server-access configuration changed. The shared test setup supplies the layout observer missing from jsdom; real viewport behavior remains covered by Playwright.
+
 ## Validation results
 
 | Check                                   | Result                                                                                                                                                                       |
 | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Initial characterization suite          | 11 passed before application refactoring                                                                                                                                     |
 | Server regression reproduction          | 17 failed / 20 passed before fixes; all 37 passed after server batch                                                                                                         |
-| Final Vitest unit/component/route suite | 104 passed across 11 files                                                                                                                                                   |
-| V8 coverage                             | 54.34% lines, 53.16% statements, 47.01% branches and 46.44% functions; HTML includes uncovered files                                                                         |
-| Playwright Chromium desktop/mobile      | 28 passed: 14 journeys in each project; fixture-backed, not live Shopify                                                                                                     |
+| Final Vitest unit/component/route suite | 109 passed across 12 files in the isolated exit-change snapshot                                                                                                              |
+| V8 coverage                             | 59.61% lines, 58.36% statements, 51.89% branches and 53.52% functions; HTML includes uncovered files                                                                         |
+| Playwright Chromium desktop/mobile      | 30 passed: 15 journeys in each project, using the isolated exit-change snapshot and fixtures, not live Shopify                                                               |
 | Accessibility                           | Full axe dialog scans recorded one serious search-status contrast finding per viewport; empty-cart scan had zero findings. All separately asserted structural checks passed. |
 | Screenshots                             | Home/search/product/cart captured for desktop/mobile; all eight footer regions match pre-footer-refactor screenshots exactly. No full-application visual-diff suite.         |
 | ESLint                                  | Passed with no warnings after cleanup                                                                                                                                        |

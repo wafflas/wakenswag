@@ -14,7 +14,7 @@ describe('custom storefront SEO', () => {
       },
       params: {handle: 'fixture-tee'},
     } as Parameters<typeof productMeta>[0]);
-    expect(descriptors).toContainEqual({title: 'Fixture Tee | Wake n Swag'});
+    expect(descriptors).toContainEqual({title: 'Wake n Swag | Fixture Tee'});
     expect(descriptors).toContainEqual({
       name: 'description',
       content: 'Soft cotton tee',

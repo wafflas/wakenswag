@@ -3,6 +3,7 @@ import {Image} from '@shopify/hydrogen';
 import {urlWithTrackingParams} from '~/lib/search';
 import type {SearchProductCard} from './searchUtils';
 import {formatMoney} from '~/lib/money';
+import {getProductPath} from '~/lib/variants';
 
 interface SearchProductItemProps {
   product: SearchProductCard;
@@ -17,7 +18,7 @@ export function SearchProductItem({
   onNavigate,
 }: SearchProductItemProps) {
   const productUrl = urlWithTrackingParams({
-    baseUrl: `/merch/${product.handle}`,
+    baseUrl: getProductPath(product.handle, product.listingPath),
     trackingParams: product.trackingParameters,
     term,
   });

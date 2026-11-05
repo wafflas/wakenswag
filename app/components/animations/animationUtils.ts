@@ -4,6 +4,9 @@ export const GENIE_DURATION_MS = 400;
 /** Full-page route fade (main menu enter/leave). */
 export const ROUTE_FADE_DURATION_MS = 500;
 
+/** Search/cart opacity fade; matches .anim-fade-in and .anim-fade-out. */
+export const OVERLAY_FADE_DURATION_MS = 300;
+
 /** Wait long enough for stacked PDP open/close effects to finish. */
 export const PRODUCT_DETAIL_EXIT_MS = GENIE_DURATION_MS;
 

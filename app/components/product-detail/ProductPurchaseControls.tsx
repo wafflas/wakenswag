@@ -4,15 +4,20 @@ import {AddToCartButton} from '~/components/cart/AddToCartButton';
 
 export function ProductPurchaseControls({
   selectedVariant,
+  allowQuantitySelection = true,
 }: {
   selectedVariant: ProductFragment['selectedOrFirstAvailableVariant'];
+  allowQuantitySelection?: boolean;
 }) {
   const [requestedQuantity, setQuantity] = useState(1);
   const stockLimit = selectedVariant?.quantityAvailable ?? null;
+
+  const selectedQuantity = allowQuantitySelection ? requestedQuantity : 1;
+
   const quantity =
     stockLimit === null
-      ? requestedQuantity
-      : Math.max(1, Math.min(requestedQuantity, stockLimit));
+      ? selectedQuantity
+      : Math.max(1, Math.min(selectedQuantity, stockLimit));
 
   const isAvailable = Boolean(selectedVariant?.availableForSale);
   const hasReachedStockLimit = stockLimit !== null && quantity >= stockLimit;
@@ -45,7 +50,7 @@ export function ProductPurchaseControls({
         </span>
       </AddToCartButton>
 
-      {isAvailable && (
+      {allowQuantitySelection && isAvailable && (
         <div
           aria-label="Quantity"
           className={[

@@ -2,6 +2,7 @@ import type {MerchQuery, ProductItemFragment} from 'storefrontapi.generated';
 
 export const PRODUCT_LISTING_STAGGER_MS = 400;
 export const PRODUCTS_PER_PAGE = 12;
+export const DRUMKITS_PER_PAGE = 6;
 
 export interface ProductListingPageChangeEvent {
   firstNode: ProductItemFragment | undefined;
@@ -9,7 +10,19 @@ export interface ProductListingPageChangeEvent {
   shouldAnimate: boolean;
 }
 
-export type ProductListingConnection = MerchQuery['products'];
+export type ProductListingConnection = NonNullable<
+  MerchQuery['collection']
+>['products'];
+
+export const EMPTY_PRODUCT_CONNECTION: ProductListingConnection = {
+  nodes: [],
+  pageInfo: {
+    hasPreviousPage: false,
+    hasNextPage: false,
+    startCursor: null,
+    endCursor: null,
+  },
+};
 
 export function getProductListingPageUrl({
   pathname,

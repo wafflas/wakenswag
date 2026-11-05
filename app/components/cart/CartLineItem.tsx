@@ -27,6 +27,8 @@ export function CartLineItem({
   const {close} = useAside();
   const lineItemChildren = childrenMap[id];
   const childrenLabelId = `cart-line-children-${id}`;
+  // Newly added optimistic lines do not have Shopify's calculated costs yet.
+  const totalAmount = line.cost?.totalAmount;
 
   return (
     <li
@@ -59,7 +61,7 @@ export function CartLineItem({
         </p>
 
         <p className="whitespace-nowrap text-base leading-6 text-ps2-muted sm:text-lg">
-          {formatMoney(line.cost.totalAmount)}
+          {totalAmount ? formatMoney(totalAmount) : '—'}
         </p>
 
         {selectedOptions.some((option) => option.name !== 'Title') ? (

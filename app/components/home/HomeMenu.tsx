@@ -116,7 +116,7 @@ export function MainMenu() {
       <ul
         className={[
           'flex flex-col items-center',
-          'text-[54px]',
+          'text-[54px] md:text-[72px]',
           'font-medium',
           'gap-1.25',
         ].join(' ')}

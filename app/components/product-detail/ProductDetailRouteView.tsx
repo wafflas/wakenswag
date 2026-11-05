@@ -5,11 +5,11 @@ import {
   useOptimisticVariant,
   useSelectedOptionInUrlParam,
 } from '@shopify/hydrogen';
-import {useNavigate} from 'react-router';
+import {useLocation, useNavigate} from 'react-router';
 import type {ProductFragment} from 'storefrontapi.generated';
 import {FadeTransition} from '~/components/animations/FadeTransition';
 import {useProductExitTransition} from '~/components/animations/RouteFadeTransition';
-import {isDefaultTitleOption} from '~/lib/variants';
+import {getProductListingPath, isDefaultTitleOption} from '~/lib/variants';
 import {ProductDetail} from './ProductDetail';
 import {useModalDialog} from '~/components/layout/useModalDialog';
 import {useAside} from '~/components/layout/Aside';
@@ -24,11 +24,13 @@ export function ProductDetailRouteView({
   productUrl,
 }: ProductDetailRouteViewProps) {
   const navigate = useNavigate();
+  const {pathname} = useLocation();
+  const listingPath = getProductListingPath(pathname);
   const modalRef = useRef<HTMLDivElement>(null);
   const {type} = useAside();
   const closeProduct = useCallback(() => {
-    void navigate('/merch');
-  }, [navigate]);
+    void navigate(listingPath);
+  }, [listingPath, navigate]);
 
   const isExiting = useProductExitTransition();
 

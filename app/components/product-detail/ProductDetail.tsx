@@ -1,6 +1,6 @@
 import {useMemo} from 'react';
 import {Image, getProductOptions} from '@shopify/hydrogen';
-import {Link} from 'react-router';
+import {Link, useLocation} from 'react-router';
 import type {ProductFragment} from 'storefrontapi.generated';
 import {GenieTransition} from '~/components/animations/GenieTransition';
 import {ProductPurchaseControls} from './ProductPurchaseControls';
@@ -9,7 +9,11 @@ import {
   getProductDetailTheme,
 } from './productDetailUtils';
 import {formatMoney} from '~/lib/money';
-import {isDefaultTitleOption} from '~/lib/variants';
+import {
+  getProductListingPath,
+  getProductPath,
+  isDefaultTitleOption,
+} from '~/lib/variants';
 
 interface ProductDetailProps {
   isClosing?: boolean;
@@ -22,7 +26,14 @@ export function ProductDetail({
   product,
   selectedVariant,
 }: ProductDetailProps) {
-  const theme = getProductDetailTheme(product, selectedVariant);
+  const {pathname} = useLocation();
+  const isDrumkit = getProductListingPath(pathname) === '/drumkits';
+  const allowQuantitySelection = !isDrumkit;
+  const theme = getProductDetailTheme(
+    product,
+    selectedVariant,
+    isDrumkit ? 'black' : undefined,
+  );
   const productOptions = getProductOptions({
     ...product,
     selectedOrFirstAvailableVariant: selectedVariant,
@@ -142,7 +153,7 @@ export function ProductDetail({
                   value.exists ? (
                     <Link
                       key={value.name}
-                      to={`/merch/${value.handle}?${value.variantUriQuery}`}
+                      to={`${getProductPath(value.handle, pathname)}?${value.variantUriQuery}`}
                       aria-current={value.selected ? 'true' : undefined}
                       className={
                         value.selected
@@ -170,6 +181,7 @@ export function ProductDetail({
           ))}
 
           <ProductPurchaseControls
+            allowQuantitySelection={allowQuantitySelection}
             key={selectedVariant?.id ?? product.id}
             selectedVariant={selectedVariant}
           />

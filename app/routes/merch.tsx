@@ -3,13 +3,18 @@ import type {Route} from './+types/merch';
 import {ProductGrid} from '~/components/product-listing/ProductGrid';
 import {ProductListingShell} from '~/components/product-listing/ProductListingShell';
 import {useProductListingSelection} from '~/components/product-listing/useProductListingSelection';
-import {PRODUCTS_PER_PAGE} from '~/components/product-listing/productListingUtils';
+import {
+  EMPTY_PRODUCT_CONNECTION,
+  PRODUCTS_PER_PAGE,
+} from '~/components/product-listing/productListingUtils';
 import {PRODUCT_ITEM_FRAGMENT} from '~/lib/fragments';
 import {getPaginationVariables} from '@shopify/hydrogen';
 
+const MERCH_HANDLE = 'merch';
+
 export const meta: Route.MetaFunction = () => [
   {
-    title: 'Merch | Wake n Swag',
+    title: 'Wake n Swag | Merch',
   },
   {
     name: 'description',
@@ -23,11 +28,14 @@ export const meta: Route.MetaFunction = () => [
 ];
 
 export async function loader({context, request}: Route.LoaderArgs) {
-  const {products} = await context.storefront.query(MERCH_QUERY, {
-    variables: getPaginationVariables(request, {pageBy: PRODUCTS_PER_PAGE}),
+  const {collection} = await context.storefront.query(MERCH_QUERY, {
+    variables: {
+      handle: MERCH_HANDLE,
+      ...getPaginationVariables(request, {pageBy: PRODUCTS_PER_PAGE}),
+    },
   });
 
-  return {products};
+  return {products: collection?.products ?? EMPTY_PRODUCT_CONNECTION};
 }
 
 export default function Merch() {
@@ -47,11 +55,17 @@ export default function Merch() {
         displayTitle={displayTitle}
         loadingDurationMs={loadingDurationMs}
       >
-        <ProductGrid
-          connection={products}
-          onSelect={onSelect}
-          selectedProductId={selectedProductId}
-        />
+        {products.nodes.length > 0 ? (
+          <ProductGrid
+            connection={products}
+            onSelect={onSelect}
+            selectedProductId={selectedProductId}
+          />
+        ) : (
+          <p className="ps2-soft-copy px-6 text-center text-xl text-ps2-muted lg:text-2xl">
+            No merch available yet.
+          </p>
+        )}
       </ProductListingShell>
 
       <Outlet />
@@ -61,6 +75,7 @@ export default function Merch() {
 
 const MERCH_QUERY = `#graphql
   query Merch(
+    $handle: String!
     $country: CountryCode
     $language: LanguageCode
     $first: Int
@@ -68,20 +83,22 @@ const MERCH_QUERY = `#graphql
     $startCursor: String
     $endCursor: String
   ) @inContext(country: $country, language: $language) {
-    products(
-      first: $first
-      last: $last
-      before: $startCursor
-      after: $endCursor
-    ) {
-      nodes {
-        ...ProductItem
-      }
-      pageInfo {
-        hasPreviousPage
-        hasNextPage
-        startCursor
-        endCursor
+    collection(handle: $handle) {
+      products(
+        first: $first
+        last: $last
+        before: $startCursor
+        after: $endCursor
+      ) {
+        nodes {
+          ...ProductItem
+        }
+        pageInfo {
+          hasPreviousPage
+          hasNextPage
+          startCursor
+          endCursor
+        }
       }
     }
   }

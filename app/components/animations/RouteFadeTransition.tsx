@@ -1,5 +1,6 @@
 import {createContext, useCallback, useContext, type ReactNode} from 'react';
 import {useLocation, type BlockerFunction} from 'react-router';
+import {isProductDetailPath} from '~/lib/variants';
 import {PRODUCT_DETAIL_EXIT_MS, ROUTE_FADE_DURATION_MS} from './animationUtils';
 import {FadeTransition} from './FadeTransition';
 import {useRouteExitTransition} from './useRouteExitTransition';
@@ -26,11 +27,11 @@ export function RouteFadeTransition({
   duration = ROUTE_FADE_DURATION_MS,
 }: RouteFadeTransitionProps) {
   const {pathname} = useLocation();
-  const isProductRoute = /^\/merch\/[^/]+\/?$/.test(pathname);
+  const isProductRoute = isProductDetailPath(pathname);
   const shouldBlock = useCallback<BlockerFunction>(
     (args) =>
       shouldTransition(args) ||
-      (/^\/merch\/[^/]+\/?$/.test(args.currentLocation.pathname) &&
+      (isProductDetailPath(args.currentLocation.pathname) &&
         args.currentLocation.pathname !== args.nextLocation.pathname),
     [shouldTransition],
   );

@@ -1,7 +1,11 @@
-import {useLoaderData} from 'react-router';
+import {redirect, useLoaderData} from 'react-router';
 import type {Route} from './+types/merch.$handle';
 import {ProductDetailRouteView} from '~/components/product-detail/ProductDetailRouteView';
 import {loadProductDetail} from '~/lib/productDetail';
+import {
+  getProductListingPath,
+  getProductListingPathForProduct,
+} from '~/lib/variants';
 
 export const meta: Route.MetaFunction = ({data, params}) => {
   const product = data?.product;
@@ -10,7 +14,7 @@ export const meta: Route.MetaFunction = ({data, params}) => {
   return [
     {
       title:
-        product?.seo.title || `${product?.title ?? 'Product'} | Wake n Swag`,
+        product?.seo.title || `Wake n Swag | ${product?.title ?? 'Product'}`,
     },
     {
       name: 'description',
@@ -31,14 +35,18 @@ export async function loader({context, params, request}: Route.LoaderArgs) {
     });
   }
 
+  const requestUrl = new URL(request.url);
   const product = await loadProductDetail({
     handle: params.handle,
     request,
     storefront: context.storefront,
   });
 
-  const requestUrl = new URL(request.url);
-  const canonicalPath = `/merch/${product.handle}`;
+  const listingPath = getProductListingPathForProduct(product);
+  const canonicalPath = `${listingPath}/${product.handle}`;
+  if (getProductListingPath(requestUrl.pathname) !== listingPath) {
+    throw redirect(`${canonicalPath}${requestUrl.search}`);
+  }
 
   return {
     canonicalPath,

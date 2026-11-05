@@ -9,6 +9,7 @@ import userEvent from '@testing-library/user-event';
 import {describe, expect, it} from 'vitest';
 import type {CartApiQueryFragment} from 'storefrontapi.generated';
 import {AddToCartButton} from '~/components/cart/AddToCartButton';
+import {CartModal} from '~/components/cart/CartModal';
 import {AppControllerFooter} from '~/components/controller/AppControllerFooter';
 import {AsideProvider} from '~/components/layout/Aside';
 import {SearchModal} from '~/components/search/SearchModal';
@@ -87,15 +88,20 @@ describe('controller footer', () => {
     },
   );
 
-  it.each(['/merch/fixture-tee', '/merch/fixture-tee/'])(
-    'returns directly opened product %s to the merchandise list',
-    async (pathname) => {
+  it.each([
+    ['/merch/fixture-tee', '/merch'],
+    ['/merch/fixture-tee/', '/merch'],
+    ['/drumkits/wnb-vol-001', '/drumkits'],
+    ['/drumkits/wnb-vol-001/', '/drumkits'],
+  ])(
+    'returns directly opened product %s to %s',
+    async (pathname, listingPath) => {
       const user = userEvent.setup();
       const router = renderFooter({pathname});
       await screen.findByRole('button', {name: 'Cart (2)'});
       await user.click(screen.getByRole('button', {name: 'Back'}));
       await waitFor(() =>
-        expect(router.state.location.pathname).toBe('/merch'),
+        expect(router.state.location.pathname).toBe(listingPath),
       );
       expect(screen.getByRole('button', {name: 'Back'})).toBeVisible();
     },
@@ -112,7 +118,7 @@ describe('controller footer', () => {
       expect(within(toolbar).getAllByRole('button')).toHaveLength(1);
       await user.click(within(toolbar).getByRole('button', {name: 'Back'}));
       expect(
-        within(toolbar).getByRole('button', {name: 'Search'}),
+        await within(toolbar).findByRole('button', {name: 'Search'}),
       ).toBeVisible();
       expect(
         within(toolbar).getByRole('button', {name: 'Cart (2)'}),
@@ -130,7 +136,7 @@ describe('controller footer', () => {
     renderFooter({cart: pendingCart.promise});
     await user.click(await screen.findByRole('button', {name: 'Cart (0)'}));
     await user.click(screen.getByRole('button', {name: 'Back'}));
-    expect(screen.getByRole('button', {name: 'Cart (0)'})).toBeVisible();
+    expect(await screen.findByRole('button', {name: 'Cart (0)'})).toBeVisible();
 
     await act(async () => pendingCart.resolve(createCart(4)));
     expect(screen.getByRole('button', {name: 'Cart (4)'})).toBeVisible();
@@ -147,7 +153,7 @@ describe('controller footer', () => {
     expect(screen.getByRole('button', {name: 'Cart (0)'})).toBeVisible();
     await user.click(screen.getByRole('button', {name: 'Search'}));
     await user.click(screen.getByRole('button', {name: 'Back'}));
-    expect(screen.getByRole('button', {name: 'Search'})).toBeVisible();
+    expect(await screen.findByRole('button', {name: 'Search'})).toBeVisible();
     expect(screen.getByRole('button', {name: 'Cart (0)'})).toBeVisible();
   });
 
@@ -164,13 +170,51 @@ describe('controller footer', () => {
     expect(dialog).toBeVisible();
     await user.keyboard('{Escape}');
 
-    expect(
-      screen.queryByRole('dialog', {name: 'System browser search'}),
-    ).not.toBeInTheDocument();
-    expect(screen.getByRole('button', {name: 'Cart (4)'})).toBeVisible();
+    expect(dialog).toBeVisible();
+    expect(dialog).toHaveClass('anim-fade-out');
+    expect(await screen.findByRole('button', {name: 'Cart (4)'})).toBeVisible();
+    expect(dialog).not.toBeInTheDocument();
     await waitFor(() =>
       expect(screen.getByRole('button', {name: 'Search'})).toHaveFocus(),
     );
+  });
+
+  it('keeps the cart usable when opened before a pending add has a server price', async () => {
+    const user = userEvent.setup();
+    const pendingAction = deferred<{errors: Array<{message: string}>}>();
+    const cart = Promise.resolve(createCart(0));
+    const variant = createVariant();
+    renderFooter({
+      cart,
+      action: () => pendingAction.promise,
+      children: (
+        <>
+          <AddToCartButton
+            lines={[
+              {
+                merchandiseId: variant.id,
+                quantity: 1,
+                selectedVariant: variant,
+              },
+            ]}
+          >
+            Add to cart
+          </AddToCartButton>
+          <CartModal cart={cart} />
+        </>
+      ),
+    });
+    await screen.findByRole('button', {name: 'Cart (0)'});
+    await user.click(screen.getByRole('button', {name: 'Add to cart'}));
+    await user.click(screen.getByRole('button', {name: 'Cart (1)'}));
+    const items = await screen.findByRole('list', {name: 'Cart items'});
+    expect(within(items).getByText('Fixture Tee')).toBeVisible();
+    expect(within(items).getByText('—', {exact: true})).toBeVisible();
+
+    await act(async () =>
+      pendingAction.resolve({errors: [{message: 'Cart update failed'}]}),
+    );
+    expect(await screen.findByText('Your cart is empty.')).toBeVisible();
   });
 
   it('shows the optimistic cart quantity during submission and restores it after failure', async () => {

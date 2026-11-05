@@ -16,6 +16,13 @@ describe('controller Back destinations', () => {
     },
   );
 
+  it.each(['/drumkits/wnb-vol-001', '/drumkits/wnb-vol-001/'])(
+    'returns a directly opened drumkit %s to drumkits',
+    (pathname) => {
+      expect(getControllerBackPath(pathname)).toBe('/drumkits');
+    },
+  );
+
   it.each(['/merch', '/drumkits', '/socials', '/info', '/missing'])(
     'returns %s to the main menu',
     (pathname) => {

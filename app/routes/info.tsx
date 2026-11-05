@@ -3,7 +3,7 @@ import {ContentPageShell} from '~/components/content/ContentPageShell';
 
 export const meta: Route.MetaFunction = () => [
   {
-    title: 'Info | Wake n Swag',
+    title: 'Wake n Swag | Info',
   },
   {
     name: 'description',

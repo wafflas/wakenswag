@@ -100,6 +100,53 @@ test('predictive search returns products and supports empty results', async ({
   await expect(page.getByRole('dialog')).toHaveCount(0);
 });
 
+test('search routes drumkits to their collection and preserves search tracking', async ({
+  page,
+}) => {
+  await page.emulateMedia({reducedMotion: 'reduce'});
+  for (const path of ['/', '/merch']) {
+    await openPage(page, path);
+    await page.getByRole('button', {name: 'Search', exact: true}).click();
+    await page.getByRole('searchbox', {name: 'Search memory'}).fill('drum');
+    const result = page.getByRole('link', {
+      name: 'View Fixture Drumkit',
+      exact: true,
+    });
+    await expect(result.getByText('DRUMKITS', {exact: true})).toBeVisible();
+    await expect(result).toHaveAttribute(
+      'href',
+      '/drumkits/fixture-drumkit?q=drum&_pos=2&_psid=fixture-session&_psq=drum&_ss=e',
+    );
+    await result.click();
+    await expect(page).toHaveURL(/\/drumkits\/fixture-drumkit\?q=drum&_pos=2/);
+    const detail = page.getByRole('dialog', {
+      name: 'Fixture Drumkit',
+      exact: true,
+    });
+    await expect(detail).toBeVisible();
+    await expect(detail.locator('[data-product-theme]')).toHaveAttribute(
+      'data-product-theme',
+      'black',
+    );
+    await expect(detail.getByRole('group', {name: 'Quantity'})).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    await expect(page).toHaveURL(/\/drumkits$/);
+    await expect(
+      page.getByRole('heading', {name: 'Buy the fucking drumkits'}),
+    ).toBeVisible();
+  }
+  await openPage(
+    page,
+    '/merch/fixture-drumkit?q=drum&_pos=2&_psid=fixture-session&_psq=drum&_ss=e',
+  );
+  await expect(page).toHaveURL(
+    /\/drumkits\/fixture-drumkit\?q=drum&_pos=2&_psid=fixture-session/,
+  );
+  await expect(
+    page.getByRole('dialog', {name: 'Fixture Drumkit', exact: true}),
+  ).toBeVisible();
+});
+
 test('cursor pagination reaches every product and survives reload and history', async ({
   page,
 }) => {
@@ -129,16 +176,173 @@ test('cursor pagination reaches every product and survives reload and history', 
   await expect(products.getByRole('link')).toHaveCount(1);
 });
 
+test('drumkit pages fit the viewport and paginate all 24 fixture products', async ({
+  page,
+  isMobile,
+}) => {
+  await page.emulateMedia({reducedMotion: 'reduce'});
+  await openPage(page, '/drumkits');
+  const products = page.getByRole('region', {name: 'Products', exact: true});
+  const visited = new Set<string>();
+
+  const checkLayout = async () => {
+    const geometry = await products.evaluate((grid) => {
+      const bounds = grid.getBoundingClientRect();
+      const cards = [...grid.querySelectorAll('a')];
+      const heights = cards.map((card) => card.getBoundingClientRect().height);
+      const fits = cards.every((card) => {
+        const box = card.getBoundingClientRect();
+        const heading = card
+          .querySelector('.ps2-drumkit-heading')!
+          .getBoundingClientRect();
+        const description = card
+          .querySelector('.ps2-drumkit-description')!
+          .getBoundingClientRect();
+        return (
+          box.top >= bounds.top - 1 &&
+          box.bottom <= bounds.bottom + 1 &&
+          heading.top >= box.top - 1 &&
+          description.bottom <= box.bottom + 1
+        );
+      });
+      return {
+        fits,
+        equalHeights: Math.max(...heights) - Math.min(...heights) < 1,
+        overflow: grid.scrollHeight - grid.clientHeight,
+        documentOverflow: document.documentElement.scrollHeight - innerHeight,
+        imageHeight: Math.min(
+          ...cards.map(
+            (card) => card.querySelector('img')!.getBoundingClientRect().height,
+          ),
+        ),
+        mdUp: innerWidth >= 768,
+        compact: innerWidth < 768 || Math.max(...heights) <= 352.5,
+        previousImageSize:
+          innerWidth >= 1024
+            ? Math.min(innerWidth * 0.1, (innerHeight - 288) / 3, 160)
+            : innerWidth >= 768
+              ? 96
+              : 88,
+      };
+    });
+    expect(geometry.fits).toBe(true);
+    expect(geometry.equalHeights).toBe(true);
+    expect(geometry.compact).toBe(true);
+    expect(geometry.overflow).toBeLessThanOrEqual(1);
+    expect(geometry.documentOverflow).toBeLessThanOrEqual(1);
+    expect(geometry.imageHeight).toBeGreaterThan(0);
+    if (geometry.mdUp)
+      expect(geometry.imageHeight).toBeGreaterThan(geometry.previousImageSize);
+    else expect(geometry.imageHeight).toBeLessThanOrEqual(144.5);
+  };
+
+  for (let pageNumber = 1; pageNumber <= 4; pageNumber++) {
+    await expect(products.getByRole('link')).toHaveCount(6);
+    const index = (pageNumber - 1) * 6 + 1;
+    const handle = index === 1 ? 'fixture-tee' : `fixture-tee-${index}`;
+    await expect(products.getByRole('link').first()).toHaveAttribute(
+      'href',
+      `/drumkits/${handle}`,
+    );
+    for (const href of await products
+      .getByRole('link')
+      .evaluateAll((links) => links.map((link) => link.getAttribute('href')!)))
+      visited.add(href);
+    await checkLayout();
+    if (pageNumber === 1) {
+      await expect(
+        page.getByRole('link', {name: 'Go to previous product page'}),
+      ).toHaveCount(0);
+      const description = products
+        .getByRole('link')
+        .first()
+        .locator('.ps2-drumkit-description');
+      await expect(description).toHaveCSS('-webkit-line-clamp', '3');
+      await expect
+        .poll(() =>
+          products
+            .getByRole('link')
+            .first()
+            .locator('img')
+            .evaluate((image) => (image as HTMLImageElement).naturalWidth),
+        )
+        .toBeGreaterThan(0);
+      if (!isMobile) {
+        for (const [width, height] of [
+          [1920, 1080],
+          [2560, 1440],
+          [1024, 600],
+          [375, 667],
+          [768, 1024],
+          [844, 390],
+          [320, 568],
+        ]) {
+          await page.setViewportSize({width, height});
+          await checkLayout();
+        }
+        await page.setViewportSize({width: 1280, height: 720});
+      }
+    }
+    if (pageNumber === 2) {
+      await page.reload();
+      await expect(products.getByRole('link').first()).toHaveAttribute(
+        'href',
+        '/drumkits/fixture-tee-7',
+      );
+    }
+    if (pageNumber === 1 || pageNumber === 4)
+      await page.screenshot({
+        path: test.info().outputPath(`drumkits-page-${pageNumber}.png`),
+        animations: 'disabled',
+      });
+    if (pageNumber < 4)
+      await page.getByRole('link', {name: 'Go to next product page'}).click();
+  }
+  expect(visited.size).toBe(24);
+  await expect(
+    page.getByRole('link', {name: 'Go to next product page'}),
+  ).toHaveCount(0);
+  await products.getByRole('link').last().click();
+  const product = page.getByRole('dialog', {
+    name: 'Fixture Tee 24',
+    exact: true,
+  });
+  await expect(product).toBeVisible();
+  await expect(
+    product.getByRole('button', {name: 'Add to cart', exact: true}),
+  ).toBeEnabled();
+  await expect(product.getByRole('group', {name: 'Quantity'})).toHaveCount(0);
+  await expect(product.locator('[data-product-theme]')).toHaveAttribute(
+    'data-product-theme',
+    'black',
+  );
+  await page.keyboard.press('Escape');
+  await expect(product).toHaveCount(0);
+  await openPage(page, '/drumkits?cursor=5&direction=next');
+  await page.getByRole('link', {name: 'Go to previous product page'}).click();
+  await expect(products.getByRole('link').first()).toHaveAttribute(
+    'href',
+    '/drumkits/fixture-tee',
+  );
+  await expect(products.getByRole('link')).toHaveCount(6);
+});
+
 test('variant links update URL, price, quantity and merchandise added to cart', async ({
   page,
 }) => {
   await openPage(page, '/merch/fixture-tee');
-  await expect(page).toHaveTitle('Fixture Tee | Wake n Swag');
+  await expect(page).toHaveTitle('Wake n Swag | Fixture Tee');
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
     'href',
     'http://localhost:4173/merch/fixture-tee',
   );
   const product = page.getByRole('dialog', {name: 'Fixture Tee', exact: true});
+  const theme = product.locator('[data-product-theme]');
+  await expect(theme).toHaveAttribute('data-product-theme', 'gray');
+  await expect(theme.locator(':scope > [aria-hidden="true"]')).toHaveCSS(
+    'background-image',
+    /linear-gradient/,
+  );
   await product.getByRole('button', {name: /Increase quantity/}).click();
   await product.getByRole('link', {name: 'Large', exact: true}).click();
   await expect(page).toHaveURL(/Size=Large/);
@@ -158,6 +362,45 @@ test('variant links update URL, price, quantity and merchandise added to cart', 
       .getByText('30 EURO', {exact: true}),
   ).toBeVisible();
   await expect(cart.getByText(/^Total/)).toHaveText('Total 30 EURO');
+});
+
+test('controller focus rings follow keyboard input after pointer dialog interactions', async ({
+  page,
+  isMobile,
+}) => {
+  await page.emulateMedia({reducedMotion: 'reduce'});
+  await openPage(page, '/');
+  const search = page.getByRole('button', {name: 'Search', exact: true});
+  const press = async (button: ReturnType<Page['getByRole']>) => {
+    if (isMobile) await button.tap();
+    else await button.click();
+  };
+  await press(search);
+  const input = page.getByRole('searchbox', {name: 'Search memory'});
+  await expect(input).toBeFocused();
+  await input.pressSequentially('nothing');
+  await page.keyboard.press('Tab');
+  const back = page.getByRole('button', {name: 'Back', exact: true});
+  await expect(back).toBeFocused();
+  await expect(back).toHaveCSS('outline-style', 'solid');
+  await press(back);
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(search).toBeFocused();
+  await expect(search).toHaveCSS('outline-style', 'none');
+
+  await page.keyboard.press('Tab');
+  const cart = page.getByRole('button', {name: /Cart/});
+  await expect(cart).toBeFocused();
+  await expect(cart).toHaveCSS('outline-style', 'solid');
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('dialog', {name: 'Shopping cart'})).toBeVisible();
+  await press(page.getByRole('button', {name: 'Back', exact: true}));
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(cart).toBeFocused();
+  await expect(cart).toHaveCSS('outline-style', 'none');
+  await page.keyboard.press('Shift+Tab');
+  await expect(search).toBeFocused();
+  await expect(search).toHaveCSS('outline-style', 'solid');
 });
 
 test('dialogs contain keyboard focus, preserve the HUD and restore the opener', async ({
@@ -187,6 +430,129 @@ test('dialogs contain keyboard focus, preserve the HUD and restore the opener', 
   expect(await page.evaluate(() => document.body.style.overflow)).toBe('');
 });
 
+test('drumkit selection follows hover and focus and respects reduced motion', async ({
+  page,
+  isMobile,
+}) => {
+  if (!isMobile) await page.setViewportSize({width: 1024, height: 600});
+  await openPage(page, '/drumkits');
+  const products = page.getByRole('region', {name: 'Products', exact: true});
+  const first = products.getByRole('link').nth(0);
+  const second = products.getByRole('link').nth(1);
+  const heading = first.locator('.ps2-drumkit-heading');
+  const description = first.locator('.ps2-drumkit-description');
+  await expect(page.getByText('Now loading...', {exact: true})).toHaveCount(0);
+
+  await expect(first).toHaveAttribute('aria-current', 'true');
+  await expect(first.getByText('Fixture Tee', {exact: true})).toBeVisible();
+  await expect(first.locator('.ps2-drumkit-indicator')).toBeVisible();
+  await expect(description).toBeVisible();
+  await expect(first).toHaveAccessibleDescription(/808s so distorted/);
+  await expect(heading).toHaveCSS('animation-name', 'ps2-drumkit-bounce');
+  await expect(first.locator('img')).toHaveCSS('animation-name', 'none');
+  await expect(first.locator('img')).toHaveCSS('transform', 'none');
+  await expect(first.locator('img')).toHaveCSS('object-fit', 'contain');
+  await expect(description).toHaveCSS('animation-name', 'none');
+  await expect(second.locator('.ps2-drumkit-heading')).toBeHidden();
+  await expect(second.locator('.ps2-drumkit-description')).toBeHidden();
+  const initialBounds = await first.boundingBox();
+
+  // Touch devices have no persistent hover; focus still selects the card.
+  if (isMobile) await second.focus();
+  else await second.hover();
+  await expect(second).toHaveAttribute('aria-current', 'true');
+  await expect(second.locator('.ps2-drumkit-heading')).toBeVisible();
+  await expect(second.locator('.ps2-drumkit-description')).toBeVisible();
+  await expect(heading).toBeHidden();
+  await expect(description).toBeHidden();
+  await expect(heading).toHaveCSS('animation-name', 'none');
+  await expect(second.locator('.ps2-drumkit-heading')).toHaveCSS(
+    'animation-name',
+    'ps2-drumkit-bounce',
+  );
+  expect(await first.boundingBox()).toEqual(initialBounds);
+
+  await first.focus();
+  await expect(first).toHaveAttribute('aria-current', 'true');
+  await expect(heading).toBeVisible();
+  // The bouncing title must fit above the artwork, even in the top row.
+  const headingFits = await heading.evaluate((element) => {
+    const grid = element.parentElement?.parentElement;
+    return Boolean(
+      grid &&
+      element.getBoundingClientRect().top >= grid.getBoundingClientRect().top,
+    );
+  });
+  expect(headingFits).toBe(true);
+  await page.screenshot({
+    path: test.info().outputPath('drumkits.png'),
+    fullPage: true,
+    animations: 'disabled',
+  });
+
+  await page.emulateMedia({reducedMotion: 'reduce'});
+  await expect(heading).toHaveCSS('animation-name', 'none');
+  await expect(heading).toBeVisible();
+  await expect(description).toBeVisible();
+  const last = products.getByRole('link').last();
+  await last.focus();
+  await expect(last.locator('.ps2-drumkit-description')).toBeInViewport();
+  await first.focus();
+  await first.click();
+  await expect(page).toHaveURL(/\/drumkits\/fixture-tee(?:\?|$)/);
+  await expect(page.getByRole('dialog', {name: 'Fixture Tee'})).toBeVisible();
+
+  await openPage(page, '/merch');
+  await expect(products.getByRole('link').first().locator('img')).toHaveCSS(
+    'animation-name',
+    'none',
+  );
+  expect(
+    await products
+      .getByRole('link')
+      .first()
+      .evaluate((element) => getComputedStyle(element, '::after').opacity),
+  ).toBe('1');
+});
+
+test('drumkit Back and Escape return to the drumkits collection', async ({
+  page,
+}) => {
+  await page.emulateMedia({reducedMotion: 'reduce'});
+  for (const action of ['Escape', 'Back']) {
+    await openPage(page, '/drumkits/fixture-tee');
+    const product = page.getByRole('dialog', {
+      name: 'Fixture Tee',
+      exact: true,
+    });
+    await expect(product).toBeVisible();
+    const theme = product.locator('[data-product-theme]');
+    await expect(theme).toHaveAttribute('data-product-theme', 'black');
+    await expect(theme.locator(':scope > [aria-hidden="true"]')).toHaveCSS(
+      'background-image',
+      'linear-gradient(145deg, rgb(56, 56, 56) 0%, rgb(24, 24, 24) 48%, rgb(5, 5, 5) 100%)',
+    );
+    if (action === 'Escape') {
+      await page.screenshot({
+        path: test.info().outputPath('drumkit-detail.png'),
+        animations: 'disabled',
+      });
+    }
+    await expect(product.getByRole('group', {name: 'Quantity'})).toHaveCount(0);
+    await expect(
+      product.getByRole('button', {name: 'Add to cart', exact: true}),
+    ).toBeEnabled();
+    if (action === 'Escape') {
+      await page.keyboard.press('Escape');
+    } else {
+      await page.getByRole('button', {name: 'Back', exact: true}).click();
+    }
+    await expect(page).toHaveURL(/\/drumkits$/);
+    await expect(product).toHaveCount(0);
+    await expect(page.getByRole('region', {name: 'Products'})).toBeVisible();
+  }
+});
+
 test('closing a cart over a product keeps the product open and locked', async ({
   page,
 }) => {
@@ -199,6 +565,9 @@ test('closing a cart over a product keeps the product open and locked', async ({
   await page.getByRole('button', {name: /Cart/}).click();
   await expect(page.getByRole('dialog', {name: 'Shopping cart'})).toBeVisible();
   await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog', {name: 'Shopping cart'})).toHaveCount(
+    0,
+  );
   await expect(
     page.getByRole('dialog', {name: 'Fixture Tee', exact: true}),
   ).toBeVisible();
@@ -251,6 +620,9 @@ test('404 pages have valid navigation and product images respect reduced motion'
   await page.getByRole('button', {name: /Cart/}).click();
   await expect(page.getByRole('dialog', {name: 'Shopping cart'})).toBeVisible();
   await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog', {name: 'Shopping cart'})).toHaveCount(
+    0,
+  );
   await page.getByRole('link', {name: 'Return to the main menu'}).click();
   await expect(
     page.getByRole('navigation', {name: 'Main navigation'}),
@@ -356,26 +728,79 @@ test('a delayed old search response cannot replace a newer query', async ({
   ).toHaveCount(0);
 });
 
-test('product and main-menu exit animations retain their timing', async ({
+test('cart and search share the product fade, finish their exit and respect reduced motion', async ({
   page,
 }) => {
   await openPage(page, '/merch/fixture-tee');
-  await page.getByRole('button', {name: 'Back', exact: true}).click();
-  await expect(page.locator('.anim-genie-shrink')).toHaveCSS(
-    'animation-duration',
-    '0.4s',
-  );
-  await expect(
-    page.getByRole('dialog', {name: 'Fixture Tee', exact: true}),
-  ).toHaveCSS('animation-duration', '0.3s');
-  await expect(page).toHaveURL(/\/merch$/);
-  await page.getByRole('button', {name: 'Back', exact: true}).click();
-  await expect(page.locator('.route-fade-transition--out')).toHaveCSS(
-    'animation-duration',
-    '0.5s',
-  );
-  await expect(page).toHaveURL(/:\d+\/$/);
+  const product = page.getByRole('dialog', {name: 'Fixture Tee', exact: true});
+  await expect(product).toHaveCSS('animation-name', 'fade-in');
+  await expect(product).toHaveCSS('animation-duration', '0.3s');
+  await expect(product).toHaveCSS('animation-timing-function', 'ease-out');
+
+  for (const reducedMotion of ['no-preference', 'reduce'] as const) {
+    await page.emulateMedia({reducedMotion});
+    for (const [buttonName, dialogName] of [
+      [/Cart/, 'Shopping cart'],
+      ['Search', 'System browser search'],
+    ] as const) {
+      await page.getByRole('button', {name: buttonName, exact: true}).click();
+      const dialog = page.getByRole('dialog', {name: dialogName, exact: true});
+      await expect(dialog).toBeVisible();
+      await expect(dialog).toHaveCSS(
+        'animation-name',
+        reducedMotion === 'reduce' ? 'none' : 'fade-in',
+      );
+      if (reducedMotion === 'no-preference') {
+        await expect(dialog).toHaveCSS('animation-duration', '0.3s');
+        await expect(dialog).toHaveCSS('animation-timing-function', 'ease-out');
+      }
+      await expect(dialog).toHaveCSS('opacity', '1');
+      if (dialogName === 'Shopping cart') {
+        await page.getByRole('button', {name: 'Back', exact: true}).click();
+      } else {
+        await page.keyboard.press('Escape');
+      }
+      if (reducedMotion === 'no-preference') {
+        await expect(dialog).toHaveCSS('animation-name', 'fade-out');
+        await expect(dialog).toHaveCSS('animation-duration', '0.3s');
+        await expect(dialog).toHaveCSS('animation-timing-function', 'ease-in');
+        expect(await page.evaluate(() => document.body.style.overflow)).toBe(
+          'hidden',
+        );
+      }
+      await expect(dialog).toHaveCount(0);
+      await expect(product).toBeVisible();
+      await expect(
+        page.getByRole('button', {name: buttonName, exact: true}),
+      ).toBeFocused();
+    }
+  }
 });
+
+for (const listingPath of ['/merch', '/drumkits']) {
+  test(`${listingPath} product and main-menu exit animations retain their timing`, async ({
+    page,
+  }) => {
+    await openPage(page, `${listingPath}/fixture-tee`);
+    await expect(page.getByText('Now loading...')).toHaveCount(0);
+    await page.getByRole('button', {name: 'Back', exact: true}).click();
+    await expect(page.locator('.anim-genie-shrink')).toHaveCSS(
+      'animation-duration',
+      '0.4s',
+    );
+    await expect(
+      page.getByRole('dialog', {name: 'Fixture Tee', exact: true}),
+    ).toHaveCSS('animation-duration', '0.3s');
+    await expect(page).toHaveURL(new RegExp(`${listingPath}$`));
+    await expect(page.getByText('Now loading...')).toHaveCount(0);
+    await page.getByRole('button', {name: 'Back', exact: true}).click();
+    await expect(page.locator('.route-fade-transition--out')).toHaveCSS(
+      'animation-duration',
+      '0.5s',
+    );
+    await expect(page).toHaveURL(/:\d+\/$/);
+  });
+}
 
 test('representative screens fit the viewport and provide review screenshots', async ({
   page,

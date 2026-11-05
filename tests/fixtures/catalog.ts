@@ -40,6 +40,8 @@ export function createProduct(
     handle: 'fixture-tee',
     vendor: 'Wake n Swag',
     description: 'Soft cotton tee',
+    productType: 'Merch',
+    collections: {nodes: [{handle: 'merch'}]},
     descriptionHtml: '<ul><li>Soft cotton tee</li></ul>',
     seo: {title: '', description: ''},
     encodedVariantExistence: 'v1_0-1',
@@ -66,6 +68,7 @@ export function createProductCard(index = 1) {
     id: `gid://shopify/Product/${index}`,
     handle: index === 1 ? product.handle : `fixture-tee-${index}`,
     title: index === 1 ? product.title : `Fixture Tee ${index}`,
+    description: product.description,
     featuredImage: product.selectedOrFirstAvailableVariant?.image ?? null,
     priceRange: {
       minVariantPrice: createVariant().price,

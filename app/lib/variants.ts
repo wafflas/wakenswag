@@ -10,11 +10,40 @@ export function isDefaultTitleOption(
   );
 }
 
+export function isProductDetailPath(pathname: string): boolean {
+  return /^\/(?:merch|drumkits)\/[^/]+\/?$/.test(pathname);
+}
+
+export function getProductListingPath(
+  pathname: string,
+): '/merch' | '/drumkits' {
+  if (pathname === '/drumkits' || pathname.startsWith('/drumkits/')) {
+    return '/drumkits';
+  }
+
+  return '/merch';
+}
+
 export function getProductPath(handle: string, pathname: string) {
   const localeMatch = /(\/[a-zA-Z]{2}-[a-zA-Z]{2}\/)/g.exec(pathname);
   const localePrefix = localeMatch?.[0] ?? '/';
+  const normalizedPathname = pathname.replace(localePrefix, '/');
+  const listingPath = getProductListingPath(normalizedPathname);
 
-  return `${localePrefix}merch/${handle}`;
+  return `${localePrefix}${listingPath.slice(1)}/${handle}`;
+}
+
+export function getProductListingPathForProduct(product: {
+  productType?: string | null;
+  collections?: {nodes: Array<{handle: string}>} | null;
+}): '/merch' | '/drumkits' {
+  const isDrumkitCollection = product.collections?.nodes.some(
+    ({handle}) => handle === 'drumkits',
+  );
+  const isDrumkitType = /^drum\s*kits?$/i.test(
+    product.productType?.trim() ?? '',
+  );
+  return isDrumkitCollection || isDrumkitType ? '/drumkits' : '/merch';
 }
 
 export function useVariantUrl(

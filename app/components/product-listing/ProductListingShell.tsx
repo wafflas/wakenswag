@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 import {useLocation} from 'react-router';
+import {isProductDetailPath} from '~/lib/variants';
 import {ProductListingHeader} from '~/components/product-listing/ProductListingHeader';
 import {PRODUCT_LISTING_STAGGER_MS} from './productListingUtils';
 
@@ -20,20 +21,24 @@ export function useProductListingLoading() {
 }
 
 interface ProductListingShellProps {
+  className?: string;
   animationKey?: string;
   children: ReactNode;
   displayTitle: string;
   loadingDurationMs: number;
+  backgroundClassName?: string;
 }
 
 export function ProductListingShell({
+  className,
   animationKey,
   children,
   displayTitle,
   loadingDurationMs,
+  backgroundClassName = '[background:linear-gradient(140deg,#c4c4c4_0%,#757575_40%,#303030_80%,#151515_100%)]',
 }: ProductListingShellProps) {
   const location = useLocation();
-  const isProductDetailRoute = /^\/merch\/[^/]+\/?$/.test(location.pathname);
+  const isProductDetailRoute = isProductDetailPath(location.pathname);
   const wasProductDetailRouteRef = useRef(isProductDetailRoute);
   const loadingTimerRef = useRef<number>();
   const [isShowingLoadingScreen, setIsShowingLoadingScreen] = useState(
@@ -97,7 +102,8 @@ export function ProductListingShell({
         className={[
           'relative isolate flex h-dvh flex-col overflow-hidden',
           'font-ps2 text-ps2-white',
-          '[background:linear-gradient(140deg,#c4c4c4_0%,#757575_40%,#303030_80%,#151515_100%)]',
+          backgroundClassName,
+          className,
         ].join(' ')}
       >
         <ProductListingHeader displayTitle={displayTitle} />

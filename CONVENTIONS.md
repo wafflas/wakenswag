@@ -80,6 +80,8 @@ Use state for values that affect rendering. Use refs for persistent mutable brow
 
 Effects synchronize browser systems: focus, scroll locking, audio, timers and event listeners. Return cleanup that restores previous values, removes listeners and clears timers. Reuse `useModalDialog` for full-screen dialogs; it preserves HUD actions, traps focus, makes background siblings inert and restores focus after closing. Do not add another document-level Escape listener to those dialogs.
 
+`AsideProvider` keeps Search/Cart active while `isExiting` drives `FadeTransition`'s 300 ms overlay fade-out. All close paths share this state; keep focus containment and scroll locking active until the exit finishes. `useExiting` shares timer cleanup and reduced-motion handling with `useRouteExitTransition`. Opening another overlay cancels the pending close. Only `RouteFadeTransition` installs a router blocker.
+
 Pass callbacks rather than invoking them during render: `onClick={close}` waits for a click, while `onClick={close()}` calls immediately. Use an arrow callback when arguments or multiple steps are needed.
 
 React Router supports one active navigation blocker. `RouteFadeTransition` owns it; ProductDetailRouteView consumes its product-exit state. Preserve the normal 400 ms product exit / 500 ms main-menu fade and reduced-motion behavior.

@@ -15,3 +15,13 @@ Object.defineProperty(window, 'matchMedia', {
 });
 
 window.scrollTo = vi.fn();
+
+// jsdom has no layout observer; real viewport prefetch runs in Playwright.
+vi.stubGlobal(
+  'IntersectionObserver',
+  class {
+    observe = vi.fn();
+    unobserve = vi.fn();
+    disconnect = vi.fn();
+  },
+);

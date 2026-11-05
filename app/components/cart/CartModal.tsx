@@ -1,6 +1,7 @@
 import {Suspense, useRef} from 'react';
 import {Await} from 'react-router';
 import type {CartApiQueryFragment} from 'storefrontapi.generated';
+import {FadeTransition} from '~/components/animations/FadeTransition';
 import {useAside} from '~/components/layout/Aside';
 import {CartMain} from './CartMain';
 import {useModalDialog} from '~/components/layout/useModalDialog';
@@ -13,7 +14,7 @@ interface CartModalProps {
  * Displays the existing Shopify cart inside a full-screen dialog.
  */
 export function CartModal({cart}: CartModalProps) {
-  const {close, type, openerRef} = useAside();
+  const {close, isExiting, type, openerRef} = useAside();
   const dialogRef = useRef<HTMLDivElement>(null);
   const isOpen = type === 'cart';
 
@@ -22,7 +23,7 @@ export function CartModal({cart}: CartModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div
+    <FadeTransition
       ref={dialogRef}
       aria-label="Shopping cart"
       aria-modal="true"
@@ -31,8 +32,10 @@ export function CartModal({cart}: CartModalProps) {
         'h-dvh overflow-hidden bg-[rgba(6,6,6,0.95)]',
         'font-ps2 text-ps2-muted',
       ].join(' ')}
+      isExiting={isExiting}
       role="dialog"
       tabIndex={-1}
+      variant="overlay"
     >
       <Suspense
         fallback={
@@ -55,6 +58,6 @@ export function CartModal({cart}: CartModalProps) {
           {(resolvedCart) => <CartMain cart={resolvedCart} layout="aside" />}
         </Await>
       </Suspense>
-    </div>
+    </FadeTransition>
   );
 }
