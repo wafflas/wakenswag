@@ -84,6 +84,58 @@ test('product quantity, add to cart, persisted cart and removal work', async ({
   expect(errors).toEqual([]);
 });
 
+test('each drumkit stays at one copy after repeat adds and direct quantity updates', async ({
+  page,
+}) => {
+  await page.emulateMedia({reducedMotion: 'reduce'});
+  await openPage(page, '/drumkits/fixture-drumkit');
+  const product = page.getByRole('dialog', {
+    name: 'Fixture Drumkit',
+    exact: true,
+  });
+  await product.getByRole('button', {name: 'Add to cart', exact: true}).click();
+  await expect(product.getByRole('button', {name: 'In cart'})).toBeDisabled();
+  await page.getByRole('button', {name: 'Cart (1)', exact: true}).click();
+  const cart = page.getByRole('dialog', {name: 'Shopping cart'});
+  await expect(cart.getByRole('status')).toHaveText('1');
+  await expect(
+    cart.getByRole('button', {name: /Increase quantity/}),
+  ).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(product.getByRole('button', {name: 'In cart'})).toBeDisabled();
+  for (const [action, inputs] of [
+    [
+      'LinesAdd',
+      {
+        lines: [
+          {merchandiseId: 'gid://shopify/ProductVariant/201', quantity: 4},
+        ],
+      },
+    ],
+    [
+      'LinesUpdate',
+      {lines: [{id: 'gid://shopify/CartLine/fixture', quantity: 9}]},
+    ],
+  ] as const) {
+    const response = await page.request.post('/cart.data', {
+      form: {cartFormInput: JSON.stringify({action, inputs})},
+    });
+    expect(response.status()).toBe(200);
+    await page.reload();
+    await expect(product.getByRole('button', {name: 'In cart'})).toBeDisabled();
+    await expect(
+      page.getByRole('button', {name: 'Cart (1)', exact: true}),
+    ).toBeVisible();
+  }
+  await page.getByRole('button', {name: 'Cart (1)', exact: true}).click();
+  await cart.getByRole('button', {name: 'Remove item', exact: true}).click();
+  await expect(cart.getByText('Your cart is empty.')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(
+    product.getByRole('button', {name: 'Add to cart', exact: true}),
+  ).toBeEnabled();
+});
+
 test('predictive search returns products and supports empty results', async ({
   page,
 }) => {

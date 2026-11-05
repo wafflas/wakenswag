@@ -23,7 +23,13 @@ export default {
        * delegates to React Router for routing and rendering.
        */
       const handleRequest = createRequestHandler({
-        build: serverBuild,
+        build: {
+          ...serverBuild,
+          allowedActionOrigins:
+            process.env.NODE_ENV === 'development'
+              ? ['*.trycloudflare.com', '*.tryhydrogen.dev']
+              : serverBuild.allowedActionOrigins,
+        },
         mode: process.env.NODE_ENV,
         getLoadContext: () => hydrogenContext,
       });

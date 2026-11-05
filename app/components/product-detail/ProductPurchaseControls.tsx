@@ -1,5 +1,11 @@
-import {useState} from 'react';
-import type {ProductFragment} from 'storefrontapi.generated';
+import {useEffect, useState} from 'react';
+import {useRouteLoaderData} from 'react-router';
+import {useOptimisticCart} from '@shopify/hydrogen';
+import type {RootLoader} from '~/root';
+import type {
+  CartApiQueryFragment,
+  ProductFragment,
+} from 'storefrontapi.generated';
 import {AddToCartButton} from '~/components/cart/AddToCartButton';
 
 export function ProductPurchaseControls({
@@ -10,6 +16,31 @@ export function ProductPurchaseControls({
   allowQuantitySelection?: boolean;
 }) {
   const [requestedQuantity, setQuantity] = useState(1);
+  const root = useRouteLoaderData<RootLoader>('root');
+  const cartPromise = root?.cart;
+  const [resolvedCart, setResolvedCart] = useState<CartApiQueryFragment | null>(
+    null,
+  );
+  const cart = useOptimisticCart(resolvedCart);
+  useEffect(() => {
+    if (!cartPromise) return;
+    let active = true;
+    void cartPromise
+      .then((cart) => {
+        if (active) setResolvedCart(cart);
+      })
+      .catch(() => {
+        if (active) setResolvedCart(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [cartPromise]);
+  const isInCart =
+    !allowQuantitySelection &&
+    cart?.lines?.nodes.some(
+      (line) => line.merchandise.product.id === selectedVariant?.product.id,
+    );
   const stockLimit = selectedVariant?.quantityAvailable ?? null;
 
   const selectedQuantity = allowQuantitySelection ? requestedQuantity : 1;
@@ -28,7 +59,7 @@ export function ProductPurchaseControls({
           'ps2-cta',
           'cursor-pointer border-0 bg-transparent p-0',
         ].join(' ')}
-        disabled={!selectedVariant || !isAvailable}
+        disabled={!selectedVariant || !isAvailable || isInCart}
         lines={
           selectedVariant
             ? [
@@ -46,7 +77,7 @@ export function ProductPurchaseControls({
             ' ',
           )}
         >
-          {isAvailable ? 'Add to cart' : 'Sold out'}
+          {isInCart ? 'In cart' : isAvailable ? 'Add to cart' : 'Sold out'}
         </span>
       </AddToCartButton>
 

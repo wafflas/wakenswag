@@ -25,7 +25,11 @@ export function createVariant(size = 'Small', availableForSale = true) {
       width: 400,
       height: 400,
     },
-    product: {title: 'Fixture Tee', handle: 'fixture-tee'},
+    product: {
+      id: 'gid://shopify/Product/1',
+      title: 'Fixture Tee',
+      handle: 'fixture-tee',
+    },
   };
 }
 
@@ -100,6 +104,8 @@ export function createCart(quantity = 1): CartApiQueryFragment {
                   ...variant.product,
                   id: 'gid://shopify/Product/1',
                   vendor: 'Wake n Swag',
+                  productType: 'Merch',
+                  collections: {nodes: [{handle: 'merch'}]},
                 },
               },
               cost: {
@@ -128,4 +134,43 @@ export function createCart(quantity = 1): CartApiQueryFragment {
     note: null,
     attributes: [],
   };
+}
+
+export function createDrumkitVariant() {
+  const variant = createVariant();
+  return {
+    ...variant,
+    id: 'gid://shopify/ProductVariant/201',
+    title: 'Default Title',
+    selectedOptions: [{name: 'Title', value: 'Default Title'}],
+    price: {amount: '10.00', currencyCode: 'EUR' as const},
+    product: {
+      id: 'gid://shopify/Product/2',
+      title: 'Fixture Drumkit',
+      handle: 'fixture-drumkit',
+    },
+  };
+}
+
+export function createDrumkitCart(quantity = 1): CartApiQueryFragment {
+  const cart = createCart(quantity);
+  const variant = createDrumkitVariant();
+  const amount = {amount: String(10 * quantity), currencyCode: 'EUR' as const};
+  if (cart.lines.nodes[0]) {
+    cart.lines.nodes[0].merchandise = {
+      ...variant,
+      requiresShipping: false,
+      product: {
+        ...variant.product,
+        vendor: 'Wake n Swag',
+        productType: '',
+        collections: {nodes: [{handle: 'drumkits'}]},
+      },
+    };
+    cart.lines.nodes[0].cost.totalAmount = amount;
+    cart.lines.nodes[0].cost.amountPerQuantity = variant.price;
+  }
+  cart.cost.subtotalAmount = amount;
+  cart.cost.totalAmount = amount;
+  return cart;
 }

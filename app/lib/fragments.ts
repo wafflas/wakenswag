@@ -77,6 +77,12 @@ export const CART_QUERY_FRAGMENT = `#graphql
           title
           id
           vendor
+          productType
+          collections(first: 20) {
+            nodes {
+              handle
+            }
+          }
         }
         selectedOptions {
           name
@@ -133,6 +139,12 @@ export const CART_QUERY_FRAGMENT = `#graphql
           title
           id
           vendor
+          productType
+          collections(first: 20) {
+            nodes {
+              handle
+            }
+          }
         }
         selectedOptions {
           name

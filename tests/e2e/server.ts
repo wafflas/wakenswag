@@ -7,6 +7,8 @@ import {
   createProduct,
   createProductCard,
   createVariant,
+  createDrumkitVariant,
+  createDrumkitCart,
 } from '../fixtures/catalog';
 
 const carts = new Map<string, ReturnType<typeof createCart>>();
@@ -153,7 +155,9 @@ function query(
       selectedOrFirstAvailableVariant:
         handle === 'no-variant'
           ? null
-          : createVariant(size, handle !== 'sold-out'),
+          : handle === 'fixture-drumkit'
+            ? createDrumkitVariant()
+            : createVariant(size, handle !== 'sold-out'),
     });
     return Promise.resolve({product});
   }
@@ -203,6 +207,14 @@ export default {
         if (request.headers.get('x-fixture-cart-error') === 'true')
           throw new Error('Simulated cart API outage');
         const line = lines[0];
+        if (line.merchandiseId.endsWith('/201')) {
+          const previous = cartId ? carts.get(cartId) : null;
+          const previousQuantity =
+            previous?.lines.nodes[0]?.merchandise.id.endsWith('/201')
+              ? previous.totalQuantity
+              : 0;
+          return saveCart(createDrumkitCart(previousQuantity + line.quantity));
+        }
         const cart = createCart(line.quantity);
         const variant = createVariant(
           line.merchandiseId.endsWith('/102') ? 'Large' : 'Small',
@@ -223,6 +235,8 @@ export default {
       },
       updateLines: (lines: Array<{quantity: number}>) => {
         const previous = cartId ? carts.get(cartId) : null;
+        if (previous?.lines.nodes[0]?.merchandise.id.endsWith('/201'))
+          return saveCart(createDrumkitCart(lines[0].quantity));
         const cart = createCart(lines[0].quantity);
         if (previous?.lines.nodes[0]) {
           cart.lines.nodes[0].merchandise = previous.lines.nodes[0].merchandise;

@@ -13,6 +13,7 @@ import {
   createCart,
   createProduct,
   createProductCard,
+  createDrumkitCart,
 } from '../fixtures/catalog';
 
 function createArgs(path = '/', inputs?: unknown, redirectTo?: string) {
@@ -26,6 +27,7 @@ function createArgs(path = '/', inputs?: unknown, redirectTo?: string) {
   const context = {
     storefront: {query},
     cart: {
+      get: vi.fn().mockResolvedValue(createCart()),
       addLines: vi.fn().mockResolvedValue(result),
       updateLines: vi.fn().mockResolvedValue(result),
       removeLines: vi.fn().mockResolvedValue(result),
@@ -48,6 +50,37 @@ function createArgs(path = '/', inputs?: unknown, redirectTo?: string) {
 }
 
 describe('cart action', () => {
+  it.each([CartForm.ACTIONS.LinesAdd, CartForm.ACTIONS.LinesUpdate])(
+    'corrects a drumkit quantity after %s using Shopify cart data',
+    async (action) => {
+      const inputs =
+        action === CartForm.ACTIONS.LinesAdd
+          ? {
+              lines: [
+                {
+                  merchandiseId: 'gid://shopify/ProductVariant/201',
+                  quantity: 4,
+                },
+              ],
+            }
+          : {lines: [{id: 'gid://shopify/CartLine/fixture', quantity: 4}]};
+      const {args, context} = createArgs('/cart', {action, inputs});
+      context.cart.get.mockResolvedValue(createDrumkitCart(4));
+      context.cart.updateLines.mockResolvedValue({
+        cart: createDrumkitCart(),
+        errors: [],
+        warnings: [],
+      });
+      const response = await cartAction(
+        args as unknown as Parameters<typeof cartAction>[0],
+      );
+      expect(context.cart.updateLines).toHaveBeenLastCalledWith(
+        [{id: 'gid://shopify/CartLine/fixture', quantity: 1}],
+        {cartId: 'gid://shopify/Cart/fixture'},
+      );
+      expect(response.data.cart?.totalQuantity).toBe(1);
+    },
+  );
   it.each([
     [
       CartForm.ACTIONS.LinesAdd,

@@ -5,8 +5,33 @@ import {
   getLineItemChildrenMap,
   getSubmittingContent,
   type CartLine,
+  getDrumkitQuantityCorrections,
 } from '~/components/cart/cartUtils';
-import {createCart} from '../fixtures/catalog';
+import {createCart, createDrumkitCart} from '../fixtures/catalog';
+
+describe('single-copy drumkits', () => {
+  it('caps drumkit quantities and removes a second variant of the same product', () => {
+    const drumkit = createDrumkitCart(3).lines.nodes[0];
+    const duplicate = {
+      ...drumkit,
+      id: 'duplicate-line',
+      merchandise: {...drumkit.merchandise, id: 'another-variant'},
+    };
+    const merch = {...createCart(5).lines.nodes[0], id: 'merch-line'};
+    expect(getDrumkitQuantityCorrections([merch, drumkit, duplicate])).toEqual({
+      updates: [{id: drumkit.id, quantity: 1}],
+      removals: ['duplicate-line'],
+    });
+  });
+  it('leaves one-copy drumkits and physical merch quantities unchanged', () => {
+    expect(
+      getDrumkitQuantityCorrections([
+        ...createDrumkitCart().lines.nodes,
+        ...createCart(4).lines.nodes,
+      ]),
+    ).toEqual({updates: [], removals: []});
+  });
+});
 
 describe('cart line grouping', () => {
   it('leaves independent lines out of the children map', () => {

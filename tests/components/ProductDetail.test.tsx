@@ -8,7 +8,12 @@ import {CartForm} from '@shopify/hydrogen';
 import userEvent from '@testing-library/user-event';
 import {describe, expect, it, vi} from 'vitest';
 import {ProductDetail} from '~/components/product-detail/ProductDetail';
-import {createProduct, createVariant} from '../fixtures/catalog';
+import {
+  createProduct,
+  createVariant,
+  createDrumkitVariant,
+  createDrumkitCart,
+} from '../fixtures/catalog';
 
 function renderProduct(
   available = true,
@@ -47,6 +52,29 @@ function createAddToCartAction() {
 }
 
 describe('product purchase controls', () => {
+  it('disables a drumkit already present in the resolved root cart', async () => {
+    const variant = createDrumkitVariant();
+    const product = createProduct({
+      selectedOrFirstAvailableVariant: variant,
+      adjacentVariants: [],
+      options: [],
+    });
+    const router = createMemoryRouter(
+      [
+        {
+          id: 'root',
+          path: '*',
+          loader: () => ({cart: Promise.resolve(createDrumkitCart())}),
+          element: (
+            <ProductDetail product={product} selectedVariant={variant} />
+          ),
+        },
+      ],
+      {initialEntries: ['/drumkits/fixture-drumkit']},
+    );
+    render(<RouterProvider router={router} />);
+    expect(await screen.findByRole('button', {name: 'In cart'})).toBeDisabled();
+  });
   it.each(['/merch', '/drumkits'])(
     'keeps variant links under %s',
     (listingPath) => {

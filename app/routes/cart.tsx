@@ -3,6 +3,7 @@ import type {Route} from './+types/cart';
 import type {CartQueryDataReturn} from '@shopify/hydrogen';
 import {CartForm} from '@shopify/hydrogen';
 import {getSafeRedirectPath} from '~/lib/redirect';
+import {getDrumkitQuantityCorrections} from '~/components/cart/cartUtils';
 
 export const headers: HeadersFunction = ({actionHeaders}) => actionHeaders;
 
@@ -111,6 +112,24 @@ export async function action({request, context}: Route.ActionArgs) {
       }
       default:
         return cartFailure('Unknown cart action.', 400);
+    }
+
+    if (
+      (action === CartForm.ACTIONS.LinesAdd ||
+        action === CartForm.ACTIONS.LinesUpdate) &&
+      result.cart?.id &&
+      !result.errors?.length
+    ) {
+      const cartId = result.cart.id;
+      const savedCart = await cart.get({cartId});
+      if (!savedCart)
+        return cartFailure('Could not load your cart. Please try again.', 502);
+      const {updates, removals} = getDrumkitQuantityCorrections(
+        savedCart.lines.nodes,
+      );
+      if (removals.length) result = await cart.removeLines(removals, {cartId});
+      if (updates.length && !result.errors?.length)
+        result = await cart.updateLines(updates, {cartId});
     }
   } catch (error) {
     console.error('Cart mutation failed', error);

@@ -1,5 +1,6 @@
 import {CartForm} from '@shopify/hydrogen';
 import type {CartLine} from './cartUtils';
+import {getProductListingPathForProduct} from '~/lib/variants';
 
 const QUANTITY_BUTTON_CLASS_NAME =
   'ps2-controller-action border-0 bg-transparent p-0 text-inherit enabled:cursor-pointer disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-20';
@@ -9,6 +10,8 @@ export function CartLineQuantity({line}: {line: CartLine}) {
   if (!line || typeof line.quantity === 'undefined') return null;
 
   const {id: lineId, merchandise, quantity, isOptimistic} = line;
+  const isDrumkit =
+    getProductListingPathForProduct(merchandise.product) === '/drumkits';
   const stockLimit = merchandise.quantityAvailable ?? null;
   const hasReachedStockLimit = stockLimit !== null && quantity >= stockLimit;
   const shouldRemoveLine = quantity === 1;
@@ -54,37 +57,39 @@ export function CartLineQuantity({line}: {line: CartLine}) {
         {quantity}
       </output>
 
-      <CartForm
-        fetcherKey={fetcherKey}
-        route="/cart"
-        action={CartForm.ACTIONS.LinesUpdate}
-        inputs={{lines: [{id: lineId, quantity: quantity + 1}]}}
-      >
-        {(fetcher) => (
-          <fieldset
-            disabled={fetcher.state !== 'idle'}
-            className="border-0 p-0"
-          >
-            <button
-              aria-label={
-                stockLimit === null
-                  ? 'Increase quantity'
-                  : `Increase quantity (maximum ${stockLimit})`
-              }
-              className={QUANTITY_BUTTON_CLASS_NAME}
-              disabled={!!isOptimistic || hasReachedStockLimit}
-              type="submit"
+      {!isDrumkit ? (
+        <CartForm
+          fetcherKey={fetcherKey}
+          route="/cart"
+          action={CartForm.ACTIONS.LinesUpdate}
+          inputs={{lines: [{id: lineId, quantity: quantity + 1}]}}
+        >
+          {(fetcher) => (
+            <fieldset
+              disabled={fetcher.state !== 'idle'}
+              className="border-0 p-0"
             >
-              +
-            </button>
-            {fetcher.state === 'idle' && fetcher.data?.errors?.length > 0 ? (
-              <p role="alert" className="text-sm">
-                Could not update this item. Please try again.
-              </p>
-            ) : null}
-          </fieldset>
-        )}
-      </CartForm>
+              <button
+                aria-label={
+                  stockLimit === null
+                    ? 'Increase quantity'
+                    : `Increase quantity (maximum ${stockLimit})`
+                }
+                className={QUANTITY_BUTTON_CLASS_NAME}
+                disabled={!!isOptimistic || hasReachedStockLimit}
+                type="submit"
+              >
+                +
+              </button>
+              {fetcher.state === 'idle' && fetcher.data?.errors?.length > 0 ? (
+                <p role="alert" className="text-sm">
+                  Could not update this item. Please try again.
+                </p>
+              ) : null}
+            </fieldset>
+          )}
+        </CartForm>
+      ) : null}
     </div>
   );
 }
