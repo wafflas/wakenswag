@@ -38,4 +38,45 @@ describe('main menu keyboard navigation', () => {
     await user.keyboard('{ArrowDown}{End}');
     expect(screen.getByRole('textbox')).toHaveFocus();
   });
+
+  it('navigates custom info items and identifies external links', async () => {
+    const user = userEvent.setup();
+    render(
+      <AsideProvider>
+        <MemoryRouter initialEntries={['/info']}>
+          <MainMenu
+            ariaLabel="Information"
+            variant="info"
+            items={[
+              {label: 'Privacy Policy', to: '/info/privacy-policy'},
+              {
+                label: 'Instagram',
+                to: 'https://www.instagram.com/wakenswag/',
+                external: true,
+              },
+              {
+                label: 'Website Credits',
+                to: 'https://wafflas.url',
+                external: true,
+              },
+            ]}
+          />
+        </MemoryRouter>
+      </AsideProvider>,
+    );
+    await user.keyboard('{End}');
+    const credits = screen.getByRole('link', {name: /Website Credits/});
+    expect(credits).toHaveFocus();
+    expect(credits).toHaveAttribute('href', 'https://wafflas.url');
+    await user.keyboard('{ArrowDown}');
+    expect(screen.getByRole('link', {name: 'Privacy Policy'})).toHaveFocus();
+    const instagram = screen.getByRole('link', {name: /Instagram/});
+    await user.hover(instagram);
+    expect(instagram).toHaveAttribute('data-selected', 'true');
+    expect(instagram).toHaveAttribute('target', '_blank');
+    expect(instagram).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(
+      screen.queryByRole('link', {current: 'page'}),
+    ).not.toBeInTheDocument();
+  });
 });

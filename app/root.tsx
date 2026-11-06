@@ -18,6 +18,7 @@ import favicon16 from '~/assets/favicons/favicon-16x16.png?url';
 import favicon32 from '~/assets/favicons/favicon-32x32.png?url';
 import favicon48 from '~/assets/favicons/favicon-48x48.png?url';
 import faviconIco from '~/assets/favicons/favicon.ico?url';
+import openGraphImage from '~/assets/wakenswagOGimage2.png?url';
 import appStyles from '~/styles/app.css?url';
 import tailwindCss from './styles/tailwind.css?url';
 import {PageLayout} from './components/layout/PageLayout';
@@ -79,9 +80,10 @@ export function links() {
   ];
 }
 
-export function loader({context}: Route.LoaderArgs) {
+export function loader({context, request}: Route.LoaderArgs) {
   const {storefront, cart, env} = context;
   return {
+    socialImageUrl: new URL(openGraphImage, request.url).href,
     cart: cart.get(),
     shop: getShopAnalytics({
       storefront,
@@ -99,6 +101,7 @@ export function loader({context}: Route.LoaderArgs) {
 
 export function Layout({children}: {children?: React.ReactNode}) {
   const nonce = useNonce();
+  const data = useRouteLoaderData<RootLoader>('root');
 
   return (
     <html lang="en">
@@ -108,6 +111,19 @@ export function Layout({children}: {children?: React.ReactNode}) {
         <link rel="stylesheet" href={tailwindCss}></link>
         <link rel="stylesheet" href={appStyles}></link>
         <Meta />
+        {/* Keep the shared image when a child route supplies its own meta. */}
+        {data?.socialImageUrl ? (
+          <>
+            <meta property="og:image" content={data.socialImageUrl} />
+            <meta property="og:image:type" content="image/png" />
+            <meta property="og:image:width" content="1200" />
+            <meta property="og:image:height" content="630" />
+            <meta property="og:image:alt" content="Wake n Swag" />
+            <meta name="twitter:card" content="summary_large_image" />
+            <meta name="twitter:image" content={data.socialImageUrl} />
+            <meta name="twitter:image:alt" content="Wake n Swag" />
+          </>
+        ) : null}
         <Links />
       </head>
       <body>

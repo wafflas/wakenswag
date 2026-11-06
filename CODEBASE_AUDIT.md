@@ -18,7 +18,7 @@ This is a React 18.3.1 storefront using Hydrogen 2026.4.7, React Router 7.16.0 f
 | `/cart`                                                   | Cart mutation action; no standalone page component                                                        |
 | `/cart/:lines`                                            | Shopify cart permalink; creates cart and redirects to checkout                                            |
 | `/discount/:code`                                         | Applies code, then redirects                                                                              |
-| `/info`, `/socials`                                       | Intentional placeholder content                                                                           |
+| `/info`, `/info/:section`                                 | Information menu with external links and published Shopify policies                                       |
 | `/robots.txt`, `/sitemap.xml`, `/sitemap/:type/:page.xml` | SEO resource routes                                                                                       |
 | `/*`                                                      | Throws real 404, root error boundary renders NotFoundPage                                                 |
 

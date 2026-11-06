@@ -89,6 +89,8 @@ describe('controller footer', () => {
   );
 
   it.each([
+    ['/info/privacy-policy', '/info'],
+    ['/info/refund-policy', '/info'],
     ['/merch/fixture-tee', '/merch'],
     ['/merch/fixture-tee/', '/merch'],
     ['/drumkits/wnb-vol-001', '/drumkits'],

@@ -3,9 +3,11 @@ import type {Route} from './+types/drumkits';
 import {ProductGrid} from '~/components/product-listing/ProductGrid';
 import {ProductListingShell} from '~/components/product-listing/ProductListingShell';
 import {useProductListingSelection} from '~/components/product-listing/useProductListingSelection';
+import {useDrumkitPageSize} from '~/components/product-listing/useDrumkitPageSize';
 import {
   EMPTY_PRODUCT_CONNECTION,
   DRUMKITS_PER_PAGE,
+  MOBILE_DRUMKITS_PER_PAGE,
 } from '~/components/product-listing/productListingUtils';
 import {PRODUCT_ITEM_FRAGMENT} from '~/lib/fragments';
 import {getPaginationVariables} from '@shopify/hydrogen';
@@ -28,10 +30,15 @@ export const meta: Route.MetaFunction = ({data}) => [
 ];
 
 export async function loader({context, request}: Route.LoaderArgs) {
+  const pageBy =
+    new URL(request.url).searchParams.get('pageSize') ===
+    String(MOBILE_DRUMKITS_PER_PAGE)
+      ? MOBILE_DRUMKITS_PER_PAGE
+      : DRUMKITS_PER_PAGE;
   const {collection} = await context.storefront.query(DRUMKITS_QUERY, {
     variables: {
       handle: DRUMKITS_HANDLE,
-      ...getPaginationVariables(request, {pageBy: DRUMKITS_PER_PAGE}),
+      ...getPaginationVariables(request, {pageBy}),
     },
   });
 
@@ -47,6 +54,7 @@ export async function loader({context, request}: Route.LoaderArgs) {
 }
 
 export default function Drumkits() {
+  useDrumkitPageSize();
   const {collection} = useLoaderData<typeof loader>();
   const products = collection.products;
 

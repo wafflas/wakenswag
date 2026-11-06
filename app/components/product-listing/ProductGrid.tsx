@@ -9,9 +9,6 @@ import {
   type ProductListingConnection,
 } from './productListingUtils';
 
-const productGridHorizontalPaddingClassName =
-  'px-4 sm:px-10 lg:px-30 2xl:px-60';
-
 interface ProductGridProps {
   connection: ProductListingConnection;
   selectedProductId?: string;
@@ -25,6 +22,9 @@ export function ProductGrid({
 }: ProductGridProps) {
   const {pathname} = useLocation();
   const isDrumkits = getProductListingPath(pathname) === '/drumkits';
+  const productGridHorizontalPaddingClassName = isDrumkits
+    ? 'px-4 sm:px-8 lg:px-20 2xl:px-40'
+    : 'px-4 sm:px-10 lg:px-30 2xl:px-60';
   const restartLoading = useProductListingLoading();
 
   return (
@@ -45,7 +45,7 @@ export function ProductGrid({
       resourcesClassName={[
         'grid h-full min-h-0 items-center',
         isDrumkits
-          ? 'ps2-drumkit-grid grid-cols-2 grid-rows-3 gap-x-4 gap-y-2 overflow-hidden py-2 lg:grid-cols-6 lg:grid-rows-1 lg:py-3'
+          ? 'ps2-drumkit-grid grid-cols-2 grid-rows-2 gap-x-4 gap-y-2 overflow-hidden py-2 max-lg:[&>:nth-child(n+5)]:hidden lg:grid-cols-6 lg:grid-rows-1 lg:py-3'
           : [
               'grid-cols-3 gap-x-4 lg:grid-cols-4 lg:gap-x-0',
               'grid-rows-4 content-center gap-y-[clamp(0.75rem,3dvh,3.5rem)] overflow-visible py-4',

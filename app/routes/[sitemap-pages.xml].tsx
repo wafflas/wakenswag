@@ -2,7 +2,7 @@ import type {LoaderFunctionArgs} from 'react-router';
 
 export function loader({request}: LoaderFunctionArgs) {
   const origin = new URL(request.url).origin;
-  const paths = ['/', '/merch', '/drumkits', '/info', '/socials'];
+  const paths = ['/', '/merch', '/drumkits', '/info'];
   const urls = paths
     .map((path) => `<url><loc>${origin}${path}</loc></url>`)
     .join('');

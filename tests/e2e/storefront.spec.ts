@@ -38,11 +38,170 @@ test('homepage navigation and important routes work', async ({page}) => {
   await expect(
     page.getByRole('navigation', {name: 'Main navigation'}),
   ).toBeVisible();
-  for (const label of ['Drumkits', 'Info', 'Socials']) {
+  for (const label of ['Drumkits', 'Info']) {
     await page.getByRole('link', {name: label, exact: true}).click();
     await expect(page.getByRole('heading', {level: 1})).toBeVisible();
     await page.getByRole('button', {name: 'Back', exact: true}).click();
   }
+});
+
+test('social previews include a public image in server-rendered pages', async ({
+  page,
+}) => {
+  await openPage(page, '/');
+  const imageUrl = await page
+    .locator('meta[property="og:image"]')
+    .getAttribute('content');
+  if (!imageUrl) throw new Error('Missing social preview image');
+  expect(new URL(imageUrl).origin).toBe(new URL(page.url()).origin);
+  expect(new URL(imageUrl).pathname).toContain('wakenswagOGimage2');
+  const imageResponse = await page.request.get(imageUrl);
+  expect(imageResponse.ok()).toBe(true);
+  expect(imageResponse.headers()['content-type']).toContain('image/png');
+
+  for (const path of ['/', '/info/privacy-policy', '/merch/fixture-tee']) {
+    const response = await page.request.get(path);
+    expect(response.ok()).toBe(true);
+    const html = await response.text();
+    expect(html).toContain(`<meta property="og:image" content="${imageUrl}"`);
+    expect(html).toContain('<meta property="og:image:width" content="1200"');
+    expect(html).toContain('<meta property="og:image:height" content="630"');
+    expect(html).toContain(`<meta name="twitter:image" content="${imageUrl}"`);
+  }
+});
+
+test('information menu opens policies and external links and fits the viewport', async ({
+  page,
+}) => {
+  await openPage(page, '/');
+  const homeLogoSize = await page
+    .locator('.ps2-logo--base')
+    .evaluate((logo) => {
+      const {width, height} = logo.getBoundingClientRect();
+      return {width, height};
+    });
+  await expect(
+    page.getByRole('navigation', {name: 'Main navigation'}).getByRole('link'),
+  ).toHaveCount(4);
+  await page.getByRole('link', {name: 'Info', exact: true}).click();
+  await expect(
+    page.getByRole('heading', {name: 'Website Information', exact: true}),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('heading', {name: 'Website Information', exact: true}),
+  ).toHaveCSS('color', 'rgb(221, 221, 85)');
+  const infoLogoSize = await page
+    .locator('.ps2-logo--base')
+    .evaluate((logo) => {
+      const {width, height} = logo.getBoundingClientRect();
+      return {width, height};
+    });
+  expect(infoLogoSize).toEqual(homeLogoSize);
+  await expect(page.getByRole('link', {name: /Instagram/})).toHaveAttribute(
+    'href',
+    'https://www.instagram.com/wakenswag/',
+  );
+  const instagram = page.getByRole('link', {name: /Instagram/});
+  const credits = page.getByRole('link', {name: /Website Credits/});
+  await expect(credits).toHaveAttribute('href', 'https://wafflas.url');
+  await expect(credits).toHaveAttribute('target', '_blank');
+  // Keyboard focus and pointer hover both use the menu's existing selection state.
+  await instagram.focus();
+  await expect(instagram.locator('span').first()).toHaveCSS(
+    'color',
+    'rgb(40, 200, 255)',
+  );
+  await expect(instagram.getByText('@wakenswag', {exact: true})).toHaveCSS(
+    'color',
+    'rgb(245, 245, 245)',
+  );
+  await expect(credits.getByText('wafflas.url', {exact: true})).toHaveCSS(
+    'color',
+    'rgb(130, 130, 130)',
+  );
+  if (!test.info().project.use.isMobile) {
+    await credits.hover();
+    await expect(credits.locator('span').first()).toHaveCSS(
+      'color',
+      'rgb(40, 200, 255)',
+    );
+    await expect(credits.getByText('wafflas.url', {exact: true})).toHaveCSS(
+      'color',
+      'rgb(245, 245, 245)',
+    );
+  }
+  await page.screenshot({
+    path: test.info().outputPath('information.png'),
+    fullPage: true,
+    animations: 'disabled',
+  });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  for (const [label, text] of [
+    ['Privacy Policy', 'Fixture privacy policy.'],
+    ['Terms of Service', 'Fixture terms of service.'],
+    ['Returns & Refunds', 'This policy hasn’t been published yet.'],
+  ]) {
+    await page.getByRole('link', {name: new RegExp(label)}).click();
+    await expect(page.locator('.route-fade-transition--out')).toHaveCSS(
+      'animation-duration',
+      '0.5s',
+    );
+    await expect(page.getByText(text, {exact: true})).toBeVisible();
+    await expect(page.locator('.route-fade-transition--in')).toHaveCSS(
+      'animation-name',
+      'fade-in',
+    );
+    await page.getByRole('button', {name: 'Back', exact: true}).click();
+    await expect(page.locator('.route-fade-transition--out')).toHaveCSS(
+      'animation-duration',
+      '0.5s',
+    );
+    await expect(page).toHaveURL(/\/info$/);
+    await expect(
+      page.getByRole('navigation', {name: 'Information', exact: true}),
+    ).toBeVisible();
+  }
+  await page.emulateMedia({reducedMotion: 'reduce'});
+  await page.getByRole('link', {name: /Privacy Policy/}).click();
+  await expect(
+    page.getByText('Fixture privacy policy.', {exact: true}),
+  ).toBeVisible();
+  await expect(page.locator('.route-fade-transition--in')).toHaveCSS(
+    'animation-name',
+    'none',
+  );
+  await page
+    .getByRole('link', {name: 'Back to Information', exact: true})
+    .click();
+  await expect(
+    page.getByRole('navigation', {name: 'Information', exact: true}),
+  ).toBeVisible();
+  await expect(page.locator('.route-fade-transition--in')).toHaveCSS(
+    'animation-name',
+    'none',
+  );
+  await page.emulateMedia({reducedMotion: 'no-preference'});
+  await page.getByRole('link', {name: /Privacy Policy/}).focus();
+  await page.keyboard.press('End');
+  await expect(
+    page.getByRole('link', {name: /Returns & Refunds/}),
+  ).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(instagram).toBeFocused();
+  await page.getByRole('button', {name: 'Search', exact: true}).click();
+  await expect(
+    page.getByRole('dialog', {name: 'System browser search'}),
+  ).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(
+    page.getByRole('dialog', {name: 'System browser search'}),
+  ).not.toBeVisible();
+  await page.getByRole('button', {name: 'Back', exact: true}).click();
+  await expect(page).toHaveURL(/:\d+\/$/);
 });
 
 test('product quantity, add to cart, persisted cart and removal work', async ({
@@ -182,7 +341,7 @@ test('search routes drumkits to their collection and preserves search tracking',
     );
     await expect(detail.getByRole('group', {name: 'Quantity'})).toHaveCount(0);
     await page.keyboard.press('Escape');
-    await expect(page).toHaveURL(/\/drumkits$/);
+    await expect(page).toHaveURL(/\/drumkits(?:\?pageSize=4)?$/);
     await expect(
       page.getByRole('heading', {name: 'Buy the fucking drumkits'}),
     ).toBeVisible();
@@ -236,8 +395,14 @@ test('drumkit pages fit the viewport and paginate all 24 fixture products', asyn
   await openPage(page, '/drumkits');
   const products = page.getByRole('region', {name: 'Products', exact: true});
   const visited = new Set<string>();
+  const pageSize = isMobile ? 4 : 6;
+  const pageCount = 24 / pageSize;
 
   const checkLayout = async () => {
+    const expectedCount = await page.evaluate(() =>
+      innerWidth < 1024 ? 4 : 6,
+    );
+    await expect(products.locator('a')).toHaveCount(expectedCount);
     const geometry = await products.evaluate((grid) => {
       const bounds = grid.getBoundingClientRect();
       const cards = [...grid.querySelectorAll('a')];
@@ -253,6 +418,8 @@ test('drumkit pages fit the viewport and paginate all 24 fixture products', asyn
         return (
           box.top >= bounds.top - 1 &&
           box.bottom <= bounds.bottom + 1 &&
+          box.left >= bounds.left - 1 &&
+          box.right <= bounds.right + 1 &&
           heading.top >= box.top - 1 &&
           description.bottom <= box.bottom + 1
         );
@@ -261,14 +428,32 @@ test('drumkit pages fit the viewport and paginate all 24 fixture products', asyn
         fits,
         equalHeights: Math.max(...heights) - Math.min(...heights) < 1,
         overflow: grid.scrollHeight - grid.clientHeight,
+        horizontalOverflow: grid.scrollWidth - grid.clientWidth,
         documentOverflow: document.documentElement.scrollHeight - innerHeight,
+        mobilePortrait: innerWidth < 768 && innerHeight > innerWidth,
+        columns: new Set(
+          cards.map((card) => Math.round(card.getBoundingClientRect().left)),
+        ).size,
+        rows: new Set(
+          cards.map((card) => Math.round(card.getBoundingClientRect().top)),
+        ).size,
+        artworkSize: Math.min(
+          ...cards.map((card) => {
+            const image = card.querySelector('img')!.getBoundingClientRect();
+            return Math.min(image.width, image.height);
+          }),
+        ),
+        minimumMobileArtworkSize: Math.min(
+          (innerWidth - 48) / 2,
+          innerHeight >= 700 ? 144 : innerHeight >= 600 ? 112 : 88,
+        ),
         imageHeight: Math.min(
           ...cards.map(
             (card) => card.querySelector('img')!.getBoundingClientRect().height,
           ),
         ),
-        mdUp: innerWidth >= 768,
-        compact: innerWidth < 768 || Math.max(...heights) <= 352.5,
+        mdUp: innerWidth >= 1024 || (innerWidth >= 768 && innerHeight > 500),
+        compact: innerWidth < 768 || Math.max(...heights) <= 384.5,
         previousImageSize:
           innerWidth >= 1024
             ? Math.min(innerWidth * 0.1, (innerHeight - 288) / 3, 160)
@@ -281,16 +466,23 @@ test('drumkit pages fit the viewport and paginate all 24 fixture products', asyn
     expect(geometry.equalHeights).toBe(true);
     expect(geometry.compact).toBe(true);
     expect(geometry.overflow).toBeLessThanOrEqual(1);
+    expect(geometry.columns).toBe(expectedCount === 4 ? 2 : 6);
+    expect(geometry.rows).toBe(expectedCount === 4 ? 2 : 1);
+    if (geometry.mobilePortrait)
+      expect(geometry.artworkSize).toBeGreaterThanOrEqual(
+        geometry.minimumMobileArtworkSize - 1,
+      );
+    expect(geometry.horizontalOverflow).toBeLessThanOrEqual(1);
     expect(geometry.documentOverflow).toBeLessThanOrEqual(1);
     expect(geometry.imageHeight).toBeGreaterThan(0);
     if (geometry.mdUp)
       expect(geometry.imageHeight).toBeGreaterThan(geometry.previousImageSize);
-    else expect(geometry.imageHeight).toBeLessThanOrEqual(144.5);
+    else expect(geometry.imageHeight).toBeLessThanOrEqual(224.5);
   };
 
-  for (let pageNumber = 1; pageNumber <= 4; pageNumber++) {
-    await expect(products.getByRole('link')).toHaveCount(6);
-    const index = (pageNumber - 1) * 6 + 1;
+  for (let pageNumber = 1; pageNumber <= pageCount; pageNumber++) {
+    await expect(products.locator('a')).toHaveCount(pageSize);
+    const index = (pageNumber - 1) * pageSize + 1;
     const handle = index === 1 ? 'fixture-tee' : `fixture-tee-${index}`;
     await expect(products.getByRole('link').first()).toHaveAttribute(
       'href',
@@ -301,6 +493,7 @@ test('drumkit pages fit the viewport and paginate all 24 fixture products', asyn
       .evaluateAll((links) => links.map((link) => link.getAttribute('href')!)))
       visited.add(href);
     await checkLayout();
+    await expect(products.getByRole('link').first()).toBeInViewport();
     if (pageNumber === 1) {
       await expect(
         page.getByRole('link', {name: 'Go to previous product page'}),
@@ -333,22 +526,24 @@ test('drumkit pages fit the viewport and paginate all 24 fixture products', asyn
           await checkLayout();
         }
         await page.setViewportSize({width: 1280, height: 720});
+        await checkLayout();
       }
     }
     if (pageNumber === 2) {
       await page.reload();
       await expect(products.getByRole('link').first()).toHaveAttribute(
         'href',
-        '/drumkits/fixture-tee-7',
+        `/drumkits/fixture-tee-${pageSize + 1}`,
       );
     }
-    if (pageNumber === 1 || pageNumber === 4)
+    if (pageNumber === 1 || pageNumber === pageCount)
       await page.screenshot({
         path: test.info().outputPath(`drumkits-page-${pageNumber}.png`),
         animations: 'disabled',
       });
-    if (pageNumber < 4)
+    if (pageNumber < pageCount) {
       await page.getByRole('link', {name: 'Go to next product page'}).click();
+    }
   }
   expect(visited.size).toBe(24);
   await expect(
@@ -370,13 +565,16 @@ test('drumkit pages fit the viewport and paginate all 24 fixture products', asyn
   );
   await page.keyboard.press('Escape');
   await expect(product).toHaveCount(0);
-  await openPage(page, '/drumkits?cursor=5&direction=next');
+  await openPage(
+    page,
+    `/drumkits?cursor=${pageSize - 1}&direction=next${isMobile ? '&pageSize=4' : ''}`,
+  );
   await page.getByRole('link', {name: 'Go to previous product page'}).click();
   await expect(products.getByRole('link').first()).toHaveAttribute(
     'href',
     '/drumkits/fixture-tee',
   );
-  await expect(products.getByRole('link')).toHaveCount(6);
+  await expect(products.getByRole('link')).toHaveCount(pageSize);
 });
 
 test('variant links update URL, price, quantity and merchandise added to cart', async ({
@@ -599,7 +797,7 @@ test('drumkit Back and Escape return to the drumkits collection', async ({
     } else {
       await page.getByRole('button', {name: 'Back', exact: true}).click();
     }
-    await expect(page).toHaveURL(/\/drumkits$/);
+    await expect(page).toHaveURL(/\/drumkits(?:\?pageSize=4)?$/);
     await expect(product).toHaveCount(0);
     await expect(page.getByRole('region', {name: 'Products'})).toBeVisible();
   }

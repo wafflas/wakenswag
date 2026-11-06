@@ -23,7 +23,16 @@ describe('controller Back destinations', () => {
     },
   );
 
-  it.each(['/merch', '/drumkits', '/socials', '/info', '/missing'])(
+  it.each([
+    '/info/privacy-policy',
+    '/info/terms-of-service',
+    '/info/refund-policy',
+    '/info/refund-policy/',
+  ])('returns %s to the information menu', (pathname) => {
+    expect(getControllerBackPath(pathname)).toBe('/info');
+  });
+
+  it.each(['/merch', '/drumkits', '/info', '/info/', '/missing'])(
     'returns %s to the main menu',
     (pathname) => {
       expect(getControllerBackPath(pathname)).toBe('/');

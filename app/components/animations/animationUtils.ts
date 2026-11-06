@@ -1,7 +1,7 @@
 /** Genie pop / shrink on product imagery. */
 export const GENIE_DURATION_MS = 400;
 
-/** Full-page route fade (main menu enter/leave). */
+/** Full-page route fade for home, Info and policy navigation. */
 export const ROUTE_FADE_DURATION_MS = 500;
 
 /** Search/cart opacity fade; matches .anim-fade-in and .anim-fade-out. */

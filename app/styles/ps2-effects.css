@@ -292,7 +292,7 @@
   height: 100%;
   min-height: 0;
   max-width: 100%;
-  max-height: 9rem;
+  max-height: 14rem;
   object-fit: contain;
 }
 
@@ -371,7 +371,7 @@
 
 @media (min-width: 768px) {
   .ps2-drumkit-item {
-    max-height: 22rem;
+    max-height: 24rem;
   }
 
   .ps2-drumkit-image {
@@ -412,11 +412,6 @@
 }
 
 @media (orientation: landscape) and (max-height: 500px) {
-  .ps2-drumkit-grid {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-    grid-template-rows: minmax(0, 1fr);
-  }
-
   .ps2-drumkit-listing .ps2-drumkit-pagination {
     grid-template-rows: minmax(0, 1fr) 2.5rem;
     padding-bottom: 3.5rem;

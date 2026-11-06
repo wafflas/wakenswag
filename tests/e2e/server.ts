@@ -46,6 +46,17 @@ function query(
   pathname = '/',
 ) {
   const variables = options?.variables ?? {};
+  if (queryText.includes('query InfoPolicies')) {
+    return Promise.resolve({
+      shop: {
+        privacyPolicy: {
+          body: '<h2>Your privacy</h2><p>Fixture privacy policy.</p>',
+        },
+        termsOfService: {body: '<p>Fixture terms of service.</p>'},
+        refundPolicy: null,
+      },
+    });
+  }
   if (queryText.includes('query ShopData'))
     return Promise.resolve({
       shop: {id: 'gid://shopify/Shop/1'},

@@ -96,7 +96,7 @@ Use `getPaginationVariables(request, {pageBy: PRODUCTS_PER_PAGE})` in catalog lo
 
 Validate user-controlled redirect paths with `getSafeRedirectPath`; checkout URLs come from Shopify cart responses. Do not invent product availability, cart totals or currency conversions on the client. `formatMoney` only formats Shopify amounts. Keep EUR's existing `EURO` label; display other currencies accurately.
 
-Handle nullable API data, GraphQL errors and mutation `errors` separately from successful HTTP transport. Preserve the custom `/merch/:handle` routes in canonical links, cards, search, cart and sitemaps. Info/socials placeholders and unimplemented account/filter features are intentional, not invitations to add unrelated features.
+Handle nullable API data, GraphQL errors and mutation `errors` separately from successful HTTP transport. Preserve the custom `/merch/:handle` routes in canonical links, cards, search, cart and sitemaps. Info sections read published Shopify policies and sanitize their HTML before rendering; Instagram and website credits are external links in Info. Unimplemented account/filter features are intentional, not invitations to add unrelated features.
 
 ## Formatting and testing
 

@@ -243,18 +243,32 @@ describe('catalog pagination and product loading', () => {
       },
     });
   });
-  it('passes the previous cursor to the drumkits query and retains the empty fallback', async () => {
-    const {args, context} = createArgs(
-      '/drumkits?cursor=cursor-12&direction=previous',
-    );
-    const result = await drumkitsLoader(
-      args as unknown as Parameters<typeof drumkitsLoader>[0],
-    );
-    expect(context.storefront.query).toHaveBeenCalledWith(expect.any(String), {
-      variables: {handle: 'drumkits', last: 6, startCursor: 'cursor-12'},
-    });
-    expect(result.collection.products.nodes).toEqual([]);
-  });
+  it.each([
+    ['', 6],
+    ['&pageSize=4', 4],
+    ['&pageSize=1000', 6],
+  ])(
+    'passes the previous cursor with the supported drumkits page size %s',
+    async (pageSize, count) => {
+      const {args, context} = createArgs(
+        `/drumkits?cursor=cursor-12&direction=previous${pageSize}`,
+      );
+      const result = await drumkitsLoader(
+        args as unknown as Parameters<typeof drumkitsLoader>[0],
+      );
+      expect(context.storefront.query).toHaveBeenCalledWith(
+        expect.any(String),
+        {
+          variables: {
+            handle: 'drumkits',
+            last: count,
+            startCursor: 'cursor-12',
+          },
+        },
+      );
+      expect(result.collection.products.nodes).toEqual([]);
+    },
+  );
   it('loads selected options server-side', async () => {
     const {args, context} = createArgs('/merch/fixture-tee?Size=Large');
     context.storefront.query.mockResolvedValue({product: createProduct()});

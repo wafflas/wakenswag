@@ -3,6 +3,7 @@ import type {MerchQuery, ProductItemFragment} from 'storefrontapi.generated';
 export const PRODUCT_LISTING_STAGGER_MS = 400;
 export const PRODUCTS_PER_PAGE = 12;
 export const DRUMKITS_PER_PAGE = 6;
+export const MOBILE_DRUMKITS_PER_PAGE = 4;
 
 export interface ProductListingPageChangeEvent {
   firstNode: ProductItemFragment | undefined;

@@ -15,7 +15,7 @@ interface PageLayoutProps {
 /**
  * Intentionally minimal storefront shell.
  *
- * Owns the global dialogs, controller footer and main-menu route transitions.
+ * Owns the global dialogs, controller footer and menu/policy route transitions.
  */
 export function PageLayout({children = null, cart}: PageLayoutProps) {
   const shouldFade = useCallback<BlockerFunction>(
@@ -24,8 +24,13 @@ export function PageLayout({children = null, cart}: PageLayoutProps) {
         currentLocation.pathname === '/' && nextLocation.pathname !== '/';
       const isReturningToMainMenu =
         currentLocation.pathname !== '/' && nextLocation.pathname === '/';
+      const isInfoNavigation =
+        currentLocation.pathname !== nextLocation.pathname &&
+        [currentLocation.pathname, nextLocation.pathname].some(
+          (pathname) => pathname === '/info' || pathname.startsWith('/info/'),
+        );
 
-      return isLeavingMainMenu || isReturningToMainMenu;
+      return isLeavingMainMenu || isReturningToMainMenu || isInfoNavigation;
     },
     [],
   );
