@@ -1041,7 +1041,7 @@ for (const listingPath of ['/merch', '/drumkits']) {
     await expect(
       page.getByRole('dialog', {name: 'Fixture Tee', exact: true}),
     ).toHaveCSS('animation-duration', '0.3s');
-    await expect(page).toHaveURL(new RegExp(`${listingPath}$`));
+    await expect(page).toHaveURL((url) => url.pathname === listingPath);
     await expect(page.getByText('Now loading...')).toHaveCount(0);
     await page.getByRole('button', {name: 'Back', exact: true}).click();
     await expect(page.locator('.route-fade-transition--out')).toHaveCSS(
