@@ -225,7 +225,7 @@
    6. Product item entrance + selection glow
 
    Layout for listing pages lives in Tailwind on the components.
-   This file owns the entrance, Merch glow and Drumkits selection effects.
+   This file owns the entrance, Swag glow and Drumkits selection effects.
    -------------------------------------------------------------------------- */
 
 .ps2-product-item.scale-in {

@@ -9,10 +9,10 @@ describe('controller Back destinations', () => {
     expect(getControllerBackPath('/')).toBeNull();
   });
 
-  it.each(['/merch/tee', '/merch/tee/'])(
-    'returns a directly opened product %s to merch',
+  it.each(['/swag/tee', '/swag/tee/'])(
+    'returns a directly opened product %s to Swag',
     (pathname) => {
-      expect(getControllerBackPath(pathname)).toBe('/merch');
+      expect(getControllerBackPath(pathname)).toBe('/swag');
     },
   );
 
@@ -32,7 +32,7 @@ describe('controller Back destinations', () => {
     expect(getControllerBackPath(pathname)).toBe('/info');
   });
 
-  it.each(['/merch', '/drumkits', '/info', '/info/', '/missing'])(
+  it.each(['/swag', '/drumkits', '/info', '/info/', '/missing'])(
     'returns %s to the main menu',
     (pathname) => {
       expect(getControllerBackPath(pathname)).toBe('/');
@@ -60,12 +60,12 @@ describe('listing pagination URLs', () => {
   it('creates a previous-page URL when no search parameters exist', () => {
     expect(
       getProductListingPageUrl({
-        pathname: '/merch',
+        pathname: '/swag',
         search: '',
         direction: 'previous',
         cursor: '0',
       }),
-    ).toBe('/merch?direction=previous&cursor=0');
+    ).toBe('/swag?direction=previous&cursor=0');
   });
 });
 
@@ -117,7 +117,7 @@ describe('interface sound targets', () => {
     expect(getInteractiveElement(new EventTarget())).toBeNull();
     expect(getInteractiveElement(document.createElement('a'))).toBeNull();
     const link = document.createElement('a');
-    link.href = '/merch';
+    link.href = '/swag';
     expect(getInteractiveElement(link)).toBe(link);
   });
 });

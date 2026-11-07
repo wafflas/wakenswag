@@ -73,7 +73,7 @@ describe('controller footer', () => {
     ).not.toBeInTheDocument();
   });
 
-  it.each(['/merch', '/info', '/missing'])(
+  it.each(['/swag', '/info', '/missing'])(
     'returns from %s to home',
     async (pathname) => {
       const user = userEvent.setup();
@@ -91,8 +91,8 @@ describe('controller footer', () => {
   it.each([
     ['/info/privacy-policy', '/info'],
     ['/info/refund-policy', '/info'],
-    ['/merch/fixture-tee', '/merch'],
-    ['/merch/fixture-tee/', '/merch'],
+    ['/swag/fixture-tee', '/swag'],
+    ['/swag/fixture-tee/', '/swag'],
     ['/drumkits/wnb-vol-001', '/drumkits'],
     ['/drumkits/wnb-vol-001/', '/drumkits'],
   ])(

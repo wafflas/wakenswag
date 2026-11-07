@@ -1,4 +1,4 @@
-import {useLoaderData, Outlet} from 'react-router';
+import {useLoaderData, Outlet, useLocation} from 'react-router';
 import type {Route} from './+types/drumkits';
 import {ProductGrid} from '~/components/product-listing/ProductGrid';
 import {ProductListingShell} from '~/components/product-listing/ProductListingShell';
@@ -10,7 +10,8 @@ import {
   MOBILE_DRUMKITS_PER_PAGE,
 } from '~/components/product-listing/productListingUtils';
 import {PRODUCT_ITEM_FRAGMENT} from '~/lib/fragments';
-import {getPaginationVariables} from '@shopify/hydrogen';
+import {Analytics, getPaginationVariables} from '@shopify/hydrogen';
+import {isProductDetailPath} from '~/lib/variants';
 
 const DRUMKITS_HANDLE = 'drumkits';
 
@@ -43,6 +44,9 @@ export async function loader({context, request}: Route.LoaderArgs) {
   });
 
   return {
+    collectionAnalytics: collection
+      ? {id: collection.id, handle: collection.handle}
+      : null,
     collection: collection ?? {
       id: 'gid://shopify/Collection/0',
       handle: DRUMKITS_HANDLE,
@@ -55,7 +59,8 @@ export async function loader({context, request}: Route.LoaderArgs) {
 
 export default function Drumkits() {
   useDrumkitPageSize();
-  const {collection} = useLoaderData<typeof loader>();
+  const {collection, collectionAnalytics} = useLoaderData<typeof loader>();
+  const {pathname} = useLocation();
   const products = collection.products;
 
   const {selectedProductId, loadingDurationMs, onSelect} =
@@ -88,6 +93,9 @@ export default function Drumkits() {
       </ProductListingShell>
 
       <Outlet />
+      {collectionAnalytics && !isProductDetailPath(pathname) ? (
+        <Analytics.CollectionView data={{collection: collectionAnalytics}} />
+      ) : null}
     </>
   );
 }

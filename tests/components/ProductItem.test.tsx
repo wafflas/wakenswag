@@ -18,7 +18,7 @@ function renderProductItem(
 }
 
 describe('product grid links', () => {
-  it.each(['/merch', '/drumkits'])(
+  it.each(['/swag', '/drumkits'])(
     'opens the product inside %s',
     (listingPath) => {
       const product = createProductCard();
@@ -61,9 +61,9 @@ describe('product grid links', () => {
     expect(link.querySelector('img')).toBeNull();
   });
 
-  it('keeps the hover description out of merch cards', () => {
+  it('keeps the hover description out of Swag cards', () => {
     const product = createProductCard();
-    renderProductItem('/merch', {product, isSelected: true});
+    renderProductItem('/swag', {product, isSelected: true});
     expect(screen.queryByText(product.description)).not.toBeInTheDocument();
     expect(screen.getByRole('link')).not.toHaveAccessibleDescription();
   });

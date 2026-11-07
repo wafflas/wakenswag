@@ -39,6 +39,22 @@ describe('main menu keyboard navigation', () => {
     expect(screen.getByRole('textbox')).toHaveFocus();
   });
 
+  it('leaves arrow and Home/End keys on buttons outside the menu', async () => {
+    const user = userEvent.setup();
+    render(
+      <AsideProvider>
+        <MemoryRouter>
+          <MainMenu />
+          <button type="button">Accept optional</button>
+        </MemoryRouter>
+      </AsideProvider>,
+    );
+    const button = screen.getByRole('button', {name: 'Accept optional'});
+    await user.click(button);
+    await user.keyboard('{ArrowDown}{ArrowUp}{Home}{End}');
+    expect(button).toHaveFocus();
+  });
+
   it('navigates custom info items and identifies external links', async () => {
     const user = userEvent.setup();
     render(

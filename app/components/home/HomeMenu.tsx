@@ -9,8 +9,8 @@ const MENU_ITEMS = [
     to: '/',
   },
   {
-    label: 'Merch',
-    to: '/merch',
+    label: 'Swag',
+    to: '/swag',
   },
   {
     label: 'Drumkits',
@@ -47,6 +47,7 @@ export function MainMenu({
     useState<NavigationMode>('directional');
 
   const selectedIndexRef = useRef(0);
+  const menuRef = useRef<HTMLElement>(null);
   const linkRefs = useRef<Array<HTMLAnchorElement | null>>([]);
 
   const selectItem = useCallback((index: number, moveFocus = false) => {
@@ -81,6 +82,15 @@ export function MainMenu({
 
       if (event.key === 'Tab') {
         setNavigationMode('tab');
+        return;
+      }
+
+      // Global menu shortcuts must leave focused controls elsewhere alone.
+      if (
+        event.target instanceof Element &&
+        event.target !== document.body &&
+        !menuRef.current?.contains(event.target)
+      ) {
         return;
       }
 
@@ -121,6 +131,7 @@ export function MainMenu({
 
   return (
     <nav
+      ref={menuRef}
       aria-label={ariaLabel}
       className={
         variant === 'info'

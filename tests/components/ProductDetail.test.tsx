@@ -75,7 +75,7 @@ describe('product purchase controls', () => {
     render(<RouterProvider router={router} />);
     expect(await screen.findByRole('button', {name: 'In cart'})).toBeDisabled();
   });
-  it.each(['/merch', '/drumkits'])(
+  it.each(['/swag', '/drumkits'])(
     'keeps variant links under %s',
     (listingPath) => {
       renderProduct(true, `${listingPath}/fixture-tee`);
@@ -98,7 +98,7 @@ describe('product purchase controls', () => {
     expect(increase).toBeDisabled();
   });
   it.each([
-    ['/merch/fixture-tee', 2],
+    ['/swag/fixture-tee', 2],
     ['/drumkits/fixture-tee', 1],
   ])(
     'submits the expected purchase quantity from %s',
@@ -122,10 +122,10 @@ describe('product purchase controls', () => {
     },
   );
 
-  it('submits one after switching from a previously increased merch quantity to drumkits', async () => {
+  it('submits one after switching from a previously increased Swag quantity to drumkits', async () => {
     const user = userEvent.setup();
     const {action, submittedQuantity} = createAddToCartAction();
-    const {router} = renderProduct(true, '/merch/fixture-tee', action);
+    const {router} = renderProduct(true, '/swag/fixture-tee', action);
     await user.click(screen.getByRole('button', {name: /Increase quantity/}));
     expect(screen.getByRole('status')).toHaveTextContent('2');
     await act(async () => {

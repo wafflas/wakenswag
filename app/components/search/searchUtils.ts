@@ -16,7 +16,7 @@ export type SearchProductCard = {
   handle: string;
   title: string;
   category: string;
-  listingPath: '/merch' | '/drumkits';
+  listingPath: '/swag' | '/drumkits';
   availableForSale: boolean;
   trackingParameters?: string | null;
   image?: SearchImage | null;
@@ -54,16 +54,13 @@ export function normalizeSearchProduct(
 ): SearchProductCard {
   const variant = product.selectedOrFirstAvailableVariant;
   const listingPath = getProductListingPathForProduct(product);
-  const category =
-    listingPath === '/drumkits'
-      ? 'DRUMKITS'
-      : product.productType?.trim() || 'MERCH';
+  const category = listingPath === '/drumkits' ? 'DRUMKITS' : 'SWAG';
 
   return {
     id: product.id,
     handle: product.handle,
     title: product.title,
-    category: category.toUpperCase(),
+    category,
     listingPath,
     availableForSale:
       variant?.availableForSale ?? product.availableForSale ?? true,

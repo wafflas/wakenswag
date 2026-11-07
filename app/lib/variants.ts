@@ -11,17 +11,15 @@ export function isDefaultTitleOption(
 }
 
 export function isProductDetailPath(pathname: string): boolean {
-  return /^\/(?:merch|drumkits)\/[^/]+\/?$/.test(pathname);
+  return /^\/(?:swag|drumkits)\/[^/]+\/?$/.test(pathname);
 }
 
-export function getProductListingPath(
-  pathname: string,
-): '/merch' | '/drumkits' {
+export function getProductListingPath(pathname: string): '/swag' | '/drumkits' {
   if (pathname === '/drumkits' || pathname.startsWith('/drumkits/')) {
     return '/drumkits';
   }
 
-  return '/merch';
+  return '/swag';
 }
 
 export function getProductPath(handle: string, pathname: string) {
@@ -36,14 +34,14 @@ export function getProductPath(handle: string, pathname: string) {
 export function getProductListingPathForProduct(product: {
   productType?: string | null;
   collections?: {nodes: Array<{handle: string}>} | null;
-}): '/merch' | '/drumkits' {
+}): '/swag' | '/drumkits' {
   const isDrumkitCollection = product.collections?.nodes.some(
     ({handle}) => handle === 'drumkits',
   );
   const isDrumkitType = /^drum\s*kits?$/i.test(
     product.productType?.trim() ?? '',
   );
-  return isDrumkitCollection || isDrumkitType ? '/drumkits' : '/merch';
+  return isDrumkitCollection || isDrumkitType ? '/drumkits' : '/swag';
 }
 
 export function useVariantUrl(

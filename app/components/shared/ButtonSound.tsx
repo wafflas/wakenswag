@@ -28,9 +28,10 @@ export function ButtonSound({
 
     if (!AudioContextConstructor) return undefined;
 
-    const audioContext = new AudioContextConstructor();
-    const hoverGainNode = audioContext.createGain();
-    const activateGainNode = audioContext.createGain();
+    let audioContext: AudioContext | undefined;
+    let hoverGainNode: GainNode | undefined;
+    let activateGainNode: GainNode | undefined;
+    let activateReady: Promise<void> | undefined;
     const abortController = new AbortController();
     let hoverBuffer: AudioBuffer | null = null;
     let activateBuffer: AudioBuffer | null = null;
@@ -40,12 +41,7 @@ export function ButtonSound({
     let keyboardNavigationActive = false;
     let activeHoverElement: HTMLElement | null = null;
 
-    hoverGainNode.gain.value = volume;
-    activateGainNode.gain.value = activateVolume;
-    hoverGainNode.connect(audioContext.destination);
-    activateGainNode.connect(audioContext.destination);
-
-    async function loadSound(soundSrc: string) {
+    async function loadSound(soundSrc: string, context: AudioContext) {
       const response = await fetch(soundSrc, {
         signal: abortController.signal,
       });
@@ -57,11 +53,49 @@ export function ButtonSound({
       }
 
       const encodedAudio = await response.arrayBuffer();
-      return audioContext.decodeAudioData(encodedAudio);
+      return context.decodeAudioData(encodedAudio);
     }
 
-    function startSound(buffer: AudioBuffer | null, gainNode: GainNode) {
-      if (!buffer || disposed || audioContext.state !== 'running') return;
+    function initializeAudio() {
+      if (audioContext) return;
+      const context = new AudioContextConstructor();
+      audioContext = context;
+      hoverGainNode = context.createGain();
+      activateGainNode = context.createGain();
+      hoverGainNode.gain.value = volume;
+      activateGainNode.gain.value = activateVolume;
+      hoverGainNode.connect(context.destination);
+      activateGainNode.connect(context.destination);
+
+      void loadSound(src, context)
+        .then((buffer) => {
+          hoverBuffer = buffer;
+        })
+        .catch((error: unknown) => {
+          if (!abortController.signal.aborted) console.warn(error);
+        });
+
+      activateReady = loadSound(activateSrc, context)
+        .then((buffer) => {
+          activateBuffer = buffer;
+        })
+        .catch((error: unknown) => {
+          if (!abortController.signal.aborted) console.warn(error);
+        });
+    }
+
+    function startSound(
+      buffer: AudioBuffer | null,
+      gainNode: GainNode | undefined,
+    ) {
+      if (
+        !buffer ||
+        !gainNode ||
+        disposed ||
+        audioContext?.state !== 'running'
+      ) {
+        return;
+      }
 
       const sourceNode = audioContext.createBufferSource();
       sourceNode.buffer = buffer;
@@ -73,6 +107,7 @@ export function ButtonSound({
     }
 
     function playHoverSound() {
+      if (!audioContext) return;
       const now = performance.now();
 
       if (now - lastHoverPlayedAt < cooldownMs) return;
@@ -116,24 +151,25 @@ export function ButtonSound({
     }
 
     function playActivateSound() {
+      if (!audioContext) return;
       const now = performance.now();
 
       if (now - lastActivatePlayedAt < cooldownMs) return;
       lastActivatePlayedAt = now;
 
-      if (audioContext.state === 'suspended') {
-        void audioContext
-          .resume()
-          .then(() => startSound(activateBuffer, activateGainNode))
-          .catch(() => undefined);
-        return;
-      }
-
-      startSound(activateBuffer, activateGainNode);
+      // The first gesture starts loading too; play its sound once decoding and
+      // any required resume have both finished.
+      void Promise.all([
+        activateReady,
+        audioContext.state === 'suspended' ? audioContext.resume() : undefined,
+      ])
+        .then(() => startSound(activateBuffer, activateGainNode))
+        .catch(() => undefined);
     }
 
     function unlockAudio() {
-      if (audioContext.state === 'suspended') {
+      initializeAudio();
+      if (audioContext?.state === 'suspended') {
         void audioContext.resume().catch(() => undefined);
       }
     }
@@ -146,8 +182,9 @@ export function ButtonSound({
       if (!interactiveElement) return;
 
       if (
-        event.relatedTarget instanceof Node &&
-        interactiveElement.contains(event.relatedTarget)
+        interactiveElement.contains(document.activeElement) ||
+        (event.relatedTarget instanceof Node &&
+          interactiveElement.contains(event.relatedTarget))
       ) {
         return;
       }
@@ -201,22 +238,6 @@ export function ButtonSound({
       }
     }
 
-    void loadSound(src)
-      .then((buffer) => {
-        hoverBuffer = buffer;
-      })
-      .catch((error: unknown) => {
-        if (!abortController.signal.aborted) console.warn(error);
-      });
-
-    void loadSound(activateSrc)
-      .then((buffer) => {
-        activateBuffer = buffer;
-      })
-      .catch((error: unknown) => {
-        if (!abortController.signal.aborted) console.warn(error);
-      });
-
     document.addEventListener('pointerover', handlePointerOver);
     document.addEventListener('pointerout', handlePointerOut);
     document.addEventListener('focusin', handleFocusIn);
@@ -237,9 +258,9 @@ export function ButtonSound({
         capture: true,
       });
       document.removeEventListener('keydown', handleKeyDown, {capture: true});
-      hoverGainNode.disconnect();
-      activateGainNode.disconnect();
-      void audioContext.close();
+      hoverGainNode?.disconnect();
+      activateGainNode?.disconnect();
+      void audioContext?.close().catch(() => undefined);
     };
   }, [activateSrc, activateVolume, cooldownMs, src, volume]);
 

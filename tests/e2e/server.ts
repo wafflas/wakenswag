@@ -81,18 +81,22 @@ function query(
     return Promise.resolve({collections: {nodes: []}});
   if (queryText.includes('query RecommendedProducts'))
     return Promise.resolve({products: {nodes: catalog.slice(0, 4)}});
-  if (queryText.includes('query Merch'))
+  if (queryText.includes('query Swag'))
     return Promise.resolve({
       collection:
-        variables.handle === 'merch'
-          ? {products: productConnection(variables)}
+        variables.handle === 'swag'
+          ? {
+              id: 'gid://shopify/Collection/2',
+              handle: 'swag',
+              products: productConnection(variables),
+            }
           : null,
     });
   if (queryText.includes('query Drumkits')) {
     const products = productConnection(variables, catalog.slice(0, 24));
     return Promise.resolve({
       collection: {
-        id: 'collection-1',
+        id: 'gid://shopify/Collection/1',
         title: 'Drumkits',
         handle: 'drumkits',
         description: 'Fixture drumkits',
@@ -134,8 +138,8 @@ function query(
                   variables.term === 'old'
                     ? 'Old Fixture Tee'
                     : catalog[0].title,
-                productType: 'Merch',
-                collections: {nodes: [{handle: 'merch'}]},
+                productType: 'Swag',
+                collections: {nodes: [{handle: 'swag'}]},
                 availableForSale: true,
                 trackingParameters: 'position=1',
                 selectedOrFirstAvailableVariant: createVariant(),
@@ -162,7 +166,7 @@ function query(
           : (catalog.find((product) => product.handle === handle)?.title ??
             'Fixture Tee'),
       productType: '',
-      collections: {nodes: [{handle: isDrumkit ? 'drumkits' : 'merch'}]},
+      collections: {nodes: [{handle: isDrumkit ? 'drumkits' : 'swag'}]},
       selectedOrFirstAvailableVariant:
         handle === 'no-variant'
           ? null

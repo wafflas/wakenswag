@@ -1,1 +1,1 @@
-export {default, loader, meta} from './merch.$handle';
+export {default, loader, meta} from './swag.$handle';

@@ -4,7 +4,7 @@
 
 Use the versions in `package.json` and `package-lock.json`: React 18, React Router 7 framework mode, Hydrogen 2026.4, TypeScript, Tailwind 4 and npm. This is not a Next.js app. Hydrogen's peer dependencies constrain compatible router releases; upgrade them together.
 
-- `app/routes/`: HTTP loaders/actions, route metadata and page composition. Keep React Router filenames such as `merch.$handle.tsx` and `[robots.txt].tsx`.
+- `app/routes/`: HTTP loaders/actions, route metadata and page composition. Keep React Router filenames such as `swag.$handle.tsx` and `[robots.txt].tsx`.
 - `app/components/<feature>/`: cohesive components plus one camelCase feature utility file for stateless helpers, such as `product-detail/productDetailUtils.ts` or `cart/cartUtils.ts`. Existing feature folders use kebab-case (`product-detail`) or simple domain names (`cart`).
 - `app/lib/`: shared domain/server utilities, e.g. `productDetail.ts`, `money.ts`, `session.ts`.
 - `app/styles/`: global defaults, Tailwind tokens/utilities, PS2 effects. Keep animation styles together.
@@ -96,7 +96,7 @@ Use `getPaginationVariables(request, {pageBy: PRODUCTS_PER_PAGE})` in catalog lo
 
 Validate user-controlled redirect paths with `getSafeRedirectPath`; checkout URLs come from Shopify cart responses. Do not invent product availability, cart totals or currency conversions on the client. `formatMoney` only formats Shopify amounts. Keep EUR's existing `EURO` label; display other currencies accurately.
 
-Handle nullable API data, GraphQL errors and mutation `errors` separately from successful HTTP transport. Preserve the custom `/merch/:handle` routes in canonical links, cards, search, cart and sitemaps. Info sections read published Shopify policies and sanitize their HTML before rendering; Instagram and website credits are external links in Info. Unimplemented account/filter features are intentional, not invitations to add unrelated features.
+Handle nullable API data, GraphQL errors and mutation `errors` separately from successful HTTP transport. Preserve the custom `/swag/:handle` routes in canonical links, cards, search, cart and sitemaps. The Shopify collection handle is `swag`; removed `/merch` routes return 404 without a local redirect. Info sections read published Shopify policies and sanitize their HTML before rendering; Instagram and website credits are external links in Info. Unimplemented account/filter features are intentional, not invitations to add unrelated features.
 
 ## Formatting and testing
 

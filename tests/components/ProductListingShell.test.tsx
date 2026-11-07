@@ -31,7 +31,7 @@ function renderListing(listingPath: string, initialPath: string) {
   return router;
 }
 
-describe.each(['/merch', '/drumkits'])(
+describe.each(['/swag', '/drumkits'])(
   '%s listing loading lifecycle',
   (listingPath) => {
     it('does not cover a directly opened product with the listing intro', () => {

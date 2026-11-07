@@ -30,7 +30,7 @@ describe('user-supplied redirect paths', () => {
     '/\\evil.example',
     '\\evil.example',
     'javascript:alert(1)',
-    '/merch\nInjected: true',
+    '/swag\nInjected: true',
     '',
     null,
     12,
@@ -38,8 +38,8 @@ describe('user-supplied redirect paths', () => {
     expect(getSafeRedirectPath(path)).toBeNull();
   });
   it('preserves a root-relative path including its query and fragment', () => {
-    expect(getSafeRedirectPath('/merch?Size=Large#options')).toBe(
-      '/merch?Size=Large#options',
+    expect(getSafeRedirectPath('/swag?Size=Large#options')).toBe(
+      '/swag?Size=Large#options',
     );
   });
   it('does not change the caller’s search parameters while making a variant URL', () => {
@@ -47,11 +47,11 @@ describe('user-supplied redirect paths', () => {
     expect(
       getVariantUrl({
         handle: 'tee',
-        pathname: '/merch',
+        pathname: '/swag',
         searchParams: params,
         selectedOptions: [{name: 'Size', value: 'Large'}],
       }),
-    ).toBe('/merch/tee?q=tee&Size=Large');
+    ).toBe('/swag/tee?q=tee&Size=Large');
     expect(params.toString()).toBe('q=tee');
   });
 });

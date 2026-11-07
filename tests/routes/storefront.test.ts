@@ -2,12 +2,12 @@ import {describe, expect, it, vi} from 'vitest';
 import {CartForm} from '@shopify/hydrogen';
 import {action as cartAction} from '~/routes/cart';
 import {loader as searchLoader} from '~/routes/search';
-import {loader as merchLoader} from '~/routes/merch';
+import {loader as swagLoader} from '~/routes/swag';
 import {loader as drumkitsLoader} from '~/routes/drumkits';
 import {loader as discountLoader} from '~/routes/discount.$code';
 import {loader as permalinkLoader} from '~/routes/cart.$lines';
 import {loadProductDetail} from '~/lib/productDetail';
-import {loader as productLoader} from '~/routes/merch.$handle';
+import {loader as productLoader} from '~/routes/swag.$handle';
 import {loader as drumkitProductLoader} from '~/routes/drumkits.$handle';
 import {
   createCart,
@@ -127,13 +127,13 @@ describe('cart action', () => {
     const {args} = createArgs(
       '/cart',
       {action: CartForm.ACTIONS.LinesRemove, inputs: {lineIds: ['line-1']}},
-      '/merch?Size=Large',
+      '/swag?Size=Large',
     );
     const response = await cartAction(
       args as unknown as Parameters<typeof cartAction>[0],
     );
     expect(new Headers(response.init?.headers).get('Location')).toBe(
-      '/merch?Size=Large',
+      '/swag?Size=Large',
     );
     expect(response.init?.status).toBe(303);
   });
@@ -199,17 +199,63 @@ describe('predictive search loader', () => {
 });
 
 describe('catalog pagination and product loading', () => {
-  it('passes the next cursor to the merch query', async () => {
-    const {args, context} = createArgs(
-      '/merch?cursor=cursor-12&direction=next',
-    );
-    await merchLoader(args as unknown as Parameters<typeof merchLoader>[0]);
+  it.each(['swag', 'drumkits'] as const)(
+    'returns real collection metadata for %s analytics',
+    async (handle) => {
+      const {args, context} = createArgs(`/${handle}`);
+      const collection = {
+        id: 'gid://shopify/Collection/42',
+        handle,
+        title: handle,
+        description: '',
+        products: {
+          nodes: [],
+          pageInfo: {
+            hasNextPage: false,
+            hasPreviousPage: false,
+            startCursor: null,
+            endCursor: null,
+          },
+        },
+      };
+      context.storefront.query.mockResolvedValue({collection});
+      const result =
+        handle === 'swag'
+          ? await swagLoader(
+              args as unknown as Parameters<typeof swagLoader>[0],
+            )
+          : await drumkitsLoader(
+              args as unknown as Parameters<typeof drumkitsLoader>[0],
+            );
+      expect(result.collectionAnalytics).toEqual({id: collection.id, handle});
+    },
+  );
+
+  it.each(['swag', 'drumkits'] as const)(
+    'omits analytics for a missing %s collection',
+    async (handle) => {
+      const {args} = createArgs(`/${handle}`);
+      const result =
+        handle === 'swag'
+          ? await swagLoader(
+              args as unknown as Parameters<typeof swagLoader>[0],
+            )
+          : await drumkitsLoader(
+              args as unknown as Parameters<typeof drumkitsLoader>[0],
+            );
+      expect(result.collectionAnalytics).toBeNull();
+    },
+  );
+
+  it('passes the next cursor to the Swag query', async () => {
+    const {args, context} = createArgs('/swag?cursor=cursor-12&direction=next');
+    await swagLoader(args as unknown as Parameters<typeof swagLoader>[0]);
     expect(context.storefront.query).toHaveBeenCalledWith(expect.any(String), {
-      variables: {handle: 'merch', first: 12, endCursor: 'cursor-12'},
+      variables: {handle: 'swag', first: 12, endCursor: 'cursor-12'},
     });
   });
-  it('uses only the merch collection even when unscoped products are also returned', async () => {
-    const {args, context} = createArgs('/merch');
+  it('uses only the Swag collection even when unscoped products are also returned', async () => {
+    const {args, context} = createArgs('/swag');
     const products = {
       nodes: [createProductCard()],
       pageInfo: {
@@ -220,18 +266,18 @@ describe('catalog pagination and product loading', () => {
       },
     };
     context.storefront.query.mockResolvedValue({
-      collection: {products},
+      collection: {id: 'gid://shopify/Collection/42', handle: 'swag', products},
       products: {nodes: [...products.nodes, createProductCard(2)]},
     });
-    const result = await merchLoader(
-      args as unknown as Parameters<typeof merchLoader>[0],
+    const result = await swagLoader(
+      args as unknown as Parameters<typeof swagLoader>[0],
     );
     expect(result.products).toEqual(products);
   });
-  it('returns an empty listing when the merch collection is missing or unavailable', async () => {
-    const {args} = createArgs('/merch');
-    const result = await merchLoader(
-      args as unknown as Parameters<typeof merchLoader>[0],
+  it('returns an empty listing when the Swag collection is missing or unavailable', async () => {
+    const {args} = createArgs('/swag');
+    const result = await swagLoader(
+      args as unknown as Parameters<typeof swagLoader>[0],
     );
     expect(result.products).toEqual({
       nodes: [],
@@ -270,7 +316,7 @@ describe('catalog pagination and product loading', () => {
     },
   );
   it('loads selected options server-side', async () => {
-    const {args, context} = createArgs('/merch/fixture-tee?Size=Large');
+    const {args, context} = createArgs('/swag/fixture-tee?Size=Large');
     context.storefront.query.mockResolvedValue({product: createProduct()});
     await loadProductDetail({
       handle: 'fixture-tee',
@@ -287,7 +333,7 @@ describe('catalog pagination and product loading', () => {
     });
   });
   it('returns 404 for a missing product', async () => {
-    const {args, context} = createArgs('/merch/missing');
+    const {args, context} = createArgs('/swag/missing');
     context.storefront.query.mockResolvedValue({product: null});
     await expect(
       loadProductDetail({
@@ -302,9 +348,9 @@ describe('catalog pagination and product loading', () => {
 });
 
 describe('product section routing', () => {
-  it('redirects a drumkit out of Merch and preserves search tracking', async () => {
+  it('redirects a drumkit out of Swag and preserves search tracking', async () => {
     const {args, context} = createArgs(
-      '/merch/drumkit-vol-002?q=drum&_pos=2&_psid=session',
+      '/swag/drumkit-vol-002?q=drum&_pos=2&_psid=session',
     );
     Object.assign(args.params, {handle: 'drumkit-vol-002'});
     context.storefront.query.mockResolvedValue({

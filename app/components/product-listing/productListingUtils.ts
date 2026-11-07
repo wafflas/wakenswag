@@ -1,4 +1,4 @@
-import type {MerchQuery, ProductItemFragment} from 'storefrontapi.generated';
+import type {SwagQuery, ProductItemFragment} from 'storefrontapi.generated';
 
 export const PRODUCT_LISTING_STAGGER_MS = 400;
 export const PRODUCTS_PER_PAGE = 12;
@@ -12,7 +12,7 @@ export interface ProductListingPageChangeEvent {
 }
 
 export type ProductListingConnection = NonNullable<
-  MerchQuery['collection']
+  SwagQuery['collection']
 >['products'];
 
 export const EMPTY_PRODUCT_CONNECTION: ProductListingConnection = {

@@ -17,13 +17,13 @@ describe('single-copy drumkits', () => {
       id: 'duplicate-line',
       merchandise: {...drumkit.merchandise, id: 'another-variant'},
     };
-    const merch = {...createCart(5).lines.nodes[0], id: 'merch-line'};
-    expect(getDrumkitQuantityCorrections([merch, drumkit, duplicate])).toEqual({
+    const swag = {...createCart(5).lines.nodes[0], id: 'swag-line'};
+    expect(getDrumkitQuantityCorrections([swag, drumkit, duplicate])).toEqual({
       updates: [{id: drumkit.id, quantity: 1}],
       removals: ['duplicate-line'],
     });
   });
-  it('leaves one-copy drumkits and physical merch quantities unchanged', () => {
+  it('leaves one-copy drumkits and physical Swag quantities unchanged', () => {
     expect(
       getDrumkitQuantityCorrections([
         ...createDrumkitCart().lines.nodes,

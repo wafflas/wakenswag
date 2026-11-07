@@ -23,7 +23,7 @@ export function CartEmpty({
 
       <Link
         className="ps2-cta md:text-2xl"
-        to="/merch"
+        to="/swag"
         onClick={layout === 'aside' ? close : undefined}
         prefetch="viewport"
       >

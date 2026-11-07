@@ -1,5 +1,5 @@
 import {redirect, useLoaderData} from 'react-router';
-import type {Route} from './+types/merch.$handle';
+import type {Route} from './+types/swag.$handle';
 import {ProductDetailRouteView} from '~/components/product-detail/ProductDetailRouteView';
 import {loadProductDetail} from '~/lib/productDetail';
 import {
@@ -23,7 +23,7 @@ export const meta: Route.MetaFunction = ({data, params}) => {
     {
       tagName: 'link',
       rel: 'canonical',
-      href: data?.productUrl ?? `/merch/${handle}`,
+      href: data?.productUrl ?? `/swag/${handle}`,
     },
   ];
 };
@@ -55,7 +55,7 @@ export async function loader({context, params, request}: Route.LoaderArgs) {
   };
 }
 
-export default function MerchProductRoute() {
+export default function SwagProductRoute() {
   const {product, productUrl} = useLoaderData<typeof loader>();
 
   return <ProductDetailRouteView product={product} productUrl={productUrl} />;

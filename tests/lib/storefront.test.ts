@@ -17,12 +17,12 @@ import {createProduct, createVariant} from '../fixtures/catalog';
 
 describe('product detail route detection', () => {
   it.each([
-    ['/merch/tee', true],
-    ['/merch/tee/', true],
+    ['/swag/tee', true],
+    ['/swag/tee/', true],
     ['/drumkits/wnb-vol-001', true],
     ['/drumkits/wnb-vol-001/', true],
     ['/', false],
-    ['/merch', false],
+    ['/swag', false],
     ['/drumkits/', false],
     ['/drumkits-archive/wnb-vol-001', false],
     ['/drumkits/wnb-vol-001/extra', false],
@@ -36,11 +36,11 @@ describe('product variant links', () => {
     expect(
       getVariantUrl({
         handle: 'tee',
-        pathname: '/en-us/merch',
+        pathname: '/en-us/swag',
         searchParams: new URLSearchParams(),
         selectedOptions: [{name: 'Color', value: 'Blue & White'}],
       }),
-    ).toBe('/en-us/merch/tee?Color=Blue+%26+White');
+    ).toBe('/en-us/swag/tee?Color=Blue+%26+White');
   });
   it('omits Shopify default-title options', () => {
     expect(isDefaultTitleOption({name: 'TITLE', value: 'Default Title'})).toBe(
@@ -53,13 +53,13 @@ describe('product variant links', () => {
         searchParams: new URLSearchParams(),
         selectedOptions: [{name: 'Title', value: 'Default Title'}],
       }),
-    ).toBe('/merch/tee');
+    ).toBe('/swag/tee');
   });
   it.each([
     ['/drumkits', '/drumkits/wnb-vol-001?Format=WAV'],
     ['/drumkits/wnb-vol-001', '/drumkits/wnb-vol-001?Format=WAV'],
     ['/en-us/drumkits', '/en-us/drumkits/wnb-vol-001?Format=WAV'],
-    ['/drumkits-archive', '/merch/wnb-vol-001?Format=WAV'],
+    ['/drumkits-archive', '/swag/wnb-vol-001?Format=WAV'],
   ])('keeps the correct listing section for %s', (pathname, expected) => {
     expect(
       getVariantUrl({
@@ -122,6 +122,20 @@ describe('product description and theme', () => {
 });
 
 describe('predictive search data', () => {
+  it.each(['Swag', 'T-Shirts', 'Hoodies', ''])(
+    'uses the Swag section label for product type %s',
+    (productType) => {
+      expect(
+        normalizeSearchProduct({
+          id: '1',
+          handle: 'tee',
+          title: 'Tee',
+          productType,
+          collections: {nodes: [{handle: 'swag'}]},
+        }),
+      ).toMatchObject({category: 'SWAG', listingPath: '/swag'});
+    },
+  );
   it('normalizes category and prioritizes variant availability', () => {
     const product = createProduct();
     expect(
@@ -136,7 +150,7 @@ describe('predictive search data', () => {
   it('handles missing optional media and price', () => {
     expect(
       normalizeSearchProduct({id: '1', handle: 'tee', title: 'Tee'}),
-    ).toMatchObject({category: 'MERCH', image: null, price: null});
+    ).toMatchObject({category: 'SWAG', image: null, price: null});
     expect(getEmptyPredictiveSearchResult()).toEqual({
       total: 0,
       items: {products: [], queries: []},
@@ -149,7 +163,7 @@ describe('predictive search data', () => {
         handle: 'drumkit-vol-002',
         title: 'Drumkit Vol. 002',
         productType: '',
-        collections: {nodes: [{handle: 'merch'}, {handle: 'drumkits'}]},
+        collections: {nodes: [{handle: 'swag'}, {handle: 'drumkits'}]},
       }),
     ).toMatchObject({category: 'DRUMKITS', listingPath: '/drumkits'});
   });
@@ -169,10 +183,10 @@ describe('predictive search data', () => {
   it('encodes user search terms and preserves Shopify tracking', () => {
     expect(
       urlWithTrackingParams({
-        baseUrl: '/merch/tee',
+        baseUrl: '/swag/tee',
         term: 'tee & hat',
         trackingParams: 'pos=1',
       }),
-    ).toBe('/merch/tee?q=tee+%26+hat&pos=1');
+    ).toBe('/swag/tee?q=tee+%26+hat&pos=1');
   });
 });

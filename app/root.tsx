@@ -90,7 +90,7 @@ export function loader({context, request}: Route.LoaderArgs) {
       publicStorefrontId: env.PUBLIC_STOREFRONT_ID,
     }),
     consent: {
-      checkoutDomain: env.PUBLIC_CHECKOUT_DOMAIN,
+      checkoutDomain: env.PUBLIC_CHECKOUT_DOMAIN || env.PUBLIC_STORE_DOMAIN,
       storefrontAccessToken: env.PUBLIC_STOREFRONT_API_TOKEN,
       withPrivacyBanner: false,
       country: storefront.i18n.country,
@@ -150,7 +150,10 @@ export default function App() {
       consent={data.consent}
     >
       <ButtonSound />
-      <PageLayout cart={data.cart}>
+      <PageLayout
+        cart={data.cart}
+        consent={{...data.consent, locale: data.consent.language}}
+      >
         <Outlet />
       </PageLayout>
     </Analytics.Provider>

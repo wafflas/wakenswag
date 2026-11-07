@@ -18,7 +18,7 @@ interface UseProductListingSelectionOptions {
 
 export function useProductListingSelection({
   initialProduct,
-  fallbackTitle = 'Merch',
+  fallbackTitle = 'Swag',
   productCount,
 }: UseProductListingSelectionOptions) {
   const initialTitle = initialProduct?.title ?? fallbackTitle;

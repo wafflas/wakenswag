@@ -1,14 +1,17 @@
 import {useCallback} from 'react';
+import type {CustomerPrivacyApiProps} from '@shopify/hydrogen';
 import type {BlockerFunction} from 'react-router';
 import type {CartApiQueryFragment} from 'storefrontapi.generated';
 import {RouteFadeTransition} from '~/components/animations/RouteFadeTransition';
 import {CartModal} from '~/components/cart/CartModal';
 import {AppControllerFooter} from '~/components/controller/AppControllerFooter';
 import {SearchModal} from '~/components/search/SearchModal';
+import {CookieConsentBanner} from '~/components/privacy/CookieConsentBanner';
 import {AsideProvider} from './Aside';
 
 interface PageLayoutProps {
   cart: Promise<CartApiQueryFragment | null>;
+  consent?: CustomerPrivacyApiProps;
   children?: React.ReactNode;
 }
 
@@ -17,7 +20,7 @@ interface PageLayoutProps {
  *
  * Owns the global dialogs, controller footer and menu/policy route transitions.
  */
-export function PageLayout({children = null, cart}: PageLayoutProps) {
+export function PageLayout({children = null, cart, consent}: PageLayoutProps) {
   const shouldFade = useCallback<BlockerFunction>(
     ({currentLocation, nextLocation}) => {
       const isLeavingMainMenu =
@@ -42,6 +45,7 @@ export function PageLayout({children = null, cart}: PageLayoutProps) {
         <SearchModal />
         <CartModal cart={cart} />
         <AppControllerFooter cart={cart} />
+        {consent ? <CookieConsentBanner consent={consent} /> : null}
       </RouteFadeTransition>
     </AsideProvider>
   );
