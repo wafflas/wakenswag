@@ -46,6 +46,7 @@ export function ControllerFooter({cart}: ControllerFooterProps) {
         {isDialogOpen || backPath ? (
           <button
             className={ACTION_CLASS_NAME}
+            data-activate-sound="back"
             data-controller-action="Back"
             onClick={handleBack}
             type="button"

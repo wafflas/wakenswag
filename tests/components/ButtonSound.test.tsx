@@ -7,6 +7,7 @@ import {ButtonSound} from '~/components/shared/ButtonSound';
 function mockAudio() {
   const gain = {gain: {value: 0}, connect: vi.fn(), disconnect: vi.fn()};
   const source = {
+    buffer: null as AudioBuffer | null,
     connect: vi.fn(),
     disconnect: vi.fn(),
     addEventListener: vi.fn(),
@@ -55,10 +56,10 @@ describe('interface sounds', () => {
     await user.click(button);
     await waitFor(() => expect(audio.source.start).toHaveBeenCalledOnce());
     expect(audio.constructor).toHaveBeenCalledOnce();
-    expect(audio.fetch).toHaveBeenCalledTimes(2);
+    expect(audio.fetch).toHaveBeenCalledTimes(3);
     await user.click(button);
     expect(audio.constructor).toHaveBeenCalledOnce();
-    expect(audio.fetch).toHaveBeenCalledTimes(2);
+    expect(audio.fetch).toHaveBeenCalledTimes(3);
   });
 
   it('initializes once on keyboard input even with React StrictMode', async () => {
@@ -75,6 +76,84 @@ describe('interface sounds', () => {
     await user.keyboard('{Enter}');
     await waitFor(() => expect(audio.source.start).toHaveBeenCalledOnce());
     expect(audio.constructor).toHaveBeenCalledOnce();
+  });
+
+  it.each(['pointer', 'Enter', 'Space'])(
+    'uses the dedicated back sound for %s activation, including the first press',
+    async (activation) => {
+      const user = userEvent.setup();
+      const audio = mockAudio();
+      const hoverBuffer = {};
+      const activateBuffer = {};
+      const backBuffer = {};
+      audio.context.decodeAudioData
+        .mockResolvedValueOnce(hoverBuffer)
+        .mockResolvedValueOnce(activateBuffer)
+        .mockResolvedValueOnce(backBuffer);
+      render(
+        <>
+          <ButtonSound cooldownMs={0} backActivateSrc="/audio/back.mp3" />
+          <button type="button" data-activate-sound="back">
+            <span>Back</span>
+          </button>
+          <button type="button">Search</button>
+        </>,
+      );
+
+      if (activation === 'pointer') {
+        await user.click(screen.getByText('Back'));
+      } else {
+        screen.getByRole('button', {name: 'Back'}).focus();
+        await user.keyboard(activation === 'Enter' ? '{Enter}' : ' ');
+      }
+
+      await waitFor(() => expect(audio.source.start).toHaveBeenCalledOnce());
+      expect(audio.source.buffer).toBe(backBuffer);
+      expect(audio.fetch).toHaveBeenCalledWith('/audio/back.mp3', {
+        signal: expect.any(AbortSignal),
+      });
+
+      await user.hover(screen.getByRole('button', {name: 'Search'}));
+      expect(audio.source.buffer).toBe(hoverBuffer);
+      await user.click(screen.getByRole('button', {name: 'Search'}));
+      await waitFor(() => expect(audio.source.start).toHaveBeenCalledTimes(3));
+      expect(audio.source.buffer).toBe(activateBuffer);
+    },
+  );
+
+  it('uses the back sound for links and ignores disabled back controls', async () => {
+    const user = userEvent.setup();
+    const audio = mockAudio();
+    const backBuffer = {};
+    audio.context.decodeAudioData
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce(backBuffer);
+    render(
+      <>
+        <ButtonSound cooldownMs={0} />
+        <button type="button" data-activate-sound="back" disabled>
+          Back
+        </button>
+        <a
+          href="/info"
+          data-activate-sound="back"
+          onClick={(event) => event.preventDefault()}
+        >
+          Back to Information
+        </a>
+      </>,
+    );
+    await user.click(screen.getByRole('button', {name: 'Back'}));
+    expect(audio.source.start).not.toHaveBeenCalled();
+
+    screen.getByRole('link', {name: 'Back to Information'}).focus();
+    await user.keyboard('{Enter}');
+    await waitFor(() => expect(audio.source.start).toHaveBeenCalledOnce());
+    expect(audio.source.buffer).toBe(backBuffer);
+    expect(audio.fetch).toHaveBeenCalledWith('/audio/select-choice.mp3', {
+      signal: expect.any(AbortSignal),
+    });
   });
 
   it('skips hover on a focused control while preserving hover elsewhere and activation sounds', async () => {

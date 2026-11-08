@@ -4,6 +4,7 @@ import {useEffect} from 'react';
 interface ButtonSoundProps {
   src?: string;
   activateSrc?: string;
+  backActivateSrc?: string;
   volume?: number;
   activateVolume?: number;
   cooldownMs?: number;
@@ -15,8 +16,9 @@ type WindowWithWebkitAudio = Window &
   };
 
 export function ButtonSound({
-  src = '/audio/select.mp3',
-  activateSrc = '/audio/select-choice.mp3',
+  src = '/audio/selectzukah.mp3',
+  activateSrc = '/audio/selectchoicezukah.mp3',
+  backActivateSrc = '/audio/select-choice.mp3',
   volume = 0.4,
   activateVolume = 0.65,
   cooldownMs = 80,
@@ -32,9 +34,11 @@ export function ButtonSound({
     let hoverGainNode: GainNode | undefined;
     let activateGainNode: GainNode | undefined;
     let activateReady: Promise<void> | undefined;
+    let backActivateReady: Promise<void> | undefined;
     const abortController = new AbortController();
     let hoverBuffer: AudioBuffer | null = null;
     let activateBuffer: AudioBuffer | null = null;
+    let backActivateBuffer: AudioBuffer | null = null;
     let lastHoverPlayedAt = 0;
     let lastActivatePlayedAt = 0;
     let disposed = false;
@@ -78,6 +82,14 @@ export function ButtonSound({
       activateReady = loadSound(activateSrc, context)
         .then((buffer) => {
           activateBuffer = buffer;
+        })
+        .catch((error: unknown) => {
+          if (!abortController.signal.aborted) console.warn(error);
+        });
+
+      backActivateReady = loadSound(backActivateSrc, context)
+        .then((buffer) => {
+          backActivateBuffer = buffer;
         })
         .catch((error: unknown) => {
           if (!abortController.signal.aborted) console.warn(error);
@@ -150,8 +162,9 @@ export function ButtonSound({
       activeHoverElement = null;
     }
 
-    function playActivateSound() {
+    function playActivateSound(interactiveElement: HTMLElement) {
       if (!audioContext) return;
+      const isBack = interactiveElement.dataset.activateSound === 'back';
       const now = performance.now();
 
       if (now - lastActivatePlayedAt < cooldownMs) return;
@@ -160,10 +173,15 @@ export function ButtonSound({
       // The first gesture starts loading too; play its sound once decoding and
       // any required resume have both finished.
       void Promise.all([
-        activateReady,
+        isBack ? backActivateReady : activateReady,
         audioContext.state === 'suspended' ? audioContext.resume() : undefined,
       ])
-        .then(() => startSound(activateBuffer, activateGainNode))
+        .then(() =>
+          startSound(
+            isBack ? backActivateBuffer : activateBuffer,
+            activateGainNode,
+          ),
+        )
         .catch(() => undefined);
     }
 
@@ -217,7 +235,7 @@ export function ButtonSound({
       const interactiveElement = getInteractiveElement(event.target);
       if (!interactiveElement) return;
 
-      playActivateSound();
+      playActivateSound(interactiveElement);
     }
 
     function handleKeyDown(event: KeyboardEvent) {
@@ -234,7 +252,7 @@ export function ButtonSound({
         event.key === ' ' && interactiveElement.tagName === 'BUTTON';
 
       if (isEnterActivation || isButtonSpaceActivation) {
-        playActivateSound();
+        playActivateSound(interactiveElement);
       }
     }
 
@@ -262,7 +280,7 @@ export function ButtonSound({
       activateGainNode?.disconnect();
       void audioContext?.close().catch(() => undefined);
     };
-  }, [activateSrc, activateVolume, cooldownMs, src, volume]);
+  }, [activateSrc, activateVolume, backActivateSrc, cooldownMs, src, volume]);
 
   return null;
 }

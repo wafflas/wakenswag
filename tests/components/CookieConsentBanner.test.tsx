@@ -1,5 +1,4 @@
-import {act, render, screen} from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import {act, fireEvent, render, screen} from '@testing-library/react';
 import {MemoryRouter} from 'react-router';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import type {CustomerPrivacy, CustomerPrivacyApiProps} from '@shopify/hydrogen';
@@ -46,6 +45,19 @@ function ready() {
   act(() => privacy.props.onReady?.());
 }
 
+function collectConsent() {
+  act(() => {
+    privacy.props.onVisitorConsentCollected?.({
+      analyticsAllowed: false,
+      firstPartyMarketingAllowed: false,
+      marketingAllowed: false,
+      preferencesAllowed: false,
+      saleOfDataAllowed: false,
+      thirdPartyMarketingAllowed: false,
+    });
+  });
+}
+
 beforeEach(() => {
   privacy.shouldShowBanner.mockReset().mockReturnValue(true);
   privacy.currentVisitorConsent.mockReset().mockReturnValue({
@@ -57,7 +69,10 @@ beforeEach(() => {
   privacy.setTrackingConsent.mockReset();
 });
 
-afterEach(() => vi.useRealTimers());
+afterEach(() => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+});
 
 describe('custom cookie consent banner', () => {
   it('waits for Shopify and follows its region / saved-choice decision', () => {
@@ -104,11 +119,11 @@ describe('custom cookie consent banner', () => {
 
   it.each([true, false])(
     'saves optional consent as %s and closes only after success',
-    async (accepted) => {
-      const user = userEvent.setup();
+    (accepted) => {
+      vi.useFakeTimers();
       renderBanner();
       ready();
-      await user.click(
+      fireEvent.click(
         screen.getByRole('button', {
           name: accepted ? 'Accept optional' : 'Reject optional',
         }),
@@ -131,23 +146,66 @@ describe('custom cookie consent banner', () => {
       act(() => {
         privacy.setTrackingConsent.mock.calls[0][1]();
       });
+      expect(screen.getByRole('region')).toHaveClass('anim-fade-out');
+      expect(
+        screen.getByRole('button', {name: 'Accept optional'}),
+      ).toBeDisabled();
+      expect(
+        screen.getByRole('button', {name: 'Reject optional'}),
+      ).toBeDisabled();
+      act(() => {
+        vi.advanceTimersByTime(299);
+      });
+      expect(screen.getByRole('region')).toBeInTheDocument();
+      act(() => {
+        vi.advanceTimersByTime(1);
+      });
       expect(screen.queryByRole('region')).not.toBeInTheDocument();
     },
   );
 
-  it('keeps failed choices visible and permits retry', async () => {
-    const user = userEvent.setup();
+  it('keeps failed choices visible and permits retry', () => {
+    vi.useFakeTimers();
     renderBanner();
     ready();
     privacy.setTrackingConsent.mockImplementationOnce((_, finish) =>
       finish({error: 'Network error'}),
     );
-    await user.click(screen.getByRole('button', {name: 'Reject optional'}));
+    fireEvent.click(screen.getByRole('button', {name: 'Reject optional'}));
     expect(screen.getByRole('alert')).toHaveTextContent('could not be saved');
-    await user.click(screen.getByRole('button', {name: 'Reject optional'}));
+    expect(screen.getByRole('region')).toHaveClass('anim-fade-in');
+    fireEvent.click(screen.getByRole('button', {name: 'Reject optional'}));
     expect(privacy.setTrackingConsent).toHaveBeenCalledTimes(2);
     act(() => {
       privacy.setTrackingConsent.mock.calls[1][1]();
+    });
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+    expect(screen.queryByRole('region')).not.toBeInTheDocument();
+  });
+
+  it('fades out when Shopify reports a collected choice and clears the exit timer on unmount', () => {
+    vi.useFakeTimers();
+    const view = renderBanner();
+    ready();
+    collectConsent();
+    expect(screen.getByRole('region')).toHaveClass('anim-fade-out');
+    expect(vi.getTimerCount()).toBe(1);
+    view.unmount();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('skips the exit delay when reduced motion is requested', () => {
+    vi.useFakeTimers();
+    vi.spyOn(window, 'matchMedia').mockReturnValue({
+      matches: true,
+    } as MediaQueryList);
+    renderBanner();
+    ready();
+    collectConsent();
+    act(() => {
+      vi.advanceTimersByTime(0);
     });
     expect(screen.queryByRole('region')).not.toBeInTheDocument();
   });
@@ -171,6 +229,7 @@ describe('custom cookie consent banner', () => {
     expect(privacy.setTrackingConsent).not.toHaveBeenCalled();
     ready();
     expect(screen.getByRole('button', {name: 'Accept optional'})).toBeEnabled();
+    expect(screen.getByRole('region')).toHaveClass('anim-fade-in');
   });
 
   it('ignores late save callbacks and clears its timer on unmount', () => {

@@ -77,6 +77,7 @@ export default function InfoSection() {
         )}
         <Link
           className="ps2-cta mt-2 flex min-h-11 w-fit items-center text-lg"
+          data-activate-sound="back"
           to="/info"
         >
           Back to Information

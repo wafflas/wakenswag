@@ -79,6 +79,10 @@ describe('controller footer', () => {
       const user = userEvent.setup();
       const router = renderFooter({pathname});
       await screen.findByRole('button', {name: 'Cart (2)'});
+      expect(screen.getByRole('button', {name: 'Back'})).toHaveAttribute(
+        'data-activate-sound',
+        'back',
+      );
       await user.click(screen.getByRole('button', {name: 'Back'}));
       await waitFor(() => expect(router.state.location.pathname).toBe('/'));
       expect(
@@ -118,6 +122,9 @@ describe('controller footer', () => {
       await user.click(screen.getByRole('button', {name: label}));
       const toolbar = screen.getByRole('toolbar', {name: 'Screen actions'});
       expect(within(toolbar).getAllByRole('button')).toHaveLength(1);
+      expect(
+        within(toolbar).getByRole('button', {name: 'Back'}),
+      ).toHaveAttribute('data-activate-sound', 'back');
       await user.click(within(toolbar).getByRole('button', {name: 'Back'}));
       expect(
         await within(toolbar).findByRole('button', {name: 'Search'}),

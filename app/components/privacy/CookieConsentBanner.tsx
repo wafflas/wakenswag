@@ -2,9 +2,14 @@ import {
   useCustomerPrivacy,
   type CustomerPrivacyApiProps,
 } from '@shopify/hydrogen';
-import {useEffect, useRef, useState} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import {useLocation} from 'react-router';
 import {isProductDetailPath} from '~/lib/variants';
+import {
+  FADE_CLASSES,
+  OVERLAY_FADE_DURATION_MS,
+} from '~/components/animations/animationUtils';
+import {useExiting} from '~/components/animations/useExiting';
 import {useAside} from '~/components/layout/Aside';
 
 export function CookieConsentBanner({
@@ -17,14 +22,21 @@ export function CookieConsentBanner({
   const [initialized, setInitialized] = useState(false);
   const [required, setRequired] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
   const [error, setError] = useState('');
   const pendingRequest = useRef<ReturnType<typeof setTimeout> | null>(null);
   const {customerPrivacy} = useCustomerPrivacy({
     ...consent,
     withPrivacyBanner: false,
     onReady: () => setInitialized(true),
-    onVisitorConsentCollected: () => setRequired(false),
+    onVisitorConsentCollected: () => setIsExiting(true),
   });
+  const finishExit = useCallback(() => {
+    setRequired(false);
+    setIsExiting(false);
+  }, []);
+
+  useExiting(isExiting ? finishExit : undefined, OVERLAY_FADE_DURATION_MS);
 
   useEffect(() => {
     if (initialized && customerPrivacy) {
@@ -51,7 +63,12 @@ export function CookieConsentBanner({
   );
 
   function saveConsent(accepted: boolean) {
-    if (!customerPrivacy || !initialized || pendingRequest.current !== null) {
+    if (
+      !customerPrivacy ||
+      !initialized ||
+      isExiting ||
+      pendingRequest.current !== null
+    ) {
       return;
     }
     setSaving(true);
@@ -73,7 +90,7 @@ export function CookieConsentBanner({
         setError('Your choice could not be saved. Please try again.');
         return;
       }
-      setRequired(false);
+      setIsExiting(true);
     }
 
     try {
@@ -102,7 +119,10 @@ export function CookieConsentBanner({
       aria-labelledby="cookie-consent-title"
       aria-describedby="cookie-consent-description"
       aria-busy={saving}
-      className="fixed inset-x-3 bottom-20 z-[80] mx-auto grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-5 gap-y-0.5 max-h-[calc(100svh-5rem)] max-w-3xl overflow-y-auto rounded-md border border-ps2-white/15 bg-ps2-black/95 px-4 py-2 font-ps2 text-ps2-white sm:w-[calc(100vw-2.5rem)]"
+      className={[
+        isExiting ? FADE_CLASSES.overlay.exit : FADE_CLASSES.overlay.enter,
+        'fixed inset-x-3 bottom-20 z-[80] mx-auto grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-5 gap-y-0.5 max-h-[calc(100svh-5rem)] max-w-3xl overflow-y-auto rounded-md border border-ps2-white/15 bg-ps2-black/95 px-4 py-2 font-ps2 text-ps2-white sm:w-[calc(100vw-2.5rem)]',
+      ].join(' ')}
     >
       <h2
         id="cookie-consent-title"
@@ -120,7 +140,7 @@ export function CookieConsentBanner({
         <button
           type="button"
           aria-label="Reject optional"
-          disabled={!initialized || saving}
+          disabled={!initialized || saving || isExiting}
           onClick={() => saveConsent(false)}
           className="min-h-7 py-1 text-ps2-muted/70 hover:text-ps2-cyan focus-visible:outline focus-visible:outline-ps2-cyan disabled:cursor-wait disabled:opacity-50 cursor-pointer disabled:underline-offset-0 cursor-pointer disabled:cursor-not-allowed"
         >
@@ -129,7 +149,7 @@ export function CookieConsentBanner({
         <button
           type="button"
           aria-label="Accept optional"
-          disabled={!initialized || saving}
+          disabled={!initialized || saving || isExiting}
           onClick={() => saveConsent(true)}
           className="min-h-7 py-1 text-ps2-white hover:text-ps2-cyan focus-visible:outline focus-visible:outline-ps2-cyan disabled:cursor-wait disabled:opacity-50 cursor-pointer disabled:underline-offset-0 cursor-pointer disabled:cursor-not-allowed"
         >

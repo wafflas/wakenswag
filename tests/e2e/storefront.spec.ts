@@ -56,6 +56,8 @@ test('custom cookie choices persist, ignore removed preview URLs and fit the vie
   await expect(
     banner.getByRole('button', {name: 'Reject optional'}),
   ).toBeEnabled();
+  // Measure contrast after the entrance fade reaches its final opacity.
+  await expect(banner).toHaveCSS('opacity', '1');
   const box = await banner.boundingBox();
   const viewport = page.viewportSize();
   if (!box || !viewport) throw new Error('Missing banner dimensions');
@@ -131,6 +133,30 @@ test('custom cookie choices persist, ignore removed preview URLs and fit the vie
   ).toBeVisible();
   await expect(banner).not.toBeVisible();
 });
+
+for (const reducedMotion of ['no-preference', 'reduce'] as const) {
+  test(`cookie banner fades respect ${reducedMotion} motion preference`, async ({
+    page,
+  }) => {
+    await page.emulateMedia({reducedMotion});
+    await installShopifyBrowserFixtures(page);
+    await openPage(page, '/');
+    const banner = page.getByRole('region', {name: 'Cookies & privacy'});
+    await expect(banner).toBeVisible();
+    await expect(banner).toHaveCSS(
+      'animation-name',
+      reducedMotion === 'reduce' ? 'none' : 'fade-in',
+    );
+    await banner.getByRole('button', {name: 'Reject optional'}).click();
+    if (reducedMotion === 'no-preference') {
+      await expect(banner).toHaveCSS('animation-name', 'fade-out');
+      await expect(
+        banner.getByRole('button', {name: 'Accept optional'}),
+      ).toBeDisabled();
+    }
+    await expect(banner).toHaveCount(0);
+  });
+}
 
 for (const [listingPath, collectionId] of [
   ['/swag', 2],
