@@ -1,5 +1,5 @@
-import {getInteractiveElement} from './sharedUtils';
 import {useEffect} from 'react';
+import {getInteractiveElement} from './sharedUtils';
 
 interface ButtonSoundProps {
   src?: string;
@@ -30,255 +30,144 @@ export function ButtonSound({
 
     if (!AudioContextConstructor) return undefined;
 
-    let audioContext: AudioContext | undefined;
-    let hoverGainNode: GainNode | undefined;
-    let activateGainNode: GainNode | undefined;
-    let activateReady: Promise<void> | undefined;
-    let backActivateReady: Promise<void> | undefined;
+    const audioContext = new AudioContextConstructor();
     const abortController = new AbortController();
-    let hoverBuffer: AudioBuffer | null = null;
-    let activateBuffer: AudioBuffer | null = null;
-    let backActivateBuffer: AudioBuffer | null = null;
-    let lastHoverPlayedAt = 0;
-    let lastActivatePlayedAt = 0;
-    let disposed = false;
+    const {signal} = abortController;
+    const buffers = new Map<string, AudioBuffer>();
+    const lastPlayedAt = {hover: -Infinity, activate: -Infinity};
     let keyboardNavigationActive = false;
     let activeHoverElement: HTMLElement | null = null;
 
-    async function loadSound(soundSrc: string, context: AudioContext) {
-      const response = await fetch(soundSrc, {
-        signal: abortController.signal,
-      });
-
-      if (!response.ok) {
-        throw new Error(
-          `Unable to load interface sound (${soundSrc}): ${response.status}`,
+    async function loadSound(soundSrc: string) {
+      try {
+        const response = await fetch(soundSrc, {signal});
+        if (!response.ok) {
+          throw new Error(
+            `Unable to load interface sound (${soundSrc}): ${response.status}`,
+          );
+        }
+        const buffer = await audioContext.decodeAudioData(
+          await response.arrayBuffer(),
         );
+        buffers.set(soundSrc, buffer);
+      } catch (error) {
+        if (!signal.aborted) console.warn(error);
       }
-
-      const encodedAudio = await response.arrayBuffer();
-      return context.decodeAudioData(encodedAudio);
     }
 
-    function initializeAudio() {
-      if (audioContext) return;
-      const context = new AudioContextConstructor();
-      audioContext = context;
-      hoverGainNode = context.createGain();
-      activateGainNode = context.createGain();
-      hoverGainNode.gain.value = volume;
-      activateGainNode.gain.value = activateVolume;
-      hoverGainNode.connect(context.destination);
-      activateGainNode.connect(context.destination);
-
-      void loadSound(src, context)
-        .then((buffer) => {
-          hoverBuffer = buffer;
-        })
-        .catch((error: unknown) => {
-          if (!abortController.signal.aborted) console.warn(error);
-        });
-
-      activateReady = loadSound(activateSrc, context)
-        .then((buffer) => {
-          activateBuffer = buffer;
-        })
-        .catch((error: unknown) => {
-          if (!abortController.signal.aborted) console.warn(error);
-        });
-
-      backActivateReady = loadSound(backActivateSrc, context)
-        .then((buffer) => {
-          backActivateBuffer = buffer;
-        })
-        .catch((error: unknown) => {
-          if (!abortController.signal.aborted) console.warn(error);
-        });
+    // Cache each clip before interaction; loading never starts playback.
+    for (const soundSrc of [src, activateSrc, backActivateSrc]) {
+      void loadSound(soundSrc);
     }
 
-    function startSound(
-      buffer: AudioBuffer | null,
-      gainNode: GainNode | undefined,
+    function playSound(
+      buffer: AudioBuffer | undefined,
+      kind: 'hover' | 'activate',
     ) {
-      if (
-        !buffer ||
-        !gainNode ||
-        disposed ||
-        audioContext?.state !== 'running'
-      ) {
+      if (!buffer || signal.aborted || audioContext.state !== 'running') {
         return;
       }
+      const now = performance.now();
+      if (now - lastPlayedAt[kind] < cooldownMs) return;
+      lastPlayedAt[kind] = now;
 
       const sourceNode = audioContext.createBufferSource();
+      const gainNode = audioContext.createGain();
+      gainNode.gain.value = kind === 'hover' ? volume : activateVolume;
       sourceNode.buffer = buffer;
       sourceNode.connect(gainNode);
-      sourceNode.addEventListener('ended', () => sourceNode.disconnect(), {
-        once: true,
-      });
+      gainNode.connect(audioContext.destination);
+      sourceNode.addEventListener(
+        'ended',
+        () => {
+          sourceNode.disconnect();
+          gainNode.disconnect();
+        },
+        {once: true},
+      );
       sourceNode.start();
     }
 
-    function playHoverSound() {
-      if (!audioContext) return;
-      const now = performance.now();
-
-      if (now - lastHoverPlayedAt < cooldownMs) return;
-      lastHoverPlayedAt = now;
-
-      if (audioContext.state === 'suspended') {
-        void audioContext
-          .resume()
-          .then(() => startSound(hoverBuffer, hoverGainNode))
-          .catch(() => undefined);
-        return;
-      }
-
-      startSound(hoverBuffer, hoverGainNode);
-    }
-
-    function playHoverForElement(interactiveElement: HTMLElement) {
-      if (activeHoverElement === interactiveElement) return;
-
-      activeHoverElement = interactiveElement;
-      playHoverSound();
-    }
-
-    function clearHoverElement(
-      target: EventTarget | null,
-      relatedTarget: EventTarget | null,
-    ) {
-      const interactiveElement = getInteractiveElement(target);
-      if (!interactiveElement || activeHoverElement !== interactiveElement) {
-        return;
-      }
-
-      if (
-        relatedTarget instanceof Node &&
-        interactiveElement.contains(relatedTarget)
-      ) {
-        return;
-      }
-
-      activeHoverElement = null;
-    }
-
-    function playActivateSound(interactiveElement: HTMLElement) {
-      if (!audioContext) return;
-      const isBack = interactiveElement.dataset.activateSound === 'back';
-      const now = performance.now();
-
-      if (now - lastActivatePlayedAt < cooldownMs) return;
-      lastActivatePlayedAt = now;
-
-      // The first gesture starts loading too; play its sound once decoding and
-      // any required resume have both finished.
-      void Promise.all([
-        isBack ? backActivateReady : activateReady,
-        audioContext.state === 'suspended' ? audioContext.resume() : undefined,
-      ])
-        .then(() =>
-          startSound(
-            isBack ? backActivateBuffer : activateBuffer,
-            activateGainNode,
-          ),
-        )
-        .catch(() => undefined);
-    }
-
     function unlockAudio() {
-      initializeAudio();
-      if (audioContext?.state === 'suspended') {
-        void audioContext.resume().catch(() => undefined);
+      if (audioContext.state !== 'running') {
+        return audioContext.resume().catch(() => undefined);
       }
+      return Promise.resolve();
     }
 
-    function handlePointerOver(event: PointerEvent) {
-      if (event.pointerType === 'touch') return;
-      keyboardNavigationActive = false;
+    function handleHover(event: PointerEvent | FocusEvent) {
+      if ('pointerType' in event && event.pointerType === 'touch') return;
+      const isPointer = event.type === 'pointerover';
+      if (isPointer) keyboardNavigationActive = false;
+      if (!isPointer && !keyboardNavigationActive) return;
 
       const interactiveElement = getInteractiveElement(event.target);
-      if (!interactiveElement) return;
-
       if (
-        interactiveElement.contains(document.activeElement) ||
+        !interactiveElement ||
+        interactiveElement === activeHoverElement ||
+        (isPointer && interactiveElement.contains(document.activeElement)) ||
         (event.relatedTarget instanceof Node &&
           interactiveElement.contains(event.relatedTarget))
       ) {
         return;
       }
 
-      playHoverForElement(interactiveElement);
+      activeHoverElement = interactiveElement;
+      playSound(buffers.get(src), 'hover');
     }
 
-    function handlePointerOut(event: PointerEvent) {
-      if (event.pointerType === 'touch') return;
-
-      clearHoverElement(event.target, event.relatedTarget);
-    }
-
-    function handleFocusIn(event: FocusEvent) {
-      if (!keyboardNavigationActive) return;
+    function handleLeave(event: PointerEvent | FocusEvent) {
+      if ('pointerType' in event && event.pointerType === 'touch') return;
       const interactiveElement = getInteractiveElement(event.target);
-      if (!interactiveElement) return;
-
-      playHoverForElement(interactiveElement);
-    }
-
-    function handleFocusOut(event: FocusEvent) {
-      clearHoverElement(event.target, event.relatedTarget);
-    }
-
-    function handlePointerDown(event: PointerEvent) {
-      keyboardNavigationActive = false;
-      unlockAudio();
-
-      const interactiveElement = getInteractiveElement(event.target);
-      if (!interactiveElement) return;
-
-      playActivateSound(interactiveElement);
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      keyboardNavigationActive = true;
-      unlockAudio();
-
-      if (event.repeat) return;
-
-      const interactiveElement = getInteractiveElement(event.target);
-      if (!interactiveElement) return;
-
-      const isEnterActivation = event.key === 'Enter';
-      const isButtonSpaceActivation =
-        event.key === ' ' && interactiveElement.tagName === 'BUTTON';
-
-      if (isEnterActivation || isButtonSpaceActivation) {
-        playActivateSound(interactiveElement);
+      if (!interactiveElement || interactiveElement !== activeHoverElement) {
+        return;
       }
+      if (
+        event.relatedTarget instanceof Node &&
+        interactiveElement.contains(event.relatedTarget)
+      ) {
+        return;
+      }
+      activeHoverElement = null;
     }
 
-    document.addEventListener('pointerover', handlePointerOver);
-    document.addEventListener('pointerout', handlePointerOut);
-    document.addEventListener('focusin', handleFocusIn);
-    document.addEventListener('focusout', handleFocusOut);
-    document.addEventListener('pointerdown', handlePointerDown, {
+    function handleInput(event: Event) {
+      keyboardNavigationActive = event.type === 'keydown';
+      if (keyboardNavigationActive) void unlockAudio();
+    }
+
+    function handleClick(event: MouseEvent) {
+      // A completed click also covers touch taps and native keyboard activation.
+      const resumed = unlockAudio();
+      const interactiveElement = getInteractiveElement(event.target);
+      if (!interactiveElement) return;
+
+      const buffer = buffers.get(
+        interactiveElement.dataset.activateSound === 'back'
+          ? backActivateSrc
+          : activateSrc,
+      );
+      // Skip unready clips instead of replaying old presses after a slow load.
+      if (!buffer) return;
+      void resumed
+        .then(() => playSound(buffer, 'activate'))
+        .catch(() => undefined);
+    }
+
+    document.addEventListener('pointerover', handleHover, {signal});
+    document.addEventListener('focusin', handleHover, {signal});
+    document.addEventListener('pointerout', handleLeave, {signal});
+    document.addEventListener('focusout', handleLeave, {signal});
+    document.addEventListener('pointerdown', handleInput, {
       capture: true,
+      signal,
     });
-    document.addEventListener('keydown', handleKeyDown, {capture: true});
+    document.addEventListener('keydown', handleInput, {capture: true, signal});
+    document.addEventListener('click', handleClick, {capture: true, signal});
 
     return () => {
-      disposed = true;
       abortController.abort();
-      document.removeEventListener('pointerover', handlePointerOver);
-      document.removeEventListener('pointerout', handlePointerOut);
-      document.removeEventListener('focusin', handleFocusIn);
-      document.removeEventListener('focusout', handleFocusOut);
-      document.removeEventListener('pointerdown', handlePointerDown, {
-        capture: true,
-      });
-      document.removeEventListener('keydown', handleKeyDown, {capture: true});
-      hoverGainNode?.disconnect();
-      activateGainNode?.disconnect();
-      void audioContext?.close().catch(() => undefined);
+      void audioContext.close().catch(() => undefined);
     };
   }, [activateSrc, activateVolume, backActivateSrc, cooldownMs, src, volume]);
 
