@@ -421,9 +421,7 @@ test('information menu opens policies and external links and fits the viewport',
   await page.emulateMedia({reducedMotion: 'no-preference'});
   await page.getByRole('link', {name: /Privacy Policy/}).focus();
   await page.keyboard.press('End');
-  await expect(
-    page.getByRole('link', {name: /Returns & Refunds/}),
-  ).toBeFocused();
+  await expect(credits).toBeFocused();
   await page.keyboard.press('ArrowDown');
   await expect(instagram).toBeFocused();
   await page.getByRole('button', {name: 'Search', exact: true}).click();
