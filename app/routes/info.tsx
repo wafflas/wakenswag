@@ -10,15 +10,16 @@ const INFO_ITEMS = [
     detail: '@wakenswag',
     external: true,
   },
+  {label: 'Privacy Policy', to: '/info/privacy-policy'},
+  {label: 'Terms of Service', to: '/info/terms-of-service'},
+  {label: 'Returns & Refunds', to: '/info/refund-policy'},
   {
     label: 'Website Credits',
     to: 'https://wafflas.url',
     detail: 'wafflas.url',
     external: true,
+    separated: true,
   },
-  {label: 'Privacy Policy', to: '/info/privacy-policy'},
-  {label: 'Terms of Service', to: '/info/terms-of-service'},
-  {label: 'Returns & Refunds', to: '/info/refund-policy'},
 ] as const;
 
 export const meta: Route.MetaFunction = () => [

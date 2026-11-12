@@ -18,11 +18,11 @@ describe('main menu keyboard navigation', () => {
     await user.keyboard('{End}');
     expect(screen.getByRole('link', {name: 'Info'})).toHaveFocus();
     await user.keyboard('{ArrowDown}');
-    expect(screen.getByRole('link', {name: 'Home'})).toHaveFocus();
+    expect(screen.getByRole('link', {name: 'Swag'})).toHaveFocus();
     await user.keyboard('{ArrowUp}');
     expect(screen.getByRole('link', {name: 'Info'})).toHaveFocus();
     await user.keyboard('{Home}');
-    expect(screen.getByRole('link', {name: 'Home'})).toHaveFocus();
+    expect(screen.getByRole('link', {name: 'Swag'})).toHaveFocus();
   });
   it('does not take keyboard focus from a text field', async () => {
     const user = userEvent.setup();

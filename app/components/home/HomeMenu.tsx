@@ -5,10 +5,6 @@ import {useAside} from '~/components/layout/Aside';
 
 const MENU_ITEMS = [
   {
-    label: 'Home',
-    to: '/',
-  },
-  {
     label: 'Swag',
     to: '/swag',
   },
@@ -30,6 +26,7 @@ interface MainMenuProps {
     to: string;
     detail?: string;
     external?: boolean;
+    separated?: boolean;
   }>;
   ariaLabel?: string;
   variant?: 'home' | 'info';
@@ -152,7 +149,9 @@ export function MainMenu({
             key={item.to}
             className={
               variant === 'info'
-                ? 'col-span-full grid grid-cols-subgrid'
+                ? item.separated
+                  ? 'col-span-full mt-6 grid grid-cols-subgrid'
+                  : 'col-span-full grid grid-cols-subgrid'
                 : undefined
             }
           >
