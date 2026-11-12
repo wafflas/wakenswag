@@ -316,7 +316,7 @@ test('information menu opens policies and external links and fits the viewport',
     });
   await expect(
     page.getByRole('navigation', {name: 'Main navigation'}).getByRole('link'),
-  ).toHaveCount(4);
+  ).toHaveCount(3);
   await page.getByRole('link', {name: 'Info', exact: true}).click();
   await expect(
     page.getByRole('heading', {name: 'Website Information', exact: true}),
