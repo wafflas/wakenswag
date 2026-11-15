@@ -4,7 +4,6 @@ import {getProductListingPathForProduct} from '~/lib/variants';
 import type {CartApiQueryFragment} from 'storefrontapi.generated';
 
 export type CartLine = OptimisticCartLine<CartApiQueryFragment>;
-export type CartLayout = 'page' | 'aside';
 export type LineItemChildrenMap = {[parentId: string]: CartLine[]};
 
 /** Keep a single copy of each drumkit product, including across variants. */

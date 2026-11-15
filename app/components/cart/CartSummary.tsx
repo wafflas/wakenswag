@@ -1,21 +1,16 @@
 import type {CartApiQueryFragment} from 'storefrontapi.generated';
-import type {CartLayout} from './cartUtils';
 import {type OptimisticCart} from '@shopify/hydrogen';
 import {formatMoneyAmount} from '~/lib/money';
 
 type CartSummaryProps = {
   cart: OptimisticCart<CartApiQueryFragment | null>;
-  layout: CartLayout;
 };
 
-export function CartSummary({cart, layout}: CartSummaryProps) {
+export function CartSummary({cart}: CartSummaryProps) {
   const subtotal = cart?.cost?.subtotalAmount;
 
   return (
-    <div
-      className="ps2-soft-copy flex flex-col items-center gap-2 text-center text-xl leading-none"
-      data-layout={layout}
-    >
+    <div className="ps2-soft-copy flex flex-col items-center gap-2 text-center text-xl leading-none">
       <p className="text-ps2-gray">
         Total{' '}
         <span className="text-ps2-white">

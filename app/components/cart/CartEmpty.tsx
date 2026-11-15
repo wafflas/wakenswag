@@ -1,14 +1,7 @@
 import {Link} from 'react-router';
 import {useAside} from '../layout/Aside';
-import type {CartLayout} from './cartUtils';
 
-export function CartEmpty({
-  hidden = false,
-  layout,
-}: {
-  hidden: boolean;
-  layout?: CartLayout;
-}) {
+export function CartEmpty({hidden = false}: {hidden: boolean}) {
   const {close} = useAside();
 
   return (
@@ -24,7 +17,7 @@ export function CartEmpty({
       <Link
         className="ps2-cta md:text-2xl"
         to="/swag"
-        onClick={layout === 'aside' ? close : undefined}
+        onClick={close}
         prefetch="viewport"
       >
         Browse items

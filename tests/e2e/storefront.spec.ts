@@ -46,6 +46,28 @@ test('homepage navigation and important routes work', async ({page}) => {
   }
 });
 
+test('cart URL redirects home and cart still opens in a modal', async ({
+  page,
+}) => {
+  for (const path of ['/cart', '/cart/']) {
+    const response = await page.request.get(path, {maxRedirects: 0});
+    expect(response.status()).toBe(302);
+    expect(response.headers()['location']).toBe('/');
+  }
+
+  for (const path of ['/api/cart', '/cart/101:2', '/discount/SAVE']) {
+    const response = await page.request.get(path, {maxRedirects: 0});
+    expect(response.status()).toBe(404);
+    expect(response.headers()['location']).toBeUndefined();
+  }
+
+  await openPage(page, '/cart');
+  await expect(page).toHaveURL((url) => url.pathname === '/');
+  await page.getByRole('button', {name: /Cart/}).click();
+  await expect(page.getByRole('dialog', {name: 'Shopping cart'})).toBeVisible();
+  await expect(page).toHaveURL((url) => url.pathname === '/');
+});
+
 test('custom cookie choices persist, ignore removed preview URLs and fit the viewport', async ({
   page,
 }) => {
@@ -575,7 +597,7 @@ test('search routes drumkits to their collection and preserves search tracking',
     await page.keyboard.press('Escape');
     await expect(page).toHaveURL(/\/drumkits(?:\?pageSize=4)?$/);
     await expect(
-      page.getByRole('heading', {name: 'Buy the fucking drumkits'}),
+      page.getByRole('heading', {name: 'Buy the f*** drumkits', exact: true}),
     ).toBeVisible();
   }
   await openPage(
@@ -929,7 +951,12 @@ test('drumkit selection follows hover and focus and respects reduced motion', as
   await expect(first.getByText('Fixture Tee', {exact: true})).toBeVisible();
   await expect(first.locator('.ps2-drumkit-indicator')).toBeVisible();
   await expect(description).toBeVisible();
-  await expect(first).toHaveAccessibleDescription(/808s so distorted/);
+  await expect(description).toHaveText(
+    '808s so distorted your speakers might file a lawsuit.',
+  );
+  await expect(first).toHaveAccessibleDescription(
+    '808s so distorted your speakers might file a lawsuit.',
+  );
   await expect(heading).toHaveCSS('animation-name', 'ps2-drumkit-bounce');
   await expect(first.locator('img')).toHaveCSS('animation-name', 'none');
   await expect(first.locator('img')).toHaveCSS('transform', 'none');

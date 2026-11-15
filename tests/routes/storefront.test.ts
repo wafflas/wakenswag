@@ -4,8 +4,6 @@ import {action as cartAction} from '~/routes/cart';
 import {loader as searchLoader} from '~/routes/search';
 import {loader as swagLoader} from '~/routes/swag';
 import {loader as drumkitsLoader} from '~/routes/drumkits';
-import {loader as discountLoader} from '~/routes/discount.$code';
-import {loader as permalinkLoader} from '~/routes/cart.$lines';
 import {loadProductDetail} from '~/lib/productDetail';
 import {loader as productLoader} from '~/routes/swag.$handle';
 import {loader as drumkitProductLoader} from '~/routes/drumkits.$handle';
@@ -31,8 +29,6 @@ function createArgs(path = '/', inputs?: unknown, redirectTo?: string) {
       addLines: vi.fn().mockResolvedValue(result),
       updateLines: vi.fn().mockResolvedValue(result),
       removeLines: vi.fn().mockResolvedValue(result),
-      updateDiscountCodes: vi.fn().mockResolvedValue(result),
-      create: vi.fn().mockResolvedValue(result),
       setCartId: vi
         .fn()
         .mockReturnValue(new Headers({'Set-Cookie': 'cart=fixture; HttpOnly'})),
@@ -44,7 +40,7 @@ function createArgs(path = '/', inputs?: unknown, redirectTo?: string) {
       inputs ? {method: 'POST', body: form} : undefined,
     ),
     context,
-    params: {code: 'SAVE', lines: '101:2'},
+    params: {},
   };
   return {args, context};
 }
@@ -111,31 +107,37 @@ describe('cart action', () => {
       );
     },
   );
-  it('rejects an external redirect but keeps a successful mutation response', async () => {
-    const {args} = createArgs(
-      '/cart',
-      {action: CartForm.ACTIONS.LinesRemove, inputs: {lineIds: ['line-1']}},
-      'https://evil.example',
-    );
+  it.each(['https://evil.example', '/swag?Size=Large'])(
+    'ignores redirectTo %s so modal cart updates do not navigate',
+    async (redirectTo) => {
+      const {args} = createArgs(
+        '/cart',
+        {action: CartForm.ACTIONS.LinesRemove, inputs: {lineIds: ['line-1']}},
+        redirectTo,
+      );
+      const response = await cartAction(
+        args as unknown as Parameters<typeof cartAction>[0],
+      );
+      expect(new Headers(response.init?.headers).get('Location')).toBeNull();
+      expect(response.init?.status).toBe(200);
+    },
+  );
+  it.each([
+    CartForm.ACTIONS.DiscountCodesUpdate,
+    CartForm.ACTIONS.GiftCardCodesAdd,
+    CartForm.ACTIONS.GiftCardCodesRemove,
+    CartForm.ACTIONS.BuyerIdentityUpdate,
+  ])('rejects unused action %s without changing the cart', async (action) => {
+    const {args, context} = createArgs('/cart', {action, inputs: {}});
     const response = await cartAction(
       args as unknown as Parameters<typeof cartAction>[0],
     );
-    expect(new Headers(response.init?.headers).get('Location')).toBeNull();
-    expect(response.init?.status).toBe(200);
-  });
-  it('keeps a local redirect with a query string', async () => {
-    const {args} = createArgs(
-      '/cart',
-      {action: CartForm.ACTIONS.LinesRemove, inputs: {lineIds: ['line-1']}},
-      '/swag?Size=Large',
-    );
-    const response = await cartAction(
-      args as unknown as Parameters<typeof cartAction>[0],
-    );
-    expect(new Headers(response.init?.headers).get('Location')).toBe(
-      '/swag?Size=Large',
-    );
-    expect(response.init?.status).toBe(303);
+    expect(response.init?.status).toBe(400);
+    expect(response.data.errors).toEqual([{message: 'Unknown cart action.'}]);
+    expect(context.cart.setCartId).not.toHaveBeenCalled();
+    expect(context.cart.addLines).not.toHaveBeenCalled();
+    expect(context.cart.updateLines).not.toHaveBeenCalled();
+    expect(context.cart.removeLines).not.toHaveBeenCalled();
   });
   it('returns a useful failure when the cart API is unreachable', async () => {
     const {args, context} = createArgs('/cart', {
@@ -387,53 +389,5 @@ describe('product section routing', () => {
     expect(result.productUrl).toBe(
       'https://store.example/drumkits/drumkit-vol-002',
     );
-  });
-});
-
-describe('discount and cart permalinks', () => {
-  it('rejects scheme-only discount redirects', async () => {
-    const {args} = createArgs('/discount/SAVE?redirect=https:evil.example');
-    const response = await discountLoader(
-      args as unknown as Parameters<typeof discountLoader>[0],
-    );
-    expect(response.headers.get('Location')).toBe('/');
-  });
-  it('handles missing cart data from a discount mutation', async () => {
-    const {args, context} = createArgs('/discount/SAVE');
-    context.cart.updateDiscountCodes.mockResolvedValue({
-      cart: null,
-      errors: [{message: 'Invalid code'}],
-    });
-    await expect(
-      discountLoader(args as unknown as Parameters<typeof discountLoader>[0]),
-    ).rejects.toMatchObject({status: 400});
-    expect(context.cart.setCartId).not.toHaveBeenCalled();
-  });
-  it.each(['101:0', '101:-1', '101:1.5', '101:2junk', 'abc:2', '101:NaN'])(
-    'rejects malformed cart permalink %s before creating a cart',
-    async (lines) => {
-      const {args, context} = createArgs('/cart/invalid');
-      args.params.lines = lines;
-      await expect(
-        permalinkLoader(
-          args as unknown as Parameters<typeof permalinkLoader>[0],
-        ),
-      ).rejects.toMatchObject({status: 400});
-      expect(context.cart.create).not.toHaveBeenCalled();
-    },
-  );
-  it('hands valid cart permalinks to Shopify checkout with a cookie', async () => {
-    const {args, context} = createArgs('/cart/101:2?discount=SAVE');
-    const response = await permalinkLoader(
-      args as unknown as Parameters<typeof permalinkLoader>[0],
-    );
-    expect(context.cart.create).toHaveBeenCalledWith({
-      lines: [{merchandiseId: 'gid://shopify/ProductVariant/101', quantity: 2}],
-      discountCodes: ['SAVE'],
-    });
-    expect(response.headers.get('Location')).toBe(
-      'https://checkout.example.test/cart/fixture',
-    );
-    expect(response.headers.get('Set-Cookie')).toContain('cart=fixture');
   });
 });

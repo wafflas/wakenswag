@@ -106,6 +106,8 @@ function query(
             ...product,
             description:
               '808s so distorted your speakers might file a lawsuit.\nScientifically proven to NOT make you a better producer.',
+            descriptionHtml:
+              '<ul><li>808s so distorted your speakers might file a lawsuit.</li><li>Scientifically proven to NOT make you a better producer.</li></ul>',
           })),
         },
       },

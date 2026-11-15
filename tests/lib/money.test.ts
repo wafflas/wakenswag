@@ -1,6 +1,5 @@
 import {describe, expect, it} from 'vitest';
 import {formatMoney} from '~/lib/money';
-import {getSafeRedirectPath} from '~/lib/redirect';
 import {getVariantUrl} from '~/lib/variants';
 
 describe('storefront money display', () => {
@@ -22,26 +21,7 @@ describe('storefront money display', () => {
   });
 });
 
-describe('user-supplied redirect paths', () => {
-  it.each([
-    'https://evil.example',
-    'https:evil.example',
-    '//evil.example',
-    '/\\evil.example',
-    '\\evil.example',
-    'javascript:alert(1)',
-    '/swag\nInjected: true',
-    '',
-    null,
-    12,
-  ])('rejects %j', (path) => {
-    expect(getSafeRedirectPath(path)).toBeNull();
-  });
-  it('preserves a root-relative path including its query and fragment', () => {
-    expect(getSafeRedirectPath('/swag?Size=Large#options')).toBe(
-      '/swag?Size=Large#options',
-    );
-  });
+describe('product variant URLs', () => {
   it('does not change the caller’s search parameters while making a variant URL', () => {
     const params = new URLSearchParams('q=tee');
     expect(

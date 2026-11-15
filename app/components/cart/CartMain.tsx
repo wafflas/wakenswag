@@ -4,18 +4,17 @@ import {CartLineItem} from '~/components/cart/CartLineItem';
 import {CartSummary} from './CartSummary';
 import {CartEmpty} from './CartEmpty';
 import {CartEmptyButton} from './CartEmptyButton';
-import {getLineItemChildrenMap, type CartLayout} from './cartUtils';
+import {getLineItemChildrenMap} from './cartUtils';
 
 export type CartMainProps = {
   cart: CartApiQueryFragment | null;
-  layout: CartLayout;
 };
 
 /**
  * The main cart component that displays the cart items and summary.
  * It is rendered inside the cart modal and uses optimistic Shopify updates.
  */
-export function CartMain({layout, cart: originalCart}: CartMainProps) {
+export function CartMain({cart: originalCart}: CartMainProps) {
   // The useOptimisticCart hook applies pending actions to the cart
   // so the user immediately sees feedback when they modify the cart.
   const cart = useOptimisticCart(originalCart);
@@ -45,7 +44,7 @@ export function CartMain({layout, cart: originalCart}: CartMainProps) {
       </h2>
 
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-6 py-6 sm:gap-8 sm:py-8">
-        <CartEmpty hidden={linesCount > 0} layout={layout} />
+        <CartEmpty hidden={linesCount > 0} />
 
         <div
           className="flex min-h-0 w-full max-w-2xl flex-1 flex-col items-center gap-4 sm:gap-6"
@@ -75,13 +74,12 @@ export function CartMain({layout, cart: originalCart}: CartMainProps) {
               <CartLineItem
                 key={line.id}
                 line={line}
-                layout={layout}
                 childrenMap={childrenMap}
               />
             ))}
           </ul>
 
-          {cartHasItems ? <CartSummary cart={cart} layout={layout} /> : null}
+          {cartHasItems ? <CartSummary cart={cart} /> : null}
         </div>
       </div>
     </section>

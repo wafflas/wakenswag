@@ -55,7 +55,7 @@ export function CartModal({cart}: CartModalProps) {
             </p>
           }
         >
-          {(resolvedCart) => <CartMain cart={resolvedCart} layout="aside" />}
+          {(resolvedCart) => <CartMain cart={resolvedCart} />}
         </Await>
       </Suspense>
     </FadeTransition>

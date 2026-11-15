@@ -1,5 +1,5 @@
 import {CartLineQuantity} from './CartLineQuantity';
-import type {CartLine, CartLayout, LineItemChildrenMap} from './cartUtils';
+import type {CartLine, LineItemChildrenMap} from './cartUtils';
 import {Image} from '@shopify/hydrogen';
 import {useVariantUrl} from '~/lib/variants';
 import {Link} from 'react-router';
@@ -13,11 +13,9 @@ import {formatMoney} from '~/lib/money';
  * rendered nested below the parent line.
  */
 export function CartLineItem({
-  layout,
   line,
   childrenMap,
 }: {
-  layout: CartLayout;
   line: CartLine;
   childrenMap: LineItemChildrenMap;
 }) {
@@ -40,9 +38,7 @@ export function CartLineItem({
         className="group flex min-h-0 w-full flex-1 flex-col items-center justify-center gap-3 rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ps2-cyan"
         prefetch="intent"
         to={lineItemUrl}
-        onClick={() => {
-          if (layout === 'aside') close();
-        }}
+        onClick={close}
       >
         <div className="flex h-28 w-full items-center justify-center sm:h-36">
           {image ? (
@@ -89,7 +85,6 @@ export function CartLineItem({
                 childrenMap={childrenMap}
                 key={childLine.id}
                 line={childLine}
-                layout={layout}
               />
             ))}
           </ul>

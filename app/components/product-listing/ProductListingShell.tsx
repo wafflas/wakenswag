@@ -110,7 +110,11 @@ export function ProductListingShell({
           className,
         ].join(' ')}
       >
-        <ProductListingHeader displayTitle={displayTitle} workspaceLabel={workspaceLabel} storageLabel={storageLabel} />
+        <ProductListingHeader
+          displayTitle={displayTitle}
+          workspaceLabel={workspaceLabel}
+          storageLabel={storageLabel}
+        />
 
         <div
           className="relative z-10 min-h-0 flex-1 [&>*]:h-full"
