@@ -15,11 +15,11 @@ const SWAG_HANDLE = 'swag';
 
 export const meta: Route.MetaFunction = () => [
   {
-    title: 'Wake n Swag | Swag',
+    title: 'Wake N Swag | Swag',
   },
   {
     name: 'description',
-    content: 'Shop official Wake n Swag clothing.',
+    content: 'Shop official Wake N Swag clothing.',
   },
   {
     tagName: 'link',

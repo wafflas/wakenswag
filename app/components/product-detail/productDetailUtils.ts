@@ -189,7 +189,7 @@ function colorDistance(
 }
 
 /**
- * Turns a Shopify product description into bullet strings for the PDP.
+ * Turns a Shopify product description into plain-text bullets for listings and product details.
  *
  * Prefers real list items from `descriptionHtml` (admin bullet lists → `<li>`).
  * Falls back to newline / dash-prefixed lines from plain `description`.

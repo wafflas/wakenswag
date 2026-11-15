@@ -51,6 +51,27 @@ function createAddToCartAction() {
   return {action, submittedQuantity};
 }
 
+it('keeps every description bullet on the full product page', () => {
+  const product = createProduct({
+    descriptionHtml:
+      '<ul><li>Distorted 808s.</li><li>Includes WAV samples.</li></ul>',
+  });
+  const router = createMemoryRouter([
+    {
+      path: '/',
+      element: (
+        <ProductDetail
+          product={product}
+          selectedVariant={product.selectedOrFirstAvailableVariant}
+        />
+      ),
+    },
+  ]);
+  render(<RouterProvider router={router} />);
+  expect(screen.getByText('Distorted 808s.')).toBeInTheDocument();
+  expect(screen.getByText('Includes WAV samples.')).toBeInTheDocument();
+});
+
 describe('product purchase controls', () => {
   it('disables a drumkit already present in the resolved root cart', async () => {
     const variant = createDrumkitVariant();

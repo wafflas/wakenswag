@@ -24,7 +24,7 @@ describe('custom storefront SEO', () => {
 
   it('uses Swag branding and the new listing canonical URL', () => {
     const descriptors = swagMeta({} as Parameters<typeof swagMeta>[0]);
-    expect(descriptors).toContainEqual({title: 'Wake n Swag | Swag'});
+    expect(descriptors).toContainEqual({title: 'Wake N Swag | Swag'});
     expect(descriptors).toContainEqual({
       tagName: 'link',
       rel: 'canonical',
@@ -39,7 +39,7 @@ describe('custom storefront SEO', () => {
       },
       params: {handle: 'fixture-tee'},
     } as Parameters<typeof productMeta>[0]);
-    expect(descriptors).toContainEqual({title: 'Wake n Swag | Fixture Tee'});
+    expect(descriptors).toContainEqual({title: 'Wake N Swag | Fixture Tee'});
     expect(descriptors).toContainEqual({
       name: 'description',
       content: 'Soft cotton tee',

@@ -5,11 +5,11 @@ import {MainMenu} from '~/components/home/HomeMenu';
 export const meta: Route.MetaFunction = () => {
   return [
     {
-      title: 'Wake n Swag',
+      title: 'Wake N Swag',
     },
     {
       name: 'description',
-      content: 'Wake n Swag clothing, drumkits, and information.',
+      content: 'Wake N Swag clothing, drumkits, and information.',
     },
   ];
 };

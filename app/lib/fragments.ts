@@ -9,6 +9,7 @@ export const PRODUCT_ITEM_FRAGMENT = `#graphql
     handle
     title
     description
+    descriptionHtml
     featuredImage {
       id
       altText

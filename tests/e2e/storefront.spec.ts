@@ -813,7 +813,7 @@ test('variant links update URL, price, quantity and merchandise added to cart', 
   page,
 }) => {
   await openPage(page, '/swag/fixture-tee');
-  await expect(page).toHaveTitle('Wake n Swag | Fixture Tee');
+  await expect(page).toHaveTitle('Wake N Swag | Fixture Tee');
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
     'href',
     'http://localhost:4173/swag/fixture-tee',

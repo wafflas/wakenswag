@@ -2,7 +2,7 @@ import logoUrl from '~/assets/logo1.svg';
 
 export default function Logo() {
   return (
-    <span aria-label="Wake n Swag" className="ps2-logo-stack" role="img">
+    <span aria-label="Wake N Swag" className="ps2-logo-stack" role="img">
       <img
         alt=""
         aria-hidden="true"

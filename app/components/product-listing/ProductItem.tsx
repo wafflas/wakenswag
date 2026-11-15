@@ -3,6 +3,7 @@ import {Link, useLocation} from 'react-router';
 import {Image, Money} from '@shopify/hydrogen';
 import type {ProductItemFragment} from 'storefrontapi.generated';
 import {getProductListingPath, getProductPath} from '~/lib/variants';
+import {getProductDescriptionBullets} from '~/components/product-detail/productDetailUtils';
 
 const productImageClassName =
   'size-22 max-w-none object-cover md:size-24 lg:size-[min(10vw,calc((100dvh-18rem)/3),10rem)]';
@@ -27,6 +28,9 @@ export function ProductItem({
   const {pathname} = useLocation();
   const descriptionId = useId();
   const isDrumkit = getProductListingPath(pathname) === '/drumkits';
+  const descriptionPreview = isDrumkit
+    ? (getProductDescriptionBullets(product)[0] ?? '')
+    : '';
   const image = product.featuredImage;
   const imageClassName = isDrumkit
     ? 'ps2-drumkit-image'
@@ -37,9 +41,7 @@ export function ProductItem({
     <Link
       aria-current={isSelected ? 'true' : undefined}
       aria-describedby={
-        isDrumkit && isSelected && product.description
-          ? descriptionId
-          : undefined
+        isSelected && descriptionPreview ? descriptionId : undefined
       }
       className={[
         'ps2-product-item group relative inline-flex h-fit w-fit shrink-0 place-self-center',
@@ -87,7 +89,7 @@ export function ProductItem({
           className="ps2-drumkit-description"
           id={descriptionId}
         >
-          {product.description}
+          {descriptionPreview}
         </span>
       ) : null}
 

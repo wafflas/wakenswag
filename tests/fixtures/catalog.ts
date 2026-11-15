@@ -42,7 +42,7 @@ export function createProduct(
     id: 'gid://shopify/Product/1',
     title: 'Fixture Tee',
     handle: 'fixture-tee',
-    vendor: 'Wake n Swag',
+    vendor: 'Wake N Swag',
     description: 'Soft cotton tee',
     productType: 'Swag',
     collections: {nodes: [{handle: 'swag'}]},
@@ -73,6 +73,7 @@ export function createProductCard(index = 1) {
     handle: index === 1 ? product.handle : `fixture-tee-${index}`,
     title: index === 1 ? product.title : `Fixture Tee ${index}`,
     description: product.description,
+    descriptionHtml: product.descriptionHtml,
     featuredImage: product.selectedOrFirstAvailableVariant?.image ?? null,
     priceRange: {
       minVariantPrice: createVariant().price,
@@ -103,7 +104,7 @@ export function createCart(quantity = 1): CartApiQueryFragment {
                 product: {
                   ...variant.product,
                   id: 'gid://shopify/Product/1',
-                  vendor: 'Wake n Swag',
+                  vendor: 'Wake N Swag',
                   productType: 'Swag',
                   collections: {nodes: [{handle: 'swag'}]},
                 },
@@ -162,7 +163,7 @@ export function createDrumkitCart(quantity = 1): CartApiQueryFragment {
       requiresShipping: false,
       product: {
         ...variant.product,
-        vendor: 'Wake n Swag',
+        vendor: 'Wake N Swag',
         productType: '',
         collections: {nodes: [{handle: 'drumkits'}]},
       },

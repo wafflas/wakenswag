@@ -118,10 +118,10 @@ export function Layout({children}: {children?: React.ReactNode}) {
             <meta property="og:image:type" content="image/png" />
             <meta property="og:image:width" content="1200" />
             <meta property="og:image:height" content="630" />
-            <meta property="og:image:alt" content="Wake n Swag" />
+            <meta property="og:image:alt" content="Wake N Swag" />
             <meta name="twitter:card" content="summary_large_image" />
             <meta name="twitter:image" content={data.socialImageUrl} />
-            <meta name="twitter:image:alt" content="Wake n Swag" />
+            <meta name="twitter:image:alt" content="Wake N Swag" />
           </>
         ) : null}
         <Links />

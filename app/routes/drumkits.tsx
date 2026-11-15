@@ -17,11 +17,11 @@ const DRUMKITS_HANDLE = 'drumkits';
 
 export const meta: Route.MetaFunction = ({data}) => [
   {
-    title: `Wake n Swag | ${data?.collection?.title ?? 'Drumkits'}`,
+    title: `Wake N Swag | ${data?.collection?.title ?? 'Drumkits'}`,
   },
   {
     name: 'description',
-    content: data?.collection?.description || 'Wake n Swag drumkits.',
+    content: data?.collection?.description || 'Wake N Swag drumkits.',
   },
   {
     tagName: 'link',
@@ -75,7 +75,8 @@ export default function Drumkits() {
       <ProductListingShell
         className="ps2-drumkit-listing"
         animationKey="/drumkits"
-        displayTitle="Buy the fucking drumkits"
+        displayTitle="Buy the f*** drumkits"
+        workspaceLabel="Kaif Workspace (SYS)/2"
         loadingDurationMs={loadingDurationMs}
         backgroundClassName="bg-ps2-black"
       >

@@ -24,11 +24,11 @@ const INFO_ITEMS = [
 
 export const meta: Route.MetaFunction = () => [
   {
-    title: 'Wake n Swag | Info',
+    title: 'Wake N Swag | Info',
   },
   {
     name: 'description',
-    content: 'Wake n Swag policies, returns, Instagram, and website credits.',
+    content: 'Wake N Swag policies, returns, Instagram, and website credits.',
   },
   {
     tagName: 'link',

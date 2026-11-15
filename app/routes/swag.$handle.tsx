@@ -14,7 +14,7 @@ export const meta: Route.MetaFunction = ({data, params}) => {
   return [
     {
       title:
-        product?.seo.title || `Wake n Swag | ${product?.title ?? 'Product'}`,
+        product?.seo.title || `Wake N Swag | ${product?.title ?? 'Product'}`,
     },
     {
       name: 'description',

@@ -30,17 +30,35 @@ describe('product grid links', () => {
     },
   );
 
-  it('describes the selected drumkit with its Shopify description', () => {
+  it('previews only the first HTML bullet of the selected drumkit', () => {
     const product = {
       ...createProductCard(),
       title: 'Drumkit Vol. 001',
       description: 'Distorted 808s.\nIncludes WAV samples.',
+      descriptionHtml:
+        '<p>Full kit description</p><ul><li>Distorted <strong>808s</strong> &amp; kicks.</li><li>Includes WAV samples.</li></ul>',
     };
     renderProductItem('/drumkits', {product, isSelected: true});
     expect(
       screen.getByRole('link', {name: /Drumkit Vol. 001, selected/}),
-    ).toHaveAccessibleDescription(product.description);
+    ).toHaveAccessibleDescription('Distorted 808s & kicks.');
+    expect(screen.getByText('Distorted 808s & kicks.')).toBeInTheDocument();
+    expect(screen.queryByText('Includes WAV samples.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Full kit description')).not.toBeInTheDocument();
     expect(screen.getByText(product.title)).toBeInTheDocument();
+  });
+
+  it('falls back to the first nonempty plain-text bullet', () => {
+    const product = {
+      ...createProductCard(),
+      description: '\n- Distorted 808s.\n• Includes WAV samples.',
+      descriptionHtml: '<p>Distorted 808s. Includes WAV samples.</p>',
+    };
+    renderProductItem('/drumkits', {product, isSelected: true});
+    expect(screen.getByRole('link')).toHaveAccessibleDescription(
+      'Distorted 808s.',
+    );
+    expect(screen.queryByText('Includes WAV samples.')).not.toBeInTheDocument();
   });
 
   it('selects the drumkit when reached with the keyboard', async () => {
@@ -53,7 +71,12 @@ describe('product grid links', () => {
 
   it('handles a drumkit without an image or description', () => {
     renderProductItem('/drumkits', {
-      product: {...createProductCard(), featuredImage: null, description: ''},
+      product: {
+        ...createProductCard(),
+        featuredImage: null,
+        description: '',
+        descriptionHtml: '',
+      },
       isSelected: true,
     });
     const link = screen.getByRole('link', {name: /Fixture Tee, selected/});

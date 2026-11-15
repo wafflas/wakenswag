@@ -25,6 +25,8 @@ interface ProductListingShellProps {
   animationKey?: string;
   children: ReactNode;
   displayTitle: string;
+  workspaceLabel?: string;
+  storageLabel?: string;
   loadingDurationMs: number;
   backgroundClassName?: string;
 }
@@ -34,6 +36,8 @@ export function ProductListingShell({
   animationKey,
   children,
   displayTitle,
+  workspaceLabel,
+  storageLabel,
   loadingDurationMs,
   backgroundClassName = '[background:linear-gradient(140deg,#c4c4c4_0%,#757575_40%,#303030_80%,#151515_100%)]',
 }: ProductListingShellProps) {
@@ -106,7 +110,7 @@ export function ProductListingShell({
           className,
         ].join(' ')}
       >
-        <ProductListingHeader displayTitle={displayTitle} />
+        <ProductListingHeader displayTitle={displayTitle} workspaceLabel={workspaceLabel} storageLabel={storageLabel} />
 
         <div
           className="relative z-10 min-h-0 flex-1 [&>*]:h-full"

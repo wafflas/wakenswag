@@ -10,10 +10,10 @@ const SECTIONS = {
 } as const;
 
 export const meta: Route.MetaFunction = ({data}) => [
-  {title: `Wake n Swag | ${data?.title ?? 'Information'}`},
+  {title: `Wake N Swag | ${data?.title ?? 'Information'}`},
   {
     name: 'description',
-    content: `Wake n Swag ${data?.title ?? 'information'}.`,
+    content: `Wake N Swag ${data?.title ?? 'information'}.`,
   },
   {tagName: 'link', rel: 'canonical', href: `/info/${data?.section ?? ''}`},
 ];
