@@ -563,9 +563,7 @@ test('product quantity, add to cart, persisted cart and removal work', async ({
   await expect(
     page.getByRole('dialog', {name: 'Shopping cart'}).getByRole('status'),
   ).toHaveText('1');
-  await expect(
-    page.getByRole('link', {name: 'Go to checkout'}),
-  ).toBeVisible();
+  await expect(page.getByRole('link', {name: 'Go to checkout'})).toBeVisible();
   await expect(
     page.getByRole('link', {name: 'Go to checkout'}),
   ).toHaveAttribute('href', 'https://checkout.example.test/cart/fixture');
