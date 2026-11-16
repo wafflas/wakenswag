@@ -601,6 +601,44 @@
   }
 }
 
+/* Cart: keep total/checkout pinned; shrink chrome so the items grid can scroll. */
+@media (max-height: 500px) {
+  .cart-main {
+    /* Keep total/checkout clear of the fixed controller footer (~4rem). */
+    padding-bottom: 4.5rem;
+  }
+
+  .cart-main-title {
+    padding-top: 0.75rem;
+    font-size: 1.25rem;
+  }
+
+  .cart-main-body {
+    gap: 0.5rem;
+    padding-block: 0.5rem;
+  }
+
+  .cart-main-grid {
+    min-height: 2.75rem;
+    padding: 0.5rem;
+  }
+
+  .cart-line-item {
+    min-height: 0;
+    gap: 0.5rem;
+    padding: 0.5rem;
+  }
+
+  .cart-line-item-media,
+  .cart-line-item-image {
+    height: 3.5rem;
+  }
+
+  .cart-main-summary {
+    font-size: 1rem;
+  }
+}
+
 /* Keep the existing image rules; scroll the layout when its rows cannot fit. */
 @media (max-height: 600px) {
   .ps2-product-listing {

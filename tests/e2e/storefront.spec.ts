@@ -565,6 +565,9 @@ test('product quantity, add to cart, persisted cart and removal work', async ({
   ).toHaveText('1');
   await expect(
     page.getByRole('link', {name: 'Go to checkout'}),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('link', {name: 'Go to checkout'}),
   ).toHaveAttribute('href', 'https://checkout.example.test/cart/fixture');
   await page.reload();
   await page.waitForFunction(() =>
@@ -1121,9 +1124,9 @@ test('the search footer opens Cart on pages and over products', async ({
     await expect(search).toHaveCount(0);
     await expect(back).toBeFocused();
     await expect(page.locator('[aria-modal="true"]')).toHaveCount(1);
-    await expect(
-      page.getByRole('group', {name: 'Screen actions'}),
-    ).toHaveCount(1);
+    await expect(page.getByRole('group', {name: 'Screen actions'})).toHaveCount(
+      1,
+    );
     await expect(page.locator('body')).toHaveCSS('overflow', 'hidden');
     await expect(page).toHaveURL((url) => url.pathname === path);
     await back.click();
@@ -1422,9 +1425,9 @@ test('404 pages have valid navigation and product images respect reduced motion'
           .__reactRouterDataRouter,
       ),
     );
-    await expect(
-      page.getByRole('group', {name: 'Screen actions'}),
-    ).toHaveCount(1);
+    await expect(page.getByRole('group', {name: 'Screen actions'})).toHaveCount(
+      1,
+    );
     await expect(
       page.getByRole('button', {name: 'Search', exact: true}),
     ).toBeVisible();

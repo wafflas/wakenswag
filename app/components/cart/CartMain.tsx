@@ -32,22 +32,35 @@ export function CartMain({cart: originalCart}: CartMainProps) {
     <section
       aria-labelledby="cart-information-title"
       className={[
-        'relative flex min-h-dvh w-full flex-col px-3',
-        'pb-20 sm:pb-22 md:pb-24',
+        'cart-main',
+        // Fixed shell: only the items grid scrolls so total/checkout stay visible.
+        'relative flex h-dvh w-full flex-col overflow-hidden px-3',
+        'pb-16 sm:pb-18 md:pb-20',
       ].join(' ')}
     >
       <h2
         id="cart-information-title"
-        className="ps2-soft-copy shrink-0 pt-20 text-center text-3xl leading-none tracking-wide text-ps2-yellow sm:pt-24 sm:text-4xl"
+        className={[
+          'cart-main-title ps2-soft-copy shrink-0 pt-20 text-center',
+          'text-3xl leading-none tracking-wide text-ps2-yellow',
+          'sm:pt-24 sm:text-4xl',
+        ].join(' ')}
       >
         Cart Information
       </h2>
 
-      <div className="flex flex-1 flex-col items-center justify-center gap-6 py-6 sm:gap-8 sm:py-8">
+      <div
+        className={[
+          'cart-main-body flex min-h-0 flex-1 flex-col items-center',
+          'gap-6 py-6 sm:gap-8 sm:py-8',
+          // justify-center clips both ends when content is taller than the shell.
+          linesCount === 0 ? 'justify-center' : 'justify-start',
+        ].join(' ')}
+      >
         <CartEmpty hidden={linesCount > 0} />
 
         <div
-          className="flex w-full max-w-2xl flex-1 flex-col items-center gap-4 sm:gap-6"
+          className="flex min-h-0 w-full max-w-2xl flex-1 flex-col items-center gap-3 sm:gap-6"
           hidden={linesCount === 0}
         >
           <div className="flex w-full shrink-0 justify-end">
@@ -63,10 +76,10 @@ export function CartMain({cart: originalCart}: CartMainProps) {
           <ul
             aria-labelledby="cart-lines"
             className={[
-              'grid w-full flex-1 grid-cols-2 items-start',
-              'gap-x-4 gap-y-4',
-              'rounded-md border border-ps2-gray/20 p-3',
-              'sm:grid-cols-2',
+              'cart-scroll cart-main-grid',
+              'grid min-h-0 w-full flex-1 grid-cols-2 items-start',
+              'gap-x-4 gap-y-4 overflow-y-auto overscroll-contain',
+              'rounded-md border border-ps2-gray/20 p-3 sm:grid-cols-2',
             ].join(' ')}
           >
             {parentLines.map((line) => (
@@ -78,7 +91,11 @@ export function CartMain({cart: originalCart}: CartMainProps) {
             ))}
           </ul>
 
-          {cartHasItems ? <CartSummary cart={cart} /> : null}
+          {cartHasItems ? (
+            <div className="cart-main-summary shrink-0">
+              <CartSummary cart={cart} />
+            </div>
+          ) : null}
         </div>
       </div>
     </section>

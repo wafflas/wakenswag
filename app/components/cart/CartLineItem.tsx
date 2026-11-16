@@ -31,7 +31,11 @@ export function CartLineItem({
   return (
     <li
       key={id}
-      className="relative flex min-h-64 min-w-0 w-full flex-col items-center justify-center gap-3 justify-self-stretch p-3 text-center sm:min-h-72 sm:p-4"
+      className={[
+        'cart-line-item relative flex min-h-64 min-w-0 w-full flex-col',
+        'items-center justify-center gap-3 justify-self-stretch p-3 text-center',
+        'sm:min-h-72 sm:p-4',
+      ].join(' ')}
     >
       <Link
         aria-label={`View ${product.title}`}
@@ -40,11 +44,11 @@ export function CartLineItem({
         to={lineItemUrl}
         onClick={close}
       >
-        <div className="flex h-28 w-full items-center justify-center sm:h-36">
+        <div className="cart-line-item-media flex h-28 w-full items-center justify-center sm:h-36">
           {image ? (
             <Image
               alt={image.altText ?? title}
-              className="h-28 w-auto max-w-full object-contain sm:h-36"
+              className="cart-line-item-image h-28 w-auto max-w-full object-contain sm:h-36"
               data={image}
               loading="lazy"
               sizes="(min-width: 640px) 192px, 160px"

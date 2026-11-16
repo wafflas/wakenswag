@@ -25,8 +25,7 @@ export function CartModal({cart}: CartModalProps) {
       openerRef={openerRef}
       className={[
         'fixed inset-0 z-40',
-        'cart-scroll h-dvh overflow-y-auto overscroll-contain bg-[rgba(6,6,6,0.95)]',
-        'scroll-pt-2 scroll-pb-18 sm:scroll-pb-20 md:scroll-pb-22',
+        'h-dvh overflow-hidden bg-[rgba(6,6,6,0.95)]',
         'font-ps2 text-ps2-muted',
       ].join(' ')}
       isExiting={isExiting}

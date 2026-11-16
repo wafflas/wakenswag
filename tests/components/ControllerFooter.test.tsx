@@ -267,9 +267,9 @@ describe('controller footer', () => {
 
     const dialog = screen.getByRole('dialog', {name: 'System browser search'});
     expect(within(dialog).getByRole('button', {name: 'Back'})).toBeVisible();
-    expect(
-      screen.getAllByRole('group', {name: 'Screen actions'}),
-    ).toHaveLength(1);
+    expect(screen.getAllByRole('group', {name: 'Screen actions'})).toHaveLength(
+      1,
+    );
     expect(dialog).toHaveAttribute('aria-modal', 'true');
 
     await user.keyboard('{Escape}');
