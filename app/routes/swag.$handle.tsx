@@ -10,11 +10,14 @@ import {
 export const meta: Route.MetaFunction = ({data, params}) => {
   const product = data?.product;
   const handle = product?.handle ?? params.handle ?? '';
+  // Keep custom SEO text, with the storefront name appearing once, first.
+  const pageTitle = (product?.seo.title?.trim() || product?.title || 'Product')
+    .replace(/^Wake N Swag\s*\|\s*|\s*\|\s*Wake N Swag$/gi, '')
+    .trim();
 
   return [
     {
-      title:
-        product?.seo.title || `Wake N Swag | ${product?.title ?? 'Product'}`,
+      title: `Wake N Swag | ${pageTitle || product?.title || 'Product'}`,
     },
     {
       name: 'description',

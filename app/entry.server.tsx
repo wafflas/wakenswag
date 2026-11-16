@@ -6,6 +6,7 @@ import {
   type HydrogenRouterContextProvider,
 } from '@shopify/hydrogen';
 import type {EntryContext} from 'react-router';
+import {RouteFocusProvider} from '~/components/layout/RouteFocusProvider';
 
 export default async function handleRequest(
   request: Request,
@@ -24,11 +25,13 @@ export default async function handleRequest(
 
   const body = await renderToReadableStream(
     <NonceProvider>
-      <ServerRouter
-        context={reactRouterContext}
-        url={request.url}
-        nonce={nonce}
-      />
+      <RouteFocusProvider>
+        <ServerRouter
+          context={reactRouterContext}
+          url={request.url}
+          nonce={nonce}
+        />
+      </RouteFocusProvider>
     </NonceProvider>,
     {
       nonce,

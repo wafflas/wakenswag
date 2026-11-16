@@ -4,7 +4,14 @@ import {
   RouterProvider,
   type ActionFunctionArgs,
 } from 'react-router';
-import {act, render, screen, waitFor, within} from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {describe, expect, it} from 'vitest';
 import type {CartApiQueryFragment} from 'storefrontapi.generated';
@@ -30,23 +37,30 @@ function renderFooter({
   cart = Promise.resolve(createCart(2)),
   children,
   action = () => ({}),
+  inDialog = true,
+  getCart,
 }: {
   pathname?: string;
   cart?: Promise<CartApiQueryFragment | null>;
   children?: ReactNode;
   action?: (args: ActionFunctionArgs) => unknown;
+  inDialog?: boolean;
+  getCart?: () => Promise<CartApiQueryFragment | null>;
 } = {}) {
   const router = createMemoryRouter(
     [
       {
         id: 'root',
         path: '/',
-        loader: () => ({cart}),
+        loader: () => ({cart: getCart ? getCart() : cart}),
         hydrateFallbackElement: <></>,
         element: (
           <AsideProvider>
             {children}
-            <AppControllerFooter cart={cart} />
+            <AppControllerFooter
+              cart={getCart ? undefined : cart}
+              inDialog={inDialog}
+            />
           </AsideProvider>
         ),
         children: [{path: '*', element: null}],
@@ -63,7 +77,7 @@ describe('controller footer', () => {
   it('shows Search and the cart quantity on home without a Back action', async () => {
     renderFooter();
     await screen.findByRole('button', {name: 'Cart (2)'});
-    const toolbar = screen.getByRole('toolbar', {name: 'Screen actions'});
+    const toolbar = screen.getByRole('group', {name: 'Screen actions'});
     expect(within(toolbar).getByRole('button', {name: 'Search'})).toBeVisible();
     expect(
       within(toolbar).getByRole('button', {name: 'Cart (2)'}),
@@ -71,6 +85,20 @@ describe('controller footer', () => {
     expect(
       within(toolbar).queryByRole('button', {name: 'Back'}),
     ).not.toBeInTheDocument();
+  });
+
+  it('does not pop when the existing cart first loads or the footer renders again', async () => {
+    const user = userEvent.setup();
+    renderFooter();
+    const cartButton = await screen.findByRole('button', {name: 'Cart (2)'});
+    const count = within(cartButton).getByText('(2)');
+    expect(count.className).not.toContain('animate-[ping_');
+
+    await user.pointer({target: cartButton});
+    fireEvent.pointerDown(document.body);
+    await user.keyboard('{Tab}');
+    expect(within(cartButton).getByText('(2)')).toBe(count);
+    expect(count.className).not.toContain('animate-[ping_');
   });
 
   it.each(['/swag', '/info', '/missing'])(
@@ -114,14 +142,21 @@ describe('controller footer', () => {
   );
 
   it.each(['Search', 'Cart (2)'])(
-    'replaces actions with Back while %s is open and restores them on close',
+    'shows the appropriate actions while %s is open and restores them on close',
     async (label) => {
       const user = userEvent.setup();
       const router = renderFooter();
       await screen.findByRole('button', {name: 'Cart (2)'});
       await user.click(screen.getByRole('button', {name: label}));
-      const toolbar = screen.getByRole('toolbar', {name: 'Screen actions'});
-      expect(within(toolbar).getAllByRole('button')).toHaveLength(1);
+      const toolbar = screen.getByRole('group', {name: 'Screen actions'});
+      expect(within(toolbar).getAllByRole('button')).toHaveLength(
+        label === 'Search' ? 2 : 1,
+      );
+      if (label === 'Search') {
+        expect(
+          within(toolbar).getByRole('button', {name: 'Cart (2)'}),
+        ).toBeVisible();
+      }
       expect(
         within(toolbar).getByRole('button', {name: 'Back'}),
       ).toHaveAttribute('data-activate-sound', 'back');
@@ -143,12 +178,15 @@ describe('controller footer', () => {
     const user = userEvent.setup();
     const pendingCart = deferred<CartApiQueryFragment | null>();
     renderFooter({cart: pendingCart.promise});
-    await user.click(await screen.findByRole('button', {name: 'Cart (0)'}));
+    const pendingCartButton = await screen.findByRole('button', {name: 'Cart'});
+    expect(pendingCartButton).toHaveAccessibleName('Cart');
+    await user.click(pendingCartButton);
     await user.click(screen.getByRole('button', {name: 'Back'}));
-    expect(await screen.findByRole('button', {name: 'Cart (0)'})).toBeVisible();
+    expect(await screen.findByRole('button', {name: 'Cart'})).toBeVisible();
 
     await act(async () => pendingCart.resolve(createCart(4)));
     expect(screen.getByRole('button', {name: 'Cart (4)'})).toBeVisible();
+    expect(screen.getByText('(4)').className).not.toContain('animate-[ping_');
     expect(screen.getByRole('button', {name: 'Search'})).toBeVisible();
   });
 
@@ -156,7 +194,7 @@ describe('controller footer', () => {
     const user = userEvent.setup();
     const pendingCart = deferred<CartApiQueryFragment | null>();
     renderFooter({cart: pendingCart.promise});
-    await screen.findByRole('button', {name: 'Cart (0)'});
+    await screen.findByRole('button', {name: 'Cart'});
 
     await act(async () => pendingCart.reject(new Error('Cart unavailable')));
     expect(screen.getByRole('button', {name: 'Cart (0)'})).toBeVisible();
@@ -166,11 +204,26 @@ describe('controller footer', () => {
     expect(screen.getByRole('button', {name: 'Cart (0)'})).toBeVisible();
   });
 
+  it('keeps the last quantity while a refreshed cart is pending and pops for its actual change', async () => {
+    const refreshedCart = deferred<CartApiQueryFragment | null>();
+    let cart = Promise.resolve<CartApiQueryFragment | null>(createCart(2));
+    const router = renderFooter({getCart: () => cart});
+    await screen.findByRole('button', {name: 'Cart (2)'});
+    const count = screen.getByText('(2)');
+    cart = refreshedCart.promise;
+    await act(async () => router.revalidate());
+    expect(screen.getByText('(2)')).toBe(count);
+    expect(count.className).not.toContain('animate-[ping_');
+
+    await act(async () => refreshedCart.resolve(createCart(3)));
+    expect(screen.getByText('(3)').className).toContain('animate-[ping_');
+  });
+
   it('restores focus to Search when the cart resolves while the search dialog is open', async () => {
     const user = userEvent.setup();
     const pendingCart = deferred<CartApiQueryFragment | null>();
     renderFooter({cart: pendingCart.promise, children: <SearchModal />});
-    await screen.findByRole('button', {name: 'Cart (0)'});
+    await screen.findByRole('button', {name: 'Cart'});
     await user.click(screen.getByRole('button', {name: 'Search'}));
     const dialog = screen.getByRole('dialog', {name: 'System browser search'});
     expect(dialog).toBeVisible();
@@ -180,12 +233,86 @@ describe('controller footer', () => {
     await user.keyboard('{Escape}');
 
     expect(dialog).toBeVisible();
-    expect(dialog).toHaveClass('anim-fade-out');
-    expect(await screen.findByRole('button', {name: 'Cart (4)'})).toBeVisible();
-    expect(dialog).not.toBeInTheDocument();
+    expect(dialog.querySelector('.anim-fade-out')).not.toBeNull();
+    await waitFor(() => expect(dialog).not.toBeInTheDocument());
+    expect(screen.getByRole('button', {name: 'Cart (4)'})).toBeVisible();
     await waitFor(() =>
       expect(screen.getByRole('button', {name: 'Search'})).toHaveFocus(),
     );
+  });
+
+  it('keeps the known cart quantity when opening search instead of flashing zero', async () => {
+    const user = userEvent.setup();
+    renderFooter({inDialog: false, children: <SearchModal />});
+    await screen.findByRole('button', {name: 'Cart (2)'});
+    await user.click(screen.getByRole('button', {name: 'Search'}));
+
+    const dialog = screen.getByRole('dialog', {name: 'System browser search'});
+    expect(
+      within(dialog).getByRole('button', {name: 'Cart (2)'}),
+    ).toBeVisible();
+    expect(
+      within(dialog).queryByRole('button', {name: 'Cart (0)'}),
+    ).not.toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole('button', {name: 'Cart'}),
+    ).not.toBeInTheDocument();
+  });
+
+  it('places Back inside the active dialog and replaces the page footer', async () => {
+    const user = userEvent.setup();
+    renderFooter({inDialog: false, children: <SearchModal />});
+    await screen.findByRole('button', {name: 'Cart (2)'});
+    await user.click(screen.getByRole('button', {name: 'Search'}));
+
+    const dialog = screen.getByRole('dialog', {name: 'System browser search'});
+    expect(within(dialog).getByRole('button', {name: 'Back'})).toBeVisible();
+    expect(
+      screen.getAllByRole('group', {name: 'Screen actions'}),
+    ).toHaveLength(1);
+    expect(dialog).toHaveAttribute('aria-modal', 'true');
+
+    await user.keyboard('{Escape}');
+    await waitFor(() =>
+      expect(screen.getByRole('button', {name: 'Search'})).toHaveFocus(),
+    );
+    expect(dialog).not.toBeInTheDocument();
+  });
+
+  it('opens Cart from the search footer and restores focus to the page Cart when closed', async () => {
+    const user = userEvent.setup();
+    const cart = Promise.resolve(createCart(2));
+    renderFooter({
+      cart,
+      inDialog: false,
+      children: (
+        <>
+          <SearchModal />
+          <CartModal cart={cart} />
+        </>
+      ),
+    });
+    await user.click(await screen.findByRole('button', {name: 'Search'}));
+    const search = screen.getByRole('dialog', {name: 'System browser search'});
+    expect(within(search).getByRole('button', {name: 'Back'})).toBeVisible();
+    await user.click(
+      await within(search).findByRole('button', {name: 'Cart (2)'}),
+    );
+
+    const cartDialog = screen.getByRole('dialog', {name: 'Shopping cart'});
+    expect(search).not.toBeInTheDocument();
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
+    expect(
+      within(cartDialog).getByRole('button', {name: 'Back'}),
+    ).toBeVisible();
+    expect(
+      within(cartDialog).queryByRole('button', {name: /Cart \(/}),
+    ).not.toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    await waitFor(() =>
+      expect(screen.getByRole('button', {name: 'Cart (2)'})).toHaveFocus(),
+    );
+    expect(cartDialog).not.toBeInTheDocument();
   });
 
   it('keeps the cart usable when opened before a pending add has a server price', async () => {
@@ -244,8 +371,14 @@ describe('controller footer', () => {
       ),
     });
     await screen.findByRole('button', {name: 'Cart (1)'});
+    expect(screen.getByText('(1)').className).not.toContain('animate-[ping_');
     await user.click(screen.getByRole('button', {name: 'Add to cart'}));
     expect(screen.getByRole('button', {name: 'Cart (3)'})).toBeVisible();
+    const animatedCount = screen.getByText('(3)');
+    expect(animatedCount.className).toContain('animate-[ping_');
+    fireEvent.pointerDown(document.body);
+    await user.keyboard('{Tab}');
+    expect(screen.getByText('(3)')).toBe(animatedCount);
     expect(
       screen.getByRole('button', {name: 'Adding to cart...'}),
     ).toBeDisabled();

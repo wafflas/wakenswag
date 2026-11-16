@@ -1,18 +1,20 @@
-import {useCallback, useRef} from 'react';
+import {useCallback} from 'react';
 import {
   Analytics,
   getAdjacentAndFirstAvailableVariants,
   useOptimisticVariant,
   useSelectedOptionInUrlParam,
 } from '@shopify/hydrogen';
-import {useLocation, useNavigate} from 'react-router';
+import {useLocation, useNavigate, useRouteLoaderData} from 'react-router';
+import type {RootLoader} from '~/root';
+import {CartModal} from '~/components/cart/CartModal';
+import {SearchModal} from '~/components/search/SearchModal';
+import {useAside} from '~/components/layout/Aside';
 import type {ProductFragment} from 'storefrontapi.generated';
-import {FadeTransition} from '~/components/animations/FadeTransition';
 import {useProductExitTransition} from '~/components/animations/RouteFadeTransition';
 import {getProductListingPath, isDefaultTitleOption} from '~/lib/variants';
 import {ProductDetail} from './ProductDetail';
-import {useModalDialog} from '~/components/layout/useModalDialog';
-import {useAside} from '~/components/layout/Aside';
+import {StorefrontDialog} from '~/components/layout/StorefrontDialog';
 
 interface ProductDetailRouteViewProps {
   product: ProductFragment;
@@ -24,10 +26,10 @@ export function ProductDetailRouteView({
   productUrl,
 }: ProductDetailRouteViewProps) {
   const navigate = useNavigate();
+  const root = useRouteLoaderData<RootLoader>('root');
+  const {type} = useAside();
   const {pathname} = useLocation();
   const listingPath = getProductListingPath(pathname);
-  const modalRef = useRef<HTMLDivElement>(null);
-  const {type} = useAside();
   const closeProduct = useCallback(() => {
     void navigate(listingPath);
   }, [listingPath, navigate]);
@@ -44,12 +46,6 @@ export function ProductDetailRouteView({
   );
 
   useSelectedOptionInUrlParam(urlSelectedOptions);
-
-  useModalDialog({
-    dialogRef: modalRef,
-    isOpen: type === 'closed',
-    onClose: closeProduct,
-  });
 
   const structuredData = {
     '@context': 'https://schema.org',
@@ -85,16 +81,13 @@ export function ProductDetailRouteView({
   );
 
   return (
-    <FadeTransition
-      aria-label={product.title}
-      aria-modal={type === 'closed' ? 'true' : undefined}
+    <StorefrontDialog
+      title={product.title}
+      onClose={closeProduct}
+      isActive={type === 'closed'}
       className="fixed inset-0 z-40 overflow-auto"
       isExiting={isExiting}
       key={product.handle}
-      ref={modalRef}
-      role="dialog"
-      tabIndex={-1}
-      variant="overlay"
     >
       <ProductDetail
         isClosing={isExiting}
@@ -124,6 +117,8 @@ export function ProductDetailRouteView({
         }}
         type="application/ld+json"
       />
-    </FadeTransition>
+      <SearchModal />
+      {root ? <CartModal cart={root.cart} /> : null}
+    </StorefrontDialog>
   );
 }

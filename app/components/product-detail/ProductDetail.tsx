@@ -29,6 +29,13 @@ export function ProductDetail({
   const {pathname} = useLocation();
   const isDrumkit = getProductListingPath(pathname) === '/drumkits';
   const allowQuantitySelection = !isDrumkit;
+  const price = selectedVariant?.price;
+  const compareAtPrice = selectedVariant?.compareAtPrice;
+  const isOnSale =
+    price &&
+    compareAtPrice &&
+    price.currencyCode === compareAtPrice.currencyCode &&
+    Number(compareAtPrice.amount) > Number(price.amount);
   const theme = getProductDetailTheme(
     product,
     selectedVariant,
@@ -133,9 +140,20 @@ export function ProductDetail({
               </ul>
             ) : null}
 
-            <div className="mt-8 text-xl leading-8 text-ps2-muted">
-              {selectedVariant?.price ? (
-                <span>{formatMoney(selectedVariant.price)}</span>
+            <div className="mt-8 flex flex-col items-center justify-center gap-x-3 text-xl leading-8 text-ps2-muted">
+              {isOnSale && compareAtPrice ? (
+                <s className="text-ps2-gray">
+                  <span className="sr-only">Original price: </span>
+                  {formatMoney(compareAtPrice)}
+                </s>
+              ) : null}
+              {price ? (
+                <span>
+                  <span className="sr-only">
+                    {isOnSale ? 'Sale price: ' : 'Price: '}
+                  </span>
+                  {formatMoney(price)}
+                </span>
               ) : (
                 <span>&nbsp;</span>
               )}

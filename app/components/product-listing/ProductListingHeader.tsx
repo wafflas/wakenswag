@@ -28,6 +28,8 @@ export function ProductListingHeader({
       </div>
 
       <h1
+        data-route-focus
+        tabIndex={-1}
         className={[
           'm-0 flex-1 text-right text-base md:max-w-1/2 md:flex-none md:text-2xl lg:text-3xl',
           'font-medium leading-none tracking-wide text-ps2-yellow text-ps2-outline',

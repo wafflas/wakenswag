@@ -4,6 +4,7 @@ import {
   type ReactNode,
   type RefObject,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -18,6 +19,7 @@ type AsideContextValue = {
   open: (mode: AsideType) => void;
   close: () => void;
   openerRef: RefObject<HTMLElement>;
+  inputMode: 'keyboard' | 'pointer';
 };
 
 const AsideContext = createContext<AsideContextValue | null>(null);
@@ -25,8 +27,23 @@ const AsideContext = createContext<AsideContextValue | null>(null);
 export function AsideProvider({children}: {children: ReactNode}) {
   const [type, setType] = useState<AsideType>('closed');
   const [isExiting, setIsExiting] = useState(false);
+  const [inputMode, setInputMode] = useState<'keyboard' | 'pointer'>(
+    'keyboard',
+  );
   const openerRef = useRef<HTMLElement | null>(null);
-  // Stable callbacks keep dialog listeners from restarting on unrelated renders.
+
+  // Preserve the input mode as the controls move between page and dialog.
+  useEffect(() => {
+    const handlePointerDown = () => setInputMode('pointer');
+    const handleKeyDown = () => setInputMode('keyboard');
+    document.addEventListener('pointerdown', handlePointerDown, true);
+    document.addEventListener('keydown', handleKeyDown, true);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown, true);
+      document.removeEventListener('keydown', handleKeyDown, true);
+    };
+  }, []);
+
   const open = useCallback((mode: AsideType) => {
     openerRef.current =
       document.activeElement instanceof HTMLElement
@@ -46,8 +63,8 @@ export function AsideProvider({children}: {children: ReactNode}) {
   useExiting(isExiting ? finishClose : undefined, OVERLAY_FADE_DURATION_MS);
 
   const value = useMemo(
-    () => ({type, isExiting, open, close, openerRef}),
-    [close, isExiting, open, type],
+    () => ({type, isExiting, open, close, openerRef, inputMode}),
+    [close, inputMode, isExiting, open, type],
   );
   return (
     <AsideContext.Provider value={value}>{children}</AsideContext.Provider>

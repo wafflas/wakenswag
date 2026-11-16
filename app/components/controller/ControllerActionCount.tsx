@@ -1,15 +1,31 @@
-import {useEffect, useRef, useState} from 'react';
+import {useEffect, useState} from 'react';
 
-export function ControllerActionCount({count}: {count: number}) {
-  const previousCountRef = useRef(count);
-  const [animationVersion, setAnimationVersion] = useState(0);
+export function ControllerActionCount({
+  count,
+  isReady,
+}: {
+  count: number;
+  isReady: boolean;
+}) {
+  const [{quantity, animationVersion}, setDisplay] = useState({
+    quantity: isReady ? count : undefined,
+    animationVersion: 0,
+  });
 
   useEffect(() => {
-    if (previousCountRef.current === count) return;
+    if (!isReady) return;
 
-    previousCountRef.current = count;
-    setAnimationVersion((version) => version + 1);
-  }, [count]);
+    setDisplay((previous) => {
+      if (previous.quantity === count) return previous;
+      return {
+        quantity: count,
+        animationVersion:
+          previous.animationVersion + (previous.quantity === undefined ? 0 : 1),
+      };
+    });
+  }, [count, isReady]);
+
+  if (quantity === undefined) return null;
 
   return (
     <span
@@ -23,7 +39,7 @@ export function ControllerActionCount({count}: {count: number}) {
           : '',
       ].join(' ')}
     >
-      ({count})
+      ({quantity})
     </span>
   );
 }

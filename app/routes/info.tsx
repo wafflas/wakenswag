@@ -44,7 +44,11 @@ export default function Info() {
   return (
     <MainMenuLayout>
       <div className="flex flex-col items-start gap-7">
-        <h1 className="text-ps2-outline w-full text-center text-3xl text-ps2-yellow md:text-[42px] ">
+        <h1
+          data-route-focus
+          tabIndex={-1}
+          className="text-ps2-outline w-full text-center text-3xl text-ps2-yellow md:text-[42px] "
+        >
           Website Information
         </h1>
         <MainMenu items={INFO_ITEMS} ariaLabel="Information" variant="info" />

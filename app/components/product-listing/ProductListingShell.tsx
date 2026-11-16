@@ -104,7 +104,7 @@ export function ProductListingShell({
     <ProductListingLoadingContext.Provider value={restartLoadingForProducts}>
       <div
         className={[
-          'relative isolate flex h-dvh flex-col overflow-hidden',
+          'ps2-product-listing relative isolate flex h-dvh flex-col overflow-hidden',
           'font-ps2 text-ps2-white',
           backgroundClassName,
           className,
@@ -117,7 +117,7 @@ export function ProductListingShell({
         />
 
         <div
-          className="relative z-10 min-h-0 flex-1 [&>*]:h-full"
+          className="ps2-product-listing-content relative z-10 min-h-0 flex-1 [&>*]:h-full"
           key={listingAnimationKey}
         >
           {children}

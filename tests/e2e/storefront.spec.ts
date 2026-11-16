@@ -326,6 +326,88 @@ test('social previews include a public image in server-rendered pages', async ({
   }
 });
 
+test('ordinary route changes hand focus to the new page after its fade', async ({
+  page,
+}) => {
+  for (const reducedMotion of ['no-preference', 'reduce'] as const) {
+    await page.emulateMedia({reducedMotion});
+    await openPage(page, '/');
+    await page.getByRole('link', {name: 'Info', exact: true}).focus();
+    await page.keyboard.press('Enter');
+    const heading = page.getByRole('heading', {
+      name: 'Website Information',
+      exact: true,
+    });
+    await expect(heading).toBeFocused();
+    await expect(page.locator('.route-fade-transition--in')).toHaveCSS(
+      'opacity',
+      '1',
+    );
+    await page.keyboard.press('ArrowDown');
+    await expect(
+      page.getByRole('link', {name: 'Privacy Policy', exact: true}),
+    ).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(
+      page.getByRole('heading', {name: 'Privacy Policy', exact: true}),
+    ).toBeFocused();
+    await page.goBack();
+    await expect(heading).toBeFocused();
+    await page.goForward();
+    await expect(
+      page.getByRole('heading', {name: 'Privacy Policy', exact: true}),
+    ).toBeFocused();
+    await page
+      .getByRole('link', {name: 'Back to Information', exact: true})
+      .click();
+    await expect(heading).toBeFocused();
+    await page.getByRole('button', {name: 'Back', exact: true}).click();
+    await expect(
+      page.getByRole('navigation', {name: 'Main navigation'}),
+    ).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(
+      page.getByRole('link', {name: 'Swag', exact: true}),
+    ).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('.ps2-product-listing h1')).toBeFocused();
+    await page.getByRole('button', {name: 'Back', exact: true}).click();
+    await expect(
+      page.getByRole('navigation', {name: 'Main navigation'}),
+    ).toBeFocused();
+    await page.getByRole('link', {name: 'Drumkits', exact: true}).click();
+    await expect(page.locator('.ps2-product-listing h1')).toBeFocused();
+  }
+});
+
+test('route focus keeps Search typing in place through query-only updates', async ({
+  page,
+}) => {
+  await openPage(page, '/info');
+  await page.getByRole('button', {name: 'Search', exact: true}).click();
+  const input = page.getByRole('searchbox', {name: 'Search memory'});
+  await input.fill('tee');
+  await expect(page.getByRole('list', {name: 'Search results'})).toBeVisible();
+  await page.evaluate(async () => {
+    const router = (
+      window as Window & {
+        __reactRouterDataRouter?: {navigate: (path: string) => Promise<void>};
+      }
+    ).__reactRouterDataRouter;
+    if (!router) throw new Error('Missing hydrated router');
+    await router.navigate('/info?view=keyboard');
+  });
+  await expect(input).toBeFocused();
+  await expect(input).toHaveValue('tee');
+  await page.keyboard.press('Escape');
+  await expect(
+    page.getByRole('dialog', {name: 'System browser search'}),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole('button', {name: 'Search', exact: true}),
+  ).toBeFocused();
+});
+
 test('information menu opens policies and external links and fits the viewport', async ({
   page,
 }) => {
@@ -495,6 +577,77 @@ test('product quantity, add to cart, persisted cart and removal work', async ({
   await page.getByRole('button', {name: 'Remove item', exact: true}).click();
   await expect(page.getByText('Your cart is empty.')).toBeVisible();
   expect(errors).toEqual([]);
+});
+
+test('cart count pops only for a quantity change, without replaying on footer mounts', async ({
+  page,
+}) => {
+  await page.emulateMedia({reducedMotion: 'no-preference'});
+  await page.addInitScript(() => {
+    const animations: string[] = [];
+    Object.defineProperty(window, '__cartCountPops', {value: animations});
+    document.addEventListener('animationstart', (event) => {
+      const target = event.target;
+      if (
+        event.animationName === 'ping' &&
+        target instanceof HTMLElement &&
+        target.closest('[data-controller-action="Cart"]')
+      ) {
+        animations.push(target.textContent ?? '');
+      }
+    });
+  });
+  const getPops = () =>
+    page.evaluate(
+      () => (window as Window & {__cartCountPops?: string[]}).__cartCountPops,
+    );
+  await openPage(page, '/swag/fixture-tee');
+  const count = page.locator('[data-controller-action="Cart"] [aria-live]');
+  await expect(count).toHaveText('(0)');
+  await expect(count).toHaveCSS('animation-name', 'none');
+
+  await page.getByRole('button', {name: 'Add to cart', exact: true}).click();
+  await expect(count).toHaveText('(1)');
+  await expect.poll(getPops).toEqual(['(1)']);
+  await expect(
+    page.getByRole('button', {name: 'Add to cart', exact: true}),
+  ).toBeEnabled();
+  await page.waitForFunction(() => {
+    const count = document.querySelector(
+      '[data-controller-action="Cart"] [aria-live]',
+    );
+    return count?.getAnimations().length === 0;
+  });
+  expect(await getPops(), 'after add').toEqual(['(1)']);
+  await page.keyboard.press('Tab');
+  await page.mouse.click(1, 1);
+  expect(await getPops(), 'after input mode').toEqual(['(1)']);
+
+  await page.getByRole('button', {name: 'Search', exact: true}).click();
+  await expect(page.getByRole('searchbox')).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(
+    page.getByRole('dialog', {name: 'System browser search'}),
+  ).toHaveCount(0);
+  await expect(count).toHaveText('(1)');
+  await expect(count).toHaveCSS('animation-name', 'none');
+  expect(await getPops(), 'after search').toEqual(['(1)']);
+  await page.getByRole('button', {name: 'Back', exact: true}).click();
+  await expect(page).toHaveURL(/\/swag$/);
+  await expect(count).toHaveCSS('animation-name', 'none');
+  expect(await getPops(), 'after listing').toEqual(['(1)']);
+  await page.getByRole('link', {name: /Fixture Tee, selected/}).click();
+  await expect(
+    page.getByRole('dialog', {name: 'Fixture Tee', exact: true}),
+  ).toBeVisible();
+  await expect(count).toHaveText('(1)');
+  await expect(count).toHaveCSS('animation-name', 'none');
+  expect(await getPops()).toEqual(['(1)']);
+
+  await openPage(page, '/swag/fixture-tee');
+  await expect(count).toHaveText('(1)');
+  await expect(count).toHaveCSS('animation-name', 'none');
+  expect(await getPops()).toEqual([]);
 });
 
 test('each drumkit stays at one copy after repeat adds and direct quantity updates', async ({
@@ -850,7 +1003,9 @@ test('variant links update URL, price, quantity and merchandise added to cart', 
   await product.getByRole('button', {name: /Increase quantity/}).click();
   await product.getByRole('link', {name: 'Large', exact: true}).click();
   await expect(page).toHaveURL(/Size=Large/);
-  await expect(product.getByText('30 EURO', {exact: true})).toBeVisible();
+  await expect(
+    product.getByText('Price: 30 EURO', {exact: true}),
+  ).toBeVisible();
   await expect(product.getByRole('status')).toHaveText('1');
   await expect(
     product.getByRole('link', {name: 'Large', exact: true}),
@@ -882,6 +1037,10 @@ test('controller focus rings follow keyboard input after pointer dialog interact
   await press(search);
   const input = page.getByRole('searchbox', {name: 'Search memory'});
   await expect(input).toBeFocused();
+  const dialog = page.getByRole('dialog', {name: 'System browser search'});
+  await expect(
+    dialog.getByRole('button', {name: 'Back', exact: true}),
+  ).toBeVisible();
   await input.pressSequentially('nothing');
   await page.keyboard.press('Tab');
   const back = page.getByRole('button', {name: 'Back', exact: true});
@@ -920,7 +1079,12 @@ test('dialogs contain keyboard focus, preserve the HUD and restore the opener', 
     page.getByRole('button', {name: 'Back', exact: true}),
   ).toBeFocused();
   await page.keyboard.press('Tab');
+  const cart = page.getByRole('button', {name: 'Cart (0)', exact: true});
+  await expect(cart).toBeFocused();
+  await page.keyboard.press('Tab');
   await expect(input).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  await expect(cart).toBeFocused();
   await page.keyboard.press('Shift+Tab');
   await expect(
     page.getByRole('button', {name: 'Back', exact: true}),
@@ -931,7 +1095,47 @@ test('dialogs contain keyboard focus, preserve the HUD and restore the opener', 
   ).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(opener).toBeFocused();
-  expect(await page.evaluate(() => document.body.style.overflow)).toBe('');
+  await expect(page.locator('body')).toHaveCSS('overflow', 'visible');
+});
+
+test('the search footer opens Cart on pages and over products', async ({
+  page,
+}) => {
+  await page.emulateMedia({reducedMotion: 'reduce'});
+  for (const path of ['/', '/swag/fixture-tee']) {
+    await openPage(page, path);
+    await page.getByRole('button', {name: 'Search', exact: true}).click();
+    const search = page.getByRole('dialog', {name: 'System browser search'});
+    const cartButton = search.getByRole('button', {
+      name: 'Cart (0)',
+      exact: true,
+    });
+    await expect(cartButton).toBeVisible();
+    await expect(
+      search.getByRole('button', {name: 'Back', exact: true}),
+    ).toBeVisible();
+    await cartButton.focus();
+    await page.keyboard.press('Enter');
+    const cart = page.getByRole('dialog', {name: 'Shopping cart'});
+    const back = cart.getByRole('button', {name: 'Back', exact: true});
+    await expect(search).toHaveCount(0);
+    await expect(back).toBeFocused();
+    await expect(page.locator('[aria-modal="true"]')).toHaveCount(1);
+    await expect(
+      page.getByRole('group', {name: 'Screen actions'}),
+    ).toHaveCount(1);
+    await expect(page.locator('body')).toHaveCSS('overflow', 'hidden');
+    await expect(page).toHaveURL((url) => url.pathname === path);
+    await back.click();
+    await expect(cart).toHaveCount(0);
+    await expect(
+      page.getByRole('button', {name: 'Cart (0)', exact: true}),
+    ).toBeFocused();
+    await expect(page.locator('body')).toHaveCSS(
+      'overflow',
+      path === '/' ? 'visible' : 'hidden',
+    );
+  }
 });
 
 test('drumkit selection follows hover and focus and respects reduced motion', async ({
@@ -1071,8 +1275,14 @@ test('closing a cart over a product keeps the product open and locked', async ({
       blockerWarnings.push(message.text());
   });
   await openPage(page, '/swag/fixture-tee');
+  const product = page.getByRole('dialog', {name: 'Fixture Tee', exact: true});
+  await product.getByRole('button', {name: /Increase quantity/}).click();
   await page.getByRole('button', {name: /Cart/}).click();
-  await expect(page.getByRole('dialog', {name: 'Shopping cart'})).toBeVisible();
+  const cart = page.getByRole('dialog', {name: 'Shopping cart'});
+  await expect(cart).toBeVisible();
+  await expect(
+    cart.getByRole('button', {name: 'Back', exact: true}),
+  ).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog', {name: 'Shopping cart'})).toHaveCount(
     0,
@@ -1080,13 +1290,36 @@ test('closing a cart over a product keeps the product open and locked', async ({
   await expect(
     page.getByRole('dialog', {name: 'Fixture Tee', exact: true}),
   ).toBeVisible();
-  expect(await page.evaluate(() => document.body.style.overflow)).toBe(
-    'hidden',
-  );
+  await expect(product.getByRole('status')).toHaveText('2');
+  await expect(product.getByRole('button', {name: /Cart/})).toBeFocused();
+  await expect(page.locator('body')).toHaveCSS('overflow', 'hidden');
   await page.keyboard.press('Escape');
   await expect(page).toHaveURL(/\/swag$/);
   await expect(page.getByRole('dialog')).toHaveCount(0);
   expect(blockerWarnings).toEqual([]);
+});
+
+test('product dialogs retain server-rendered content and restore the listing opener', async ({
+  page,
+}) => {
+  const response = await page.request.get('/swag/fixture-tee');
+  const html = await response.text();
+  expect(html).toContain('aria-modal="true"');
+  expect(html).toContain('Price:');
+  expect(html).toContain('Add to cart');
+
+  await page.emulateMedia({reducedMotion: 'reduce'});
+  await openPage(page, '/swag');
+  const opener = page.getByRole('link', {name: /Fixture Tee, selected/});
+  await opener.focus();
+  await page.keyboard.press('Enter');
+  const product = page.getByRole('dialog', {name: 'Fixture Tee', exact: true});
+  await expect(
+    product.getByRole('button', {name: 'Back', exact: true}),
+  ).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page).toHaveURL(/\/swag$/);
+  await expect(opener).toBeFocused();
 });
 
 test('search outages have a retry action and sold-out/missing variants stay safe', async ({
@@ -1110,18 +1343,92 @@ test('search outages have a retry action and sold-out/missing variants stay safe
   }
 });
 
+test('page titles consistently start with the storefront name', async ({
+  page,
+}) => {
+  for (const [path, name] of [
+    ['/', 'Home'],
+    ['/swag', 'Swag'],
+    ['/drumkits', 'Drumkits'],
+    ['/info', 'Info'],
+    ['/info/privacy-policy', 'Privacy Policy'],
+    ['/swag/fixture-tee', 'Fixture Tee'],
+    ['/drumkits/fixture-drumkit', 'Fixture Drumkit'],
+  ]) {
+    await openPage(page, path);
+    await expect(page).toHaveTitle(`Wake N Swag | ${name}`);
+    await expect(page.locator('head title')).toHaveCount(1);
+  }
+});
+
+test('404 titles survive server rendering, hydration and client navigation', async ({
+  page,
+}) => {
+  const paths = ['/not-a-page', '/swag/missing', '/drumkits/missing'];
+  for (const path of paths) {
+    const response = await page.request.get(path);
+    expect(response.status()).toBe(404);
+    const html = await response.text();
+    expect(html).toContain('<title>Wake N Swag | 404</title>');
+    expect(html).toContain('<meta name="robots" content="noindex"');
+    await openPage(page, path);
+    await expect(page).toHaveTitle('Wake N Swag | 404');
+    await expect(page.locator('head title')).toHaveCount(1);
+    const result = await new AxeBuilder({page})
+      .withRules(['document-title'])
+      .analyze();
+    expect(result.violations).toEqual([]);
+    expect(result.incomplete).toEqual([]);
+  }
+
+  await openPage(page, '/');
+  for (const path of paths) {
+    await expect(page).toHaveTitle('Wake N Swag | Home');
+    await page.evaluate(async (path) => {
+      const router = (
+        window as Window & {
+          __reactRouterDataRouter?: {navigate: (path: string) => Promise<void>};
+        }
+      ).__reactRouterDataRouter;
+      if (!router) throw new Error('Missing hydrated router');
+      await router.navigate(path);
+    }, path);
+    await expect(page.getByText('Page not found', {exact: true})).toBeVisible();
+    await expect(page.getByText('Page not found', {exact: true})).toBeFocused();
+    await expect(page).toHaveTitle('Wake N Swag | 404');
+    await expect(page.locator('head title')).toHaveCount(1);
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+      'content',
+      'noindex',
+    );
+    await page.getByRole('link', {name: 'Return to the main menu'}).click();
+    await expect(page).toHaveTitle('Wake N Swag | Home');
+    await expect(
+      page.getByRole('navigation', {name: 'Main navigation'}),
+    ).toBeFocused();
+    await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
+  }
+});
+
 test('404 pages have valid navigation and product images respect reduced motion', async ({
   page,
 }) => {
-  const response = await page.goto('/not-a-page');
-  expect(response?.status()).toBe(404);
-  await page.waitForFunction(() =>
-    Boolean(
-      (window as Window & {__reactRouterDataRouter?: unknown})
-        .__reactRouterDataRouter,
-    ),
-  );
-  await expect(page.getByRole('toolbar')).toHaveCount(1);
+  for (const path of ['/not-a-page', '/swag/missing', '/drumkits/missing']) {
+    const response = await page.goto(path);
+    expect(response?.status()).toBe(404);
+    await page.waitForFunction(() =>
+      Boolean(
+        (window as Window & {__reactRouterDataRouter?: unknown})
+          .__reactRouterDataRouter,
+      ),
+    );
+    await expect(
+      page.getByRole('group', {name: 'Screen actions'}),
+    ).toHaveCount(1);
+    await expect(
+      page.getByRole('button', {name: 'Search', exact: true}),
+    ).toBeVisible();
+  }
   await page.getByRole('button', {name: 'Search', exact: true}).click();
   await page.getByRole('searchbox').fill('tee');
   await expect(page.getByRole('list', {name: 'Search results'})).toBeVisible();
@@ -1255,6 +1562,9 @@ test('cart and search share the product fade, finish their exit and respect redu
       await page.getByRole('button', {name: buttonName, exact: true}).click();
       const dialog = page.getByRole('dialog', {name: dialogName, exact: true});
       await expect(dialog).toBeVisible();
+      await expect(
+        dialog.getByRole('button', {name: 'Back', exact: true}),
+      ).toBeVisible();
       await expect(dialog).toHaveCSS(
         'animation-name',
         reducedMotion === 'reduce' ? 'none' : 'fade-in',
@@ -1264,6 +1574,15 @@ test('cart and search share the product fade, finish their exit and respect redu
         await expect(dialog).toHaveCSS('animation-timing-function', 'ease-out');
       }
       await expect(dialog).toHaveCSS('opacity', '1');
+      // With reduced motion, visibility is immediate. Wait for the dialog's
+      // initial keyboard focus before exercising its dismissal behavior.
+      await expect
+        .poll(() =>
+          dialog.evaluate((element) =>
+            element.contains(document.activeElement),
+          ),
+        )
+        .toBe(true);
       if (dialogName === 'Shopping cart') {
         await page.getByRole('button', {name: 'Back', exact: true}).click();
       } else {
@@ -1273,9 +1592,7 @@ test('cart and search share the product fade, finish their exit and respect redu
         await expect(dialog).toHaveCSS('animation-name', 'fade-out');
         await expect(dialog).toHaveCSS('animation-duration', '0.3s');
         await expect(dialog).toHaveCSS('animation-timing-function', 'ease-in');
-        expect(await page.evaluate(() => document.body.style.overflow)).toBe(
-          'hidden',
-        );
+        await expect(page.locator('body')).toHaveCSS('overflow', 'hidden');
       }
       await expect(dialog).toHaveCount(0);
       await expect(product).toBeVisible();
@@ -1335,7 +1652,7 @@ test('representative screens fit the viewport and provide review screenshots', a
   });
   await page.keyboard.press('Escape');
   await openPage(page, '/swag/fixture-tee?Size=Large');
-  await expect(page.getByText('30 EURO', {exact: true})).toBeVisible();
+  await expect(page.getByText('Price: 30 EURO', {exact: true})).toBeVisible();
   await page.screenshot({
     path: test.info().outputPath('product.png'),
     fullPage: true,
@@ -1359,4 +1676,196 @@ test('representative screens fit the viewport and provide review screenshots', a
     fullPage: true,
     animations: 'disabled',
   });
+});
+
+test('reflow keeps every product separate and pagination reachable', async ({
+  page,
+}) => {
+  // Different source ratios must retain the original layout and image fit.
+  let wideImage = true;
+  await page.route('https://cdn.shopify.com/fixture.svg*', (route) => {
+    const width = wideImage ? 800 : 400;
+    const height = wideImage ? 200 : 400;
+    return route.fulfill({
+      contentType: 'image/svg+xml',
+      body: `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="${width}" height="${height}" fill="#555"/></svg>`,
+    });
+  });
+  await page.setViewportSize({width: 320, height: 256});
+  await page.emulateMedia({reducedMotion: 'reduce'});
+
+  for (const path of ['/swag', '/drumkits']) {
+    await openPage(page, path);
+    const products = page.getByRole('region', {name: 'Products', exact: true});
+    const cards = products.getByRole('link');
+    await expect(cards).toHaveCount(path === '/swag' ? 12 : 4);
+    const columns = await cards.evaluateAll(
+      (links) =>
+        new Set(
+          links.map((link) => Math.round(link.getBoundingClientRect().left)),
+        ).size,
+    );
+    expect(columns).toBe(path === '/swag' ? 3 : 2);
+
+    const image = cards.first().locator('img');
+    await expect
+      .poll(() =>
+        image.evaluate((element) => {
+          const artwork = element as HTMLImageElement;
+          return artwork.naturalWidth / artwork.naturalHeight;
+        }),
+      )
+      .toBeCloseTo(4, 1);
+    await expect(image).toHaveCSS(
+      'object-fit',
+      path === '/swag' ? 'cover' : 'contain',
+    );
+    if (path === '/swag') {
+      const wideBox = await image.boundingBox();
+      wideImage = false;
+      await openPage(page, path);
+      await expect
+        .poll(() =>
+          image.evaluate((element) => {
+            const artwork = element as HTMLImageElement;
+            return artwork.naturalWidth / artwork.naturalHeight;
+          }),
+        )
+        .toBeCloseTo(1, 1);
+      const squareBox = await image.boundingBox();
+      expect(wideBox).not.toBeNull();
+      expect(squareBox).not.toBeNull();
+      expect(squareBox!.width).toBeCloseTo(wideBox!.width, 1);
+      expect(squareBox!.height).toBeCloseTo(wideBox!.height, 1);
+      wideImage = true;
+    }
+
+    const overlaps = await cards.evaluateAll((links) => {
+      const boxes = links.map((link) => link.getBoundingClientRect());
+      return boxes.some((box, index) =>
+        boxes
+          .slice(index + 1)
+          .some(
+            (other) =>
+              Math.min(box.right, other.right) -
+                Math.max(box.left, other.left) >
+                1 &&
+              Math.min(box.bottom, other.bottom) -
+                Math.max(box.top, other.top) >
+                1,
+          ),
+      );
+    });
+    expect(overlaps).toBe(false);
+
+    for (const card of await cards.all()) {
+      await card.focus();
+      await expect(card).toBeFocused();
+      expect(
+        await card.evaluate((element) => {
+          const box = element.getBoundingClientRect();
+          const footer = document
+            .querySelector('[data-modal-controls]')!
+            .getBoundingClientRect();
+          return (
+            box.width > 0 &&
+            box.height > 0 &&
+            box.top >= -1 &&
+            box.bottom <= footer.top + 1 &&
+            box.left >= -1 &&
+            box.right <= innerWidth + 1 &&
+            element.contains(
+              document.elementFromPoint(
+                box.x + box.width / 2,
+                box.y + box.height / 2,
+              ),
+            )
+          );
+        }),
+      ).toBe(true);
+    }
+
+    const next = page.getByRole('link', {name: 'Go to next product page'});
+    await next.focus();
+    await expect(next).toBeFocused();
+    expect(
+      await next.evaluate((element) => {
+        const box = element.getBoundingClientRect();
+        return element.contains(
+          document.elementFromPoint(
+            box.x + box.width / 2,
+            box.y + box.height / 2,
+          ),
+        );
+      }),
+    ).toBe(true);
+    await page.screenshot({
+      path: test.info().outputPath(`${path.slice(1)}-reflow.png`),
+      animations: 'disabled',
+    });
+    await page.keyboard.press('Enter');
+    await expect(cards.first()).not.toHaveAttribute(
+      'href',
+      `${path}/fixture-tee`,
+    );
+  }
+});
+
+test('reflow preserves cart controls and the complete checkout link', async ({
+  page,
+}) => {
+  await page.setViewportSize({width: 320, height: 256});
+  await page.emulateMedia({reducedMotion: 'reduce'});
+  await openPage(page, '/swag/fixture-tee');
+  const product = page.getByRole('dialog', {name: 'Fixture Tee', exact: true});
+  await product.getByRole('button', {name: 'Add to cart', exact: true}).click();
+  await product.getByRole('button', {name: 'Cart (1)', exact: true}).click();
+  const cart = page.getByRole('dialog', {name: 'Shopping cart', exact: true});
+  const checkout = cart.getByRole('link', {name: 'Go to checkout'});
+  await expect(checkout).toBeAttached();
+
+  for (const control of [
+    cart.getByRole('button', {name: /Increase quantity/}),
+    checkout,
+  ]) {
+    await control.focus();
+    await expect(control).toBeFocused();
+    expect(
+      await control.evaluate((element) => {
+        const box = element.getBoundingClientRect();
+        const footer = element
+          .closest('[role="dialog"]')!
+          .querySelector('[data-modal-controls]')!
+          .getBoundingClientRect();
+        return (
+          box.top >= -1 &&
+          box.bottom <= footer.top + 1 &&
+          box.left >= -1 &&
+          box.right <= innerWidth + 1 &&
+          element.contains(
+            document.elementFromPoint(
+              box.x + box.width / 2,
+              box.y + box.height / 2,
+            ),
+          )
+        );
+      }),
+    ).toBe(true);
+  }
+  await page.screenshot({
+    path: test.info().outputPath('cart-reflow.png'),
+    animations: 'disabled',
+  });
+  await expect(checkout).toHaveAttribute(
+    'href',
+    'https://checkout.example.test/cart/fixture',
+  );
+  await expect(
+    cart.getByRole('button', {name: 'Back', exact: true}),
+  ).toBeInViewport();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
 });

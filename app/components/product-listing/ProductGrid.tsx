@@ -31,7 +31,7 @@ export function ProductGrid({
     <ProductListingPagination
       connection={connection}
       containerClassName={[
-        'grid h-full min-h-0',
+        'ps2-product-pagination grid h-full min-h-0',
         isDrumkits
           ? 'ps2-drumkit-pagination grid-rows-[minmax(0,1fr)_3rem] lg:grid-rows-[minmax(0,1fr)_3.5rem]'
           : 'grid-rows-[minmax(0,1fr)_3.5rem] lg:grid-rows-[minmax(0,1fr)_4.5rem]',
@@ -47,7 +47,7 @@ export function ProductGrid({
         isDrumkits
           ? 'ps2-drumkit-grid grid-cols-2 grid-rows-2 gap-x-4 gap-y-2 overflow-hidden py-2 max-lg:[&>:nth-child(n+5)]:hidden lg:grid-cols-6 lg:grid-rows-1 lg:py-3'
           : [
-              'grid-cols-3 gap-x-4 lg:grid-cols-4 lg:gap-x-0',
+              'ps2-swag-grid grid-cols-3 gap-x-4 lg:grid-cols-4 lg:gap-x-0',
               'grid-rows-4 content-center gap-y-[clamp(0.75rem,3dvh,3.5rem)] overflow-visible py-4',
               'sm:gap-y-[clamp(1rem,3.5dvh,4rem)] sm:py-6',
               'lg:grid-rows-3 lg:overflow-hidden lg:gap-y-[clamp(0.75rem,2dvh,2rem)] lg:py-2',

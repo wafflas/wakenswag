@@ -55,6 +55,23 @@ describe('main menu keyboard navigation', () => {
     expect(button).toHaveFocus();
   });
 
+  it('accepts menu arrows from the new page reading start', async () => {
+    const user = userEvent.setup();
+    render(
+      <AsideProvider>
+        <MemoryRouter>
+          <h1 data-route-focus tabIndex={-1}>
+            Info
+          </h1>
+          <MainMenu />
+        </MemoryRouter>
+      </AsideProvider>,
+    );
+    screen.getByRole('heading').focus();
+    await user.keyboard('{ArrowDown}');
+    expect(screen.getByRole('link', {name: 'Drumkits'})).toHaveFocus();
+  });
+
   it('navigates custom info items and identifies external links', async () => {
     const user = userEvent.setup();
     render(

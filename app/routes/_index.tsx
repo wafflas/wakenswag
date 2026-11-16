@@ -5,7 +5,7 @@ import {MainMenu} from '~/components/home/HomeMenu';
 export const meta: Route.MetaFunction = () => {
   return [
     {
-      title: 'Wake N Swag',
+      title: 'Wake N Swag | Home',
     },
     {
       name: 'description',
@@ -17,6 +17,7 @@ export const meta: Route.MetaFunction = () => {
 export default function Homepage() {
   return (
     <MainMenuLayout>
+      <h1 className="sr-only">Wake N Swag</h1>
       <MainMenu />
     </MainMenuLayout>
   );

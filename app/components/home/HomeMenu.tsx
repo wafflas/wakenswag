@@ -86,6 +86,7 @@ export function MainMenu({
       if (
         event.target instanceof Element &&
         event.target !== document.body &&
+        !event.target.hasAttribute('data-route-focus') &&
         !menuRef.current?.contains(event.target)
       ) {
         return;
@@ -130,6 +131,8 @@ export function MainMenu({
     <nav
       ref={menuRef}
       aria-label={ariaLabel}
+      data-route-focus={variant === 'home' ? true : undefined}
+      tabIndex={variant === 'home' ? -1 : undefined}
       className={
         variant === 'info'
           ? 'ps2-main-menu w-[calc(100vw-3rem)] max-w-160 text-left'

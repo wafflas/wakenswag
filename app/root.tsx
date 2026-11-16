@@ -25,8 +25,19 @@ import {PageLayout} from './components/layout/PageLayout';
 import {ButtonSound} from './components/shared/ButtonSound';
 import {CRTOverlay} from './components/shared/CRTOverlay';
 import {NotFoundPage} from './components/shared/NotFoundPage';
+import {useRouteFocus} from './components/layout/useRouteFocus';
 
 export type RootLoader = typeof loader;
+
+export const meta: Route.MetaFunction = ({error}) => {
+  if (error === undefined || error === null) return [];
+
+  const errorStatus = isRouteErrorResponse(error) ? error.status : 500;
+  return [
+    {title: errorStatus === 404 ? 'Wake N Swag | 404' : 'Wake N Swag | Error'},
+    {name: 'robots', content: 'noindex'},
+  ];
+};
 
 /**
  * This is important to avoid re-fetching root queries on sub-navigations
@@ -100,6 +111,7 @@ export function loader({context, request}: Route.LoaderArgs) {
 }
 
 export function Layout({children}: {children?: React.ReactNode}) {
+  useRouteFocus();
   const nonce = useNonce();
   const data = useRouteLoaderData<RootLoader>('root');
 
@@ -170,7 +182,9 @@ export function ErrorBoundary() {
 
   return (
     <div className="route-error">
-      <h1>Oops</h1>
+      <h1 data-route-focus tabIndex={-1}>
+        Oops
+      </h1>
       <h2>{errorStatus}</h2>
       <p>Something went wrong. Please refresh the page and try again.</p>
     </div>

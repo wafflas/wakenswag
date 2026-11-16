@@ -7,6 +7,7 @@ import {act, render, screen, waitFor} from '@testing-library/react';
 import {CartForm} from '@shopify/hydrogen';
 import userEvent from '@testing-library/user-event';
 import {describe, expect, it, vi} from 'vitest';
+import type {ProductFragment} from 'storefrontapi.generated';
 import {ProductDetail} from '~/components/product-detail/ProductDetail';
 import {
   createProduct,
@@ -70,6 +71,86 @@ it('keeps every description bullet on the full product page', () => {
   render(<RouterProvider router={router} />);
   expect(screen.getByText('Distorted 808s.')).toBeInTheDocument();
   expect(screen.getByText('Includes WAV samples.')).toBeInTheDocument();
+});
+
+describe('product sale pricing', () => {
+  function priceView(
+    selectedVariant: ProductFragment['selectedOrFirstAvailableVariant'],
+  ) {
+    const router = createMemoryRouter([
+      {
+        path: '/',
+        element: (
+          <ProductDetail
+            product={createProduct()}
+            selectedVariant={selectedVariant}
+          />
+        ),
+      },
+    ]);
+    return <RouterProvider key={selectedVariant?.id} router={router} />;
+  }
+
+  it('shows the original price and updates the sale when the selected variant changes', () => {
+    const variant = {
+      ...createVariant(),
+      price: {amount: '40.00', currencyCode: 'EUR' as const},
+      compareAtPrice: {amount: '50.00', currencyCode: 'EUR' as const},
+    };
+    const {rerender} = render(priceView(variant));
+
+    expect(screen.getByText('50 EURO').closest('s')).toBeInTheDocument();
+    expect(screen.getByText('40 EURO')).toHaveTextContent('Sale price:');
+    expect(screen.queryByText(/%/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/% off/)).not.toBeInTheDocument();
+
+    rerender(priceView(createVariant('Large')));
+
+    expect(screen.getByText('30 EURO')).toHaveTextContent('Price:');
+    expect(screen.queryByText('50 EURO')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/% off/)).not.toBeInTheDocument();
+  });
+
+  it.each([null, '25.00', '20.00'])(
+    'shows only the current price when the compare-at amount is %s',
+    (amount) => {
+      render(
+        priceView({
+          ...createVariant(),
+          compareAtPrice: amount ? {amount, currencyCode: 'EUR'} : null,
+        }),
+      );
+
+      expect(screen.getByText('25 EURO')).toHaveTextContent('Price:');
+      expect(screen.queryByText('Original price:')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText(/% off/)).not.toBeInTheDocument();
+    },
+  );
+
+  it('does not compare prices in different currencies', () => {
+    render(
+      priceView({
+        ...createVariant(),
+        compareAtPrice: {amount: '50.00', currencyCode: 'USD'},
+      }),
+    );
+
+    expect(screen.getByText('25 EURO')).toBeInTheDocument();
+    expect(screen.queryByText('Original price:')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/% off/)).not.toBeInTheDocument();
+  });
+
+  it('shows both prices even for a small discount', () => {
+    render(
+      priceView({
+        ...createVariant(),
+        compareAtPrice: {amount: '25.01', currencyCode: 'EUR'},
+      }),
+    );
+
+    expect(screen.getByText('25.01 EURO').closest('s')).toBeInTheDocument();
+    expect(screen.getByText('25 EURO')).toHaveTextContent('Sale price:');
+  });
 });
 
 describe('product purchase controls', () => {

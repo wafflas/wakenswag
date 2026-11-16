@@ -43,7 +43,11 @@ export default function InfoSection() {
   return (
     <HomeShell>
       <article className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col gap-10 px-6 pt-12 pb-28 sm:px-10 lg:pt-[10vh]">
-        <h1 className="text-ps2-outline text-center text-3xl text-ps2-yellow sm:text-4xl lg:text-5xl">
+        <h1
+          data-route-focus
+          tabIndex={-1}
+          className="text-ps2-outline text-center text-3xl text-ps2-yellow sm:text-4xl lg:text-5xl"
+        >
           {title}
         </h1>
         {failed ? (

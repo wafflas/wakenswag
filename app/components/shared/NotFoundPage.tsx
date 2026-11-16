@@ -18,9 +18,13 @@ export function NotFoundPage() {
           404
         </p>
 
-        <p className="ps2-soft-copy  text-center text-xl text-ps2-muted lg:text-2xl">
+        <h1
+          data-route-focus
+          tabIndex={-1}
+          className="ps2-soft-copy text-center text-xl text-ps2-muted lg:text-2xl"
+        >
           Page not found
-        </p>
+        </h1>
 
         <Link to="/" className="ps2-cta text-center text-xl lg:text-2xl">
           Return to the main menu

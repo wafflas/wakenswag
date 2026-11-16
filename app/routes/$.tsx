@@ -2,7 +2,7 @@ import type {Route} from './+types/$';
 import {NotFoundPage} from '~/components/shared/NotFoundPage';
 
 export const meta: Route.MetaFunction = () => [
-  {title: '404 | Wake N Swag'},
+  {title: 'Wake N Swag | 404'},
   {name: 'robots', content: 'noindex'},
 ];
 

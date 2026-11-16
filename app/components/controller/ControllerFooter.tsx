@@ -15,11 +15,11 @@ const ACTION_CLASS_NAME = [
 ].join(' ');
 
 interface ControllerFooterProps {
-  cart: CartApiQueryFragment | null;
+  cart: CartApiQueryFragment | null | undefined;
+  isCartReady: boolean;
 }
 
-/** The storefront's Back, Search and Cart controls. */
-export function ControllerFooter({cart}: ControllerFooterProps) {
+export function ControllerFooter({cart, isCartReady}: ControllerFooterProps) {
   const optimisticCart = useOptimisticCart(cart);
   const {pathname} = useLocation();
   const navigate = useNavigate();
@@ -40,7 +40,7 @@ export function ControllerFooter({cart}: ControllerFooterProps) {
     <div
       aria-label="Screen actions"
       className="flex w-full items-center justify-between"
-      role="toolbar"
+      role="group"
     >
       <div className="flex items-center gap-3 px-2 sm:gap-7">
         {isDialogOpen || backPath ? (
@@ -59,37 +59,38 @@ export function ControllerFooter({cart}: ControllerFooterProps) {
 
       <div className="flex items-center gap-3 px-2 sm:gap-7">
         {!isDialogOpen ? (
-          <>
-            <button
-              className={ACTION_CLASS_NAME}
-              data-controller-action="Search"
-              onClick={(event) => {
-                event.currentTarget.focus();
-                open('search');
-              }}
-              type="button"
-            >
-              <ControllerSymbol symbol="triangle" />
-              <span>Search</span>
-            </button>
-            <button
-              className={ACTION_CLASS_NAME}
-              data-controller-action="Cart"
-              onClick={(event) => {
-                event.currentTarget.focus();
-                open('cart');
-              }}
-              type="button"
-            >
-              <ControllerSymbol symbol="square" />
-              <span>
-                Cart{' '}
-                <ControllerActionCount
-                  count={optimisticCart?.totalQuantity ?? 0}
-                />
-              </span>
-            </button>
-          </>
+          <button
+            className={ACTION_CLASS_NAME}
+            data-controller-action="Search"
+            onClick={(event) => {
+              event.currentTarget.focus();
+              open('search');
+            }}
+            type="button"
+          >
+            <ControllerSymbol symbol="triangle" />
+            <span>Search</span>
+          </button>
+        ) : null}
+        {type !== 'cart' ? (
+          <button
+            className={ACTION_CLASS_NAME}
+            data-controller-action="Cart"
+            onClick={(event) => {
+              event.currentTarget.focus();
+              open('cart');
+            }}
+            type="button"
+          >
+            <ControllerSymbol symbol="square" />
+            <span>
+              Cart{' '}
+              <ControllerActionCount
+                count={optimisticCart?.totalQuantity ?? 0}
+                isReady={isCartReady || !!optimisticCart?.isOptimistic}
+              />
+            </span>
+          </button>
         ) : null}
       </div>
     </div>

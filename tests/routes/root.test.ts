@@ -1,5 +1,32 @@
 import {describe, expect, it, vi} from 'vitest';
-import {loader} from '~/root';
+import {loader, meta} from '~/root';
+
+describe('root error metadata', () => {
+  it('leaves normal page metadata to the matched route', () => {
+    expect(meta({error: null} as Parameters<typeof meta>[0])).toEqual([]);
+  });
+
+  it.each([
+    {
+      error: {status: 404, statusText: 'Not Found', internal: false, data: ''},
+      title: 'Wake N Swag | 404',
+    },
+    {
+      error: {
+        status: 500,
+        statusText: 'Server Error',
+        internal: false,
+        data: '',
+      },
+      title: 'Wake N Swag | Error',
+    },
+    {error: new Error('Private server details'), title: 'Wake N Swag | Error'},
+  ])('sets "$title" and noindex for a handled error', ({error, title}) => {
+    const descriptors = meta({error} as Parameters<typeof meta>[0]);
+    expect(descriptors).toContainEqual({title});
+    expect(descriptors).toContainEqual({name: 'robots', content: 'noindex'});
+  });
+});
 
 describe('root consent configuration', () => {
   it.each([

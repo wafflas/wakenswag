@@ -1,10 +1,9 @@
-import {Suspense, useRef} from 'react';
+import {Suspense} from 'react';
 import {Await} from 'react-router';
 import type {CartApiQueryFragment} from 'storefrontapi.generated';
-import {FadeTransition} from '~/components/animations/FadeTransition';
 import {useAside} from '~/components/layout/Aside';
 import {CartMain} from './CartMain';
-import {useModalDialog} from '~/components/layout/useModalDialog';
+import {StorefrontDialog} from '~/components/layout/StorefrontDialog';
 
 interface CartModalProps {
   cart: Promise<CartApiQueryFragment | null>;
@@ -15,27 +14,22 @@ interface CartModalProps {
  */
 export function CartModal({cart}: CartModalProps) {
   const {close, isExiting, type, openerRef} = useAside();
-  const dialogRef = useRef<HTMLDivElement>(null);
   const isOpen = type === 'cart';
-
-  useModalDialog({dialogRef, isOpen, onClose: close, openerRef});
 
   if (!isOpen) return null;
 
   return (
-    <FadeTransition
-      ref={dialogRef}
-      aria-label="Shopping cart"
-      aria-modal="true"
+    <StorefrontDialog
+      title="Shopping cart"
+      onClose={close}
+      openerRef={openerRef}
       className={[
         'fixed inset-0 z-40',
-        'h-dvh overflow-hidden bg-[rgba(6,6,6,0.95)]',
+        'cart-scroll h-dvh overflow-y-auto overscroll-contain bg-[rgba(6,6,6,0.95)]',
+        'scroll-pt-2 scroll-pb-18 sm:scroll-pb-20 md:scroll-pb-22',
         'font-ps2 text-ps2-muted',
       ].join(' ')}
       isExiting={isExiting}
-      role="dialog"
-      tabIndex={-1}
-      variant="overlay"
     >
       <Suspense
         fallback={
@@ -58,6 +52,6 @@ export function CartModal({cart}: CartModalProps) {
           {(resolvedCart) => <CartMain cart={resolvedCart} />}
         </Await>
       </Suspense>
-    </FadeTransition>
+    </StorefrontDialog>
   );
 }

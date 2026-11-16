@@ -1,13 +1,38 @@
 import {describe, expect, it, vi} from 'vitest';
 import {meta as productMeta} from '~/routes/swag.$handle';
 import {meta as swagMeta} from '~/routes/swag';
-import {loader as notFoundLoader} from '~/routes/$';
+import {loader as notFoundLoader, meta as notFoundMeta} from '~/routes/$';
+import {meta as homeMeta} from '~/routes/_index';
 import {loader as sitemapIndex} from '~/routes/[sitemap.xml]';
 import {loader as productSitemap} from '~/routes/sitemap.$type.$page[.xml]';
 import {loader as pageSitemap} from '~/routes/[sitemap-pages.xml]';
 import {createProduct} from '../fixtures/catalog';
 
 describe('custom storefront SEO', () => {
+  it('puts the storefront name first on home and the catch-all route', () => {
+    expect(homeMeta({} as Parameters<typeof homeMeta>[0])).toContainEqual({
+      title: 'Wake N Swag | Home',
+    });
+    expect(
+      notFoundMeta({} as Parameters<typeof notFoundMeta>[0]),
+    ).toContainEqual({title: 'Wake N Swag | 404'});
+  });
+
+  it.each([
+    'Summer Tee',
+    'Wake N Swag | Summer Tee',
+    'Summer Tee | Wake N Swag',
+    '  Summer Tee  ',
+  ])(
+    'keeps the storefront name first and unique for custom SEO title "%s"',
+    (title) => {
+      const descriptors = productMeta({
+        data: {product: createProduct({seo: {title, description: ''}})},
+        params: {handle: 'fixture-tee'},
+      } as Parameters<typeof productMeta>[0]);
+      expect(descriptors).toContainEqual({title: 'Wake N Swag | Summer Tee'});
+    },
+  );
   it.each([
     '/merch',
     '/merch/',

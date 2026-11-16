@@ -32,8 +32,8 @@ export function CartMain({cart: originalCart}: CartMainProps) {
     <section
       aria-labelledby="cart-information-title"
       className={[
-        'relative flex h-dvh w-full flex-col overflow-hidden px-3',
-        'pb-16 sm:pb-18 md:pb-20',
+        'relative flex min-h-dvh w-full flex-col px-3',
+        'pb-20 sm:pb-22 md:pb-24',
       ].join(' ')}
     >
       <h2
@@ -43,11 +43,11 @@ export function CartMain({cart: originalCart}: CartMainProps) {
         Cart Information
       </h2>
 
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-6 py-6 sm:gap-8 sm:py-8">
+      <div className="flex flex-1 flex-col items-center justify-center gap-6 py-6 sm:gap-8 sm:py-8">
         <CartEmpty hidden={linesCount > 0} />
 
         <div
-          className="flex min-h-0 w-full max-w-2xl flex-1 flex-col items-center gap-4 sm:gap-6"
+          className="flex w-full max-w-2xl flex-1 flex-col items-center gap-4 sm:gap-6"
           hidden={linesCount === 0}
         >
           <div className="flex w-full shrink-0 justify-end">
@@ -63,9 +63,8 @@ export function CartMain({cart: originalCart}: CartMainProps) {
           <ul
             aria-labelledby="cart-lines"
             className={[
-              'cart-scroll',
-              'grid min-h-0 w-full flex-1 grid-cols-2 items-start',
-              'gap-x-4 gap-y-4 overflow-y-auto overscroll-contain',
+              'grid w-full flex-1 grid-cols-2 items-start',
+              'gap-x-4 gap-y-4',
               'rounded-md border border-ps2-gray/20 p-3',
               'sm:grid-cols-2',
             ].join(' ')}
