@@ -1550,9 +1550,10 @@ test('cart and search share the product fade, finish their exit and respect redu
 }) => {
   await openPage(page, '/swag/fixture-tee');
   const product = page.getByRole('dialog', {name: 'Fixture Tee', exact: true});
-  await expect(product).toHaveCSS('animation-name', 'fade-in');
-  await expect(product).toHaveCSS('animation-duration', '0.3s');
-  await expect(product).toHaveCSS('animation-timing-function', 'ease-out');
+  const productFade = product.locator('.anim-fade-in, .anim-fade-out');
+  await expect(productFade).toHaveCSS('animation-name', 'fade-in');
+  await expect(productFade).toHaveCSS('animation-duration', '0.3s');
+  await expect(productFade).toHaveCSS('animation-timing-function', 'ease-out');
 
   for (const reducedMotion of ['no-preference', 'reduce'] as const) {
     await page.emulateMedia({reducedMotion});
@@ -1562,19 +1563,20 @@ test('cart and search share the product fade, finish their exit and respect redu
     ] as const) {
       await page.getByRole('button', {name: buttonName, exact: true}).click();
       const dialog = page.getByRole('dialog', {name: dialogName, exact: true});
+      const fade = dialog.locator('.anim-fade-in, .anim-fade-out');
       await expect(dialog).toBeVisible();
       await expect(
         dialog.getByRole('button', {name: 'Back', exact: true}),
       ).toBeVisible();
-      await expect(dialog).toHaveCSS(
+      await expect(fade).toHaveCSS(
         'animation-name',
         reducedMotion === 'reduce' ? 'none' : 'fade-in',
       );
       if (reducedMotion === 'no-preference') {
-        await expect(dialog).toHaveCSS('animation-duration', '0.3s');
-        await expect(dialog).toHaveCSS('animation-timing-function', 'ease-out');
+        await expect(fade).toHaveCSS('animation-duration', '0.3s');
+        await expect(fade).toHaveCSS('animation-timing-function', 'ease-out');
       }
-      await expect(dialog).toHaveCSS('opacity', '1');
+      await expect(fade).toHaveCSS('opacity', '1');
       // With reduced motion, visibility is immediate. Wait for the dialog's
       // initial keyboard focus before exercising its dismissal behavior.
       await expect
@@ -1590,9 +1592,9 @@ test('cart and search share the product fade, finish their exit and respect redu
         await page.keyboard.press('Escape');
       }
       if (reducedMotion === 'no-preference') {
-        await expect(dialog).toHaveCSS('animation-name', 'fade-out');
-        await expect(dialog).toHaveCSS('animation-duration', '0.3s');
-        await expect(dialog).toHaveCSS('animation-timing-function', 'ease-in');
+        await expect(fade).toHaveCSS('animation-name', 'fade-out');
+        await expect(fade).toHaveCSS('animation-duration', '0.3s');
+        await expect(fade).toHaveCSS('animation-timing-function', 'ease-in');
         await expect(page.locator('body')).toHaveCSS('overflow', 'hidden');
       }
       await expect(dialog).toHaveCount(0);
@@ -1616,7 +1618,9 @@ for (const listingPath of ['/swag', '/drumkits']) {
       '0.4s',
     );
     await expect(
-      page.getByRole('dialog', {name: 'Fixture Tee', exact: true}),
+      page
+        .getByRole('dialog', {name: 'Fixture Tee', exact: true})
+        .locator('.anim-fade-in, .anim-fade-out'),
     ).toHaveCSS('animation-duration', '0.3s');
     await expect(page).toHaveURL((url) => url.pathname === listingPath);
     await expect(page.getByText('Now loading...')).toHaveCount(0);
