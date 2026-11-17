@@ -20,16 +20,16 @@ For example, `ProductPurchaseControls.tsx` owns quantity and purchase behavior, 
 
 Use one `<feature>Utils.ts` module per component folder when independent helpers exist. Files and functions use camelCase, shared types use PascalCase, and true static constants use UPPER_SNAKE_CASE.
 
-| Utility module                           | Responsibility                                                    |
-| ---------------------------------------- | ----------------------------------------------------------------- |
-| `animations/animationUtils.ts`           | Animation durations, fade class mappings and related type         |
-| `cart/cartUtils.ts`                      | Shared cart types, child-line grouping and pending submit content |
-| `controller/controllerUtils.ts`          | Back destinations for home, product and other routes              |
-| `home/homeUtils.ts`                      | Keyboard typing-target detection                                  |
-| `product-detail/productDetailUtils.ts`   | Product themes and description parsing                            |
-| `product-listing/productListingUtils.ts` | Listing constants, shared data types and pagination URLs          |
-| `search/searchUtils.ts`                  | Search product normalization and shared search card types         |
-| `shared/sharedUtils.ts`                  | Interactive-element lookup for interface sounds                   |
+| Utility module                           | Responsibility                                                  |
+| ---------------------------------------- | --------------------------------------------------------------- |
+| `animations/animationUtils.ts`           | Animation durations, fade class mappings and related type       |
+| `cart/cartUtils.ts`                      | Cart types, child lines, drumkit corrections and submit content |
+| `controller/controllerUtils.ts`          | Back destinations for home, product and other routes            |
+| `home/homeUtils.ts`                      | Keyboard typing-target detection                                |
+| `product-detail/productDetailUtils.ts`   | Product themes and description parsing                          |
+| `product-listing/productListingUtils.ts` | Listing constants, shared data types and pagination URLs        |
+| `search/searchUtils.ts`                  | Search product normalization and shared search card types       |
+| `shared/sharedUtils.ts`                  | Interactive-element lookup for interface sounds                 |
 
 Components import named helpers directly:
 
@@ -51,7 +51,7 @@ The controller footer has two stages: `AppControllerFooter` reads the shared Hyd
 | Item                | Convention                                | Repository example                        |
 | ------------------- | ----------------------------------------- | ----------------------------------------- |
 | Components/files    | PascalCase                                | `ProductDetail.tsx`, `CartLineItem.tsx`   |
-| Hooks               | camelCase, `use` prefix                   | `useModalDialog`, `useVariantUrl`         |
+| Hooks               | camelCase, `use` prefix                   | `useRouteFocus`, `useDrumkitPageSize`     |
 | Utilities/functions | camelCase, descriptive verb               | `formatMoney`, `loadProductDetail`        |
 | Booleans            | is/has/can/should                         | `isExiting`, `hasReachedStockLimit`       |
 | Static constants    | UPPER_SNAKE_CASE                          | `PRODUCTS_PER_PAGE`                       |
@@ -78,7 +78,9 @@ This excerpt omits the other required props. `?.` safely reads a property when t
 
 Use state for values that affect rendering. Use refs for persistent mutable browser references/history, such as a dialog element, opener or visited-page set. Updating `.current` does not render the component. Avoid `useMemo`/`useCallback` unless their stable identity or measured work matters; stable `open`/`close` callbacks prevent dialog effects from unnecessarily restarting.
 
-Effects synchronize browser systems: focus, scroll locking, audio, timers and event listeners. Return cleanup that restores previous values, removes listeners and clears timers. Reuse `useModalDialog` for full-screen dialogs; it preserves HUD actions, traps focus, makes background siblings inert and restores focus after closing. Do not add another document-level Escape listener to those dialogs.
+Effects synchronize browser systems: focus, scroll locking, audio, timers and event listeners. Return cleanup that restores previous values, removes listeners and clears timers. Reuse `StorefrontDialog` for full-screen dialogs. It uses the existing Radix Dialog primitive for modal focus/scroll behavior, keeps the active controller footer inside the dialog and restores a usable opener after closing. Do not add a second custom focus trap or document-level Escape listener.
+
+Ordinary pathname navigation uses `useRouteFocus` and `[data-route-focus]` headings after the route fade. Query-only updates preserve focus, and returning from a product dialog leaves opener restoration to the dialog. Keep these two responsibilities separate.
 
 `AsideProvider` keeps Search/Cart active while `isExiting` drives `FadeTransition`'s 300 ms overlay fade-out. All close paths share this state; keep focus containment and scroll locking active until the exit finishes. `useExiting` shares timer cleanup and reduced-motion handling with `useRouteExitTransition`. Opening another overlay cancels the pending close. Only `RouteFadeTransition` installs a router blocker.
 
@@ -97,6 +99,10 @@ The new client has no implicit query cache. Apply `publicDataCache` to public ca
 Use the local `getPaginationVariables(request, {pageBy: PRODUCTS_PER_PAGE})` in catalog loaders. ProductListingPagination emits ordinary React Router links with matching `cursor` and `direction` parameters. This supports page flips and browser history without accumulating earlier pages. Never download the entire catalog for pagination.
 
 Cart forms submit to the `/api/cart` handler without changing the current page; checkout URLs come from Shopify cart responses. Do not invent product availability, cart totals or currency conversions on the client. `formatMoney` only formats Shopify amounts. Keep EUR's existing `EURO` label; display other currencies accurately.
+
+The storefront keeps a modal-only cart: `/cart` redirects home. An initial cart transport/GraphQL failure shows a safe error and reload link rather than a false empty cart. `AsideProvider` connects Shopify's permanent `openCart` action through a DOM event to the currently mounted provider; its event listeners are removed on unmount.
+
+Search is predictive, with no separate results page. `SearchModal` configures `PredictiveSearchProvider` with a 220 ms debounce, a limit of 8 and PRODUCT/QUERY types. `SearchScreen` submits input through the SDK actions and displays products only when the returned term matches the current trimmed input. It clears pending search on unmount and renders loading, empty and retry states. `predictiveSearch.server.ts` owns the handler and custom product fragment; `/search` is a resource alias. Keep this flow rather than copying a separate classic fetcher/query recipe into the UI.
 
 Handle nullable API data, GraphQL errors and mutation `errors` separately from successful HTTP transport. Preserve the custom `/swag/:handle` routes in canonical links, cards, search, cart and sitemaps. The Shopify collection handle is `swag`; removed `/merch` routes return 404 without a local redirect. Info sections read published Shopify policies and sanitize their HTML before rendering; Instagram and website credits are external links in Info. Unimplemented account/filter features are intentional, not invitations to add unrelated features.
 

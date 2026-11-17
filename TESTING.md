@@ -81,7 +81,7 @@ On ordinary visits the banner waits for Shopify's consent initialization, then r
 
 Axe runs its full dialog scan and attaches violations as JSON. The structural-assertion test explicitly separates color-contrast findings from labels/roles/semantics. A passing structural assertion is not a clean full accessibility scan: the dim search status currently has a recorded contrast finding. No accessibility rule was disabled to hide it. Keyboard containment, HUD availability, focus restoration and nested Escape behavior have separate functional browser checks.
 
-Normal animation durations and reduced-motion visibility are asserted. These are not pixel-perfect before/after visual snapshots. Existing source styles are preserved; cart quantity is now a registered editable numeric input with a status announcement. Manual checks remain for contrast/design decisions, VoiceOver/NVDA, zoom/reflow, real devices, Firefox/WebKit and audio experience.
+Normal animation durations and reduced-motion visibility are asserted. These are not pixel-perfect before/after visual snapshots. Cart quantity uses a registered editable numeric input with a status announcement. The automated 320 × 256 reflow checks exercise product separation, pagination and complete cart controls. Manual checks remain for contrast/design decisions, VoiceOver/NVDA, actual browser zoom, real devices, Firefox/WebKit and audio experience. See [ACCESSIBILITY_AUDIT.md](ACCESSIBILITY_AUDIT.md) for the current follow-up list.
 
 Live Storefront API behavior, actual inventory/market pricing, consent/analytics delivery, checkout services and Oxygen production deployment are not proven by fixtures. To validate them, use a dedicated test store: run `npm run dev` with its environment, repeat navigation/variant/cart flows, confirm currency/stock/totals against that store, follow checkout only to its review screen, and stop before payment/order submission. Test real Shopify responses to quantity-limit and expired-cart errors. Do not substitute production fixtures or make real orders.
 
@@ -104,7 +104,7 @@ Stop the fixture preview before `npm run preview` for a real-store production re
 
 ## Migration verification: 2026-11-17
 
-Validated locally with Hydrogen 2026.10.3, React 19.2.7 and React Router 7.18.5:
+Recorded for migration commit `095b835f`, using Hydrogen 2026.10.3, React 19.2.7 and React Router 7.18.5. These dated results are historical evidence; rerun the commands after relevant changes:
 
 - Vitest: **241 tests in 20 files passed**. Coverage: 77.7% statements, 69.17% branches, 72.08% functions, 78.68% lines.
 - Playwright: **82 checks passed** against the production fixture build across Chromium desktop and Pixel 7 emulation. The earlier development-server run passed 80 checks before adding the two initial-cart recovery checks.
@@ -132,4 +132,4 @@ No merchant-store environment was available locally. Merchant inventory/pricing,
 4. For a critical customer journey, add a Playwright scenario and run both desktop/mobile projects.
 5. Run the affected test, then lint/typecheck. Before shipping, run all commands above and report each result separately.
 
-The reusable quality workflow runs lint, typecheck, formatting, coverage tests, production build and browser tests. Pull requests run it directly; the existing push-to-Oxygen workflow now waits for it. No deployment was performed during this refactor.
+The reusable quality workflow runs lint, typecheck, formatting, coverage tests, production build and browser tests. Pull requests run it directly; the push-to-Oxygen workflow waits for it before deployment. `format:check` covers all root Markdown files, application/tests, root TypeScript/JavaScript configuration and workflow files. SDK-managed skills and unmodified vendor runtime snapshots are excluded through `.prettierignore`.

@@ -16,7 +16,7 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "test:e2e:serve": "vite dev --config vite.e2e.config.ts --port 4173",
-    "format:check": "prettier --check app tests *.ts *.js package.json tsconfig.json .github/workflows/quality.yml CODEBASE_AUDIT.md CONVENTIONS.md TESTING.md REFACTOR_REPORT.md",
+    "format:check": "prettier --check app tests *.md *.ts *.js package.json tsconfig.json .github/workflows",
     "dev:https": "hydrogen skills check --mode=warn && vite dev",
     "deploy": "npm run build && shopify hydrogen deploy --assets-dir dist/client --worker-dir dist/server",
     "test:e2e:build": "react-router build --config vite.e2e.config.ts",

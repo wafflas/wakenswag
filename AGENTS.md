@@ -4,6 +4,12 @@ This storefront uses Hydrogen 2026-10 (`@shopify/hydrogen` 2026.10.x), React 19 
 
 Use the [Shopify AI Toolkit](https://shopify.dev/docs/apps/build/ai-toolkit) for all Shopify API and platform work. If missing, install it in the agent host per that page (or `npx skills add Shopify/shopify-ai-toolkit --list` for skill-compatible hosts).
 
+# Project documentation
+
+Use [README.md](README.md) for setup and the documentation index, [CONVENTIONS.md](CONVENTIONS.md) for implementation standards, [TESTING.md](TESTING.md) for commands and dated verification, and [ACCESSIBILITY_AUDIT.md](ACCESSIBILITY_AUDIT.md) for accessibility follow-ups. Keep these aligned with the code; record test results with their date and scope. `CLAUDE.md` imports this file rather than duplicating instructions.
+
+The `.agents/skills` and `.claude/skills` Markdown files are SDK-managed reference material. Keep them synchronized with the installed Hydrogen version using `hydrogen skills sync`; do not rewrite or prune individual generated guides during project documentation cleanup.
+
 # Component simplicity
 
 - Keep one React component per dedicated UI component file. Preserve framework-required exports in route modules.
