@@ -1,13 +1,15 @@
 import {
   getSelectedProductOptions,
-  type HydrogenRouterContextProvider,
+  gql,
+  type StorefrontApi,
 } from '@shopify/hydrogen';
+import {publicDataCache, type RequestStorefrontClient} from '~/lib/context';
 import {redirectIfHandleIsLocalized} from '~/lib/redirect';
 
 interface LoadProductDetailOptions {
   handle: string;
   request: Request;
-  storefront: HydrogenRouterContextProvider['storefront'];
+  storefront: RequestStorefrontClient;
 }
 
 export async function loadProductDetail({
@@ -15,13 +17,19 @@ export async function loadProductDetail({
   request,
   storefront,
 }: LoadProductDetailOptions) {
-  const {product} = await storefront.query(PRODUCT_DETAIL_QUERY, {
+  const {data, errors} = await storefront.graphql(PRODUCT_DETAIL_QUERY, {
+    cache: publicDataCache,
     variables: {
       handle,
-      selectedOptions: getSelectedProductOptions(request),
+      selectedOptions: getSelectedProductOptions({
+        searchParams: new URL(request.url).searchParams,
+      }),
     },
   });
 
+  if (errors?.length)
+    throw new Response('Product is unavailable', {status: 502});
+  const product = data?.product;
   if (!product?.id) {
     throw new Response(null, {
       status: 404,
@@ -35,7 +43,7 @@ export async function loadProductDetail({
 
   return product;
 }
-const PRODUCT_VARIANT_FRAGMENT = `#graphql
+const PRODUCT_VARIANT_FRAGMENT = gql(`#graphql
   fragment ProductVariant on ProductVariant {
     availableForSale
     quantityAvailable
@@ -72,9 +80,10 @@ const PRODUCT_VARIANT_FRAGMENT = `#graphql
       currencyCode
     }
   }
-` as const;
+`);
 
-const PRODUCT_FRAGMENT = `#graphql
+const PRODUCT_FRAGMENT = gql(
+  `#graphql
   fragment Product on Product {
     id
     title
@@ -125,10 +134,12 @@ const PRODUCT_FRAGMENT = `#graphql
     }
   }
 
-  ${PRODUCT_VARIANT_FRAGMENT}
-` as const;
+`,
+  [PRODUCT_VARIANT_FRAGMENT],
+);
 
-const PRODUCT_DETAIL_QUERY = `#graphql
+const PRODUCT_DETAIL_QUERY = gql(
+  `#graphql
   query Product(
     $country: CountryCode
     $handle: String!
@@ -143,5 +154,13 @@ const PRODUCT_DETAIL_QUERY = `#graphql
     }
   }
 
-  ${PRODUCT_FRAGMENT}
-` as const;
+`,
+  [PRODUCT_FRAGMENT],
+);
+
+export type ProductFragment = NonNullable<
+  StorefrontApi.ResultOf<typeof PRODUCT_DETAIL_QUERY>['product']
+>;
+export type ProductVariantFragment = NonNullable<
+  ProductFragment['selectedOrFirstAvailableVariant']
+>;

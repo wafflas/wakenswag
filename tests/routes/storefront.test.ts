@@ -1,6 +1,7 @@
+import {publicDataCache, storefrontClientContext} from '~/lib/context';
 import {describe, expect, it, vi} from 'vitest';
-import {CartForm} from '@shopify/hydrogen';
-import {action as cartAction} from '~/routes/cart';
+import {cartHandlers} from '~/lib/cartHandlers.server';
+import {createRouteContext} from '../fixtures/routeContext';
 import {loader as searchLoader} from '~/routes/search';
 import {loader as swagLoader} from '~/routes/swag';
 import {loader as drumkitsLoader} from '~/routes/drumkits';
@@ -21,144 +22,184 @@ function createArgs(path = '/', inputs?: unknown, redirectTo?: string) {
   const query = vi
     .fn()
     .mockResolvedValue({products: {nodes: []}, collection: null});
-  const result = {cart: createCart(), errors: [], warnings: []};
-  const context = {
-    storefront: {query},
-    cart: {
-      get: vi.fn().mockResolvedValue(createCart()),
-      addLines: vi.fn().mockResolvedValue(result),
-      updateLines: vi.fn().mockResolvedValue(result),
-      removeLines: vi.fn().mockResolvedValue(result),
-      setCartId: vi
-        .fn()
-        .mockReturnValue(new Headers({'Set-Cookie': 'cart=fixture; HttpOnly'})),
-    },
-  };
+  const {context: provider} = createRouteContext(query);
+  const context = {storefront: {query}};
   const args = {
     request: new Request(
       `https://store.example${path}`,
       inputs ? {method: 'POST', body: form} : undefined,
     ),
-    context,
+    context: provider,
     params: {},
   };
   return {args, context};
 }
 
-describe('cart action', () => {
-  it.each([CartForm.ACTIONS.LinesAdd, CartForm.ACTIONS.LinesUpdate])(
-    'corrects a drumkit quantity after %s using Shopify cart data',
-    async (action) => {
-      const inputs =
-        action === CartForm.ACTIONS.LinesAdd
-          ? {
-              lines: [
-                {
-                  merchandiseId: 'gid://shopify/ProductVariant/201',
-                  quantity: 4,
-                },
-              ],
-            }
-          : {lines: [{id: 'gid://shopify/CartLine/fixture', quantity: 4}]};
-      const {args, context} = createArgs('/cart', {action, inputs});
-      context.cart.get.mockResolvedValue(createDrumkitCart(4));
-      context.cart.updateLines.mockResolvedValue({
-        cart: createDrumkitCart(),
-        errors: [],
-        warnings: [],
-      });
-      const response = await cartAction(
-        args as unknown as Parameters<typeof cartAction>[0],
-      );
-      expect(context.cart.updateLines).toHaveBeenLastCalledWith(
-        [{id: 'gid://shopify/CartLine/fixture', quantity: 1}],
-        {cartId: 'gid://shopify/Cart/fixture'},
-      );
-      expect(response.data.cart?.totalQuantity).toBe(1);
-    },
-  );
-  it.each([
-    [
-      CartForm.ACTIONS.LinesAdd,
-      {
-        lines: [
-          {merchandiseId: 'gid://shopify/ProductVariant/101', quantity: 2},
-        ],
+describe('cart handlers', () => {
+  async function mutate(
+    body: unknown,
+    cart = createCart(),
+    options: {
+      cookie?: string;
+      native?: boolean;
+      referer?: string;
+      fail?: boolean;
+    } = {},
+  ) {
+    const query = vi.fn(
+      async (
+        document: string,
+        config: {variables: Record<string, unknown>},
+      ) => {
+        if (options.fail) throw new Error('private upstream detail');
+        if (document.includes('mutation')) {
+          const key = document.includes('cartCreate(')
+            ? 'cartCreate'
+            : document.includes('cartLinesAdd(')
+              ? 'cartLinesAdd'
+              : document.includes('cartLinesUpdate(')
+                ? 'cartLinesUpdate'
+                : 'cartLinesRemove';
+          const corrected =
+            key === 'cartLinesUpdate' &&
+            (config.variables.lines as Array<{quantity: number}>)[0]
+              ?.quantity === 1;
+          return {
+            [key]: {
+              cart: corrected ? createDrumkitCart() : cart,
+              userErrors: [],
+              warnings: [],
+            },
+          };
+        }
+        return {cart: createDrumkitCart()};
       },
-      'addLines',
-    ],
-    [
-      CartForm.ACTIONS.LinesUpdate,
-      {lines: [{id: 'line-1', quantity: 2}]},
-      'updateLines',
-    ],
-    [CartForm.ACTIONS.LinesRemove, {lineIds: ['line-1']}, 'removeLines'],
-  ] as const)(
-    'dispatches %s and preserves the cart cookie',
-    async (action, inputs, method) => {
-      const {args, context} = createArgs('/cart', {action, inputs});
-      const response = await cartAction(
-        args as unknown as Parameters<typeof cartAction>[0],
+    );
+    const {client} = createRouteContext(query);
+    const headers = new Headers({
+      'content-type': options.native
+        ? 'application/x-www-form-urlencoded'
+        : 'application/json',
+    });
+    if (options.cookie) headers.set('cookie', options.cookie);
+    if (options.referer) headers.set('referer', options.referer);
+    const request = new Request('https://store.example/api/cart', {
+      method: 'POST',
+      headers,
+      body: options.native ? String(body) : JSON.stringify(body),
+    });
+    return {
+      result: await cartHandlers.post({
+        request,
+        storefrontClient: client,
+        requestContext: client.requestContext,
+      }),
+      query,
+    };
+  }
+  it.each(['add', 'update', 'remove'] as const)(
+    'dispatches %s through the new Shopify handlers',
+    async (intent) => {
+      const lines =
+        intent === 'add'
+          ? [{merchandiseId: 'gid://shopify/ProductVariant/101', quantity: 2}]
+          : [{id: 'line-1', quantity: intent === 'remove' ? 0 : 2}];
+      const {result, query} = await mutate({lines}, createCart(), {
+        cookie: 'cart=fixture',
+      });
+      expect(result.type).toBe('json');
+      expect(query.mock.calls[0][0]).toContain(
+        intent === 'add'
+          ? 'cartLinesAdd('
+          : intent === 'update'
+            ? 'cartLinesUpdate('
+            : 'cartLinesRemove(',
       );
-      expect(context.cart[method]).toHaveBeenCalledOnce();
-      expect(response.data.cart?.totalQuantity).toBe(1);
-      expect(new Headers(response.init?.headers).get('Set-Cookie')).toContain(
-        'cart=fixture',
+      expect(new Headers(result.headers).get('Cache-Control')).toMatch(
+        /private|no-store/,
       );
     },
   );
-  it.each(['https://evil.example', '/swag?Size=Large'])(
-    'ignores redirectTo %s so modal cart updates do not navigate',
-    async (redirectTo) => {
-      const {args} = createArgs(
-        '/cart',
-        {action: CartForm.ACTIONS.LinesRemove, inputs: {lineIds: ['line-1']}},
-        redirectTo,
+  it('sets a cart cookie when the first item creates a cart', async () => {
+    const {result} = await mutate({
+      lines: [{merchandiseId: 'gid://shopify/ProductVariant/101', quantity: 1}],
+    });
+    expect(new Headers(result.headers).get('Set-Cookie')).toContain(
+      'cart=fixture',
+    );
+  });
+  it.each([false, true])(
+    'enforces one-copy drumkits for native form = %s',
+    async (native) => {
+      const body = native
+        ? 'intent=add&merchandiseId=gid%3A%2F%2Fshopify%2FProductVariant%2F201&quantity=4'
+        : {
+            lines: [
+              {merchandiseId: 'gid://shopify/ProductVariant/201', quantity: 4},
+            ],
+          };
+      const {result, query} = await mutate(body, createDrumkitCart(4), {
+        native,
+      });
+      expect(
+        query.mock.calls.some(
+          ([document, config]) =>
+            document.includes('cartLinesUpdate(') &&
+            (config.variables.lines as Array<{quantity: number}>)[0]
+              .quantity === 1,
+        ),
+      ).toBe(true);
+      expect(result.type).toBe(native ? 'redirect' : 'json');
+      if (result.type === 'json')
+        expect(
+          (result.data as {cart: ReturnType<typeof createCart>}).cart
+            .totalQuantity,
+        ).toBe(1);
+    },
+  );
+  it.each(['https://evil.example/', 'https://store.example/swag?Size=Large'])(
+    'constrains native redirects to the storefront origin: %s',
+    async (referer) => {
+      const {result} = await mutate(
+        'intent=add&merchandiseId=gid%3A%2F%2Fshopify%2FProductVariant%2F101&quantity=1',
+        createCart(),
+        {native: true, referer},
       );
-      const response = await cartAction(
-        args as unknown as Parameters<typeof cartAction>[0],
-      );
-      expect(new Headers(response.init?.headers).get('Location')).toBeNull();
-      expect(response.init?.status).toBe(200);
+      expect(result).toMatchObject({
+        type: 'redirect',
+        location: referer.includes('evil') ? '/' : '/swag?Size=Large',
+      });
     },
   );
   it.each([
-    CartForm.ACTIONS.DiscountCodesUpdate,
-    CartForm.ACTIONS.GiftCardCodesAdd,
-    CartForm.ACTIONS.GiftCardCodesRemove,
-    CartForm.ACTIONS.BuyerIdentityUpdate,
-  ])('rejects unused action %s without changing the cart', async (action) => {
-    const {args, context} = createArgs('/cart', {action, inputs: {}});
-    const response = await cartAction(
-      args as unknown as Parameters<typeof cartAction>[0],
-    );
-    expect(response.init?.status).toBe(400);
-    expect(response.data.errors).toEqual([{message: 'Unknown cart action.'}]);
-    expect(context.cart.setCartId).not.toHaveBeenCalled();
-    expect(context.cart.addLines).not.toHaveBeenCalled();
-    expect(context.cart.updateLines).not.toHaveBeenCalled();
-    expect(context.cart.removeLines).not.toHaveBeenCalled();
-  });
-  it('returns a useful failure when the cart API is unreachable', async () => {
-    const {args, context} = createArgs('/cart', {
-      action: CartForm.ACTIONS.LinesAdd,
-      inputs: {
+    {note: 'unused'},
+    {discountCodes: ['SAVE']},
+    {attributes: []},
+    {intent: 'unknown'},
+  ])(
+    'rejects unsupported UI mutations without querying Shopify: %j',
+    async (body) => {
+      const {result, query} = await mutate(body);
+      expect(result).toMatchObject({type: 'error', status: 400});
+      expect(query).not.toHaveBeenCalled();
+    },
+  );
+  it('returns a recoverable upstream failure without private details', async () => {
+    const {result} = await mutate(
+      {
         lines: [
           {merchandiseId: 'gid://shopify/ProductVariant/101', quantity: 1},
         ],
       },
+      createCart(),
+      {fail: true},
+    );
+    expect(result).toMatchObject({
+      type: 'error',
+      status: 502,
+      error: {message: expect.stringMatching(/try again/i)},
     });
-    context.cart.addLines.mockRejectedValue(
-      new Error('private upstream detail'),
-    );
-    const response = await cartAction(
-      args as unknown as Parameters<typeof cartAction>[0],
-    );
-    expect(response.init?.status).toBe(502);
-    expect(response.data.errors?.[0].message).toMatch(/try again/i);
-    expect(JSON.stringify(response.data)).not.toContain(
-      'private upstream detail',
-    );
+    expect(JSON.stringify(result)).not.toContain('private upstream detail');
   });
 });
 
@@ -168,8 +209,7 @@ describe('predictive search loader', () => {
     const result = await searchLoader(
       args as unknown as Parameters<typeof searchLoader>[0],
     );
-    expect(result.term).toBe('');
-    expect(result.result.total).toBe(0);
+    expect(result.data).toMatchObject({term: '', total: 0});
     expect(context.storefront.query).not.toHaveBeenCalled();
   });
   it.each(['-1', '0', '1.5', '9999', 'NaN'])(
@@ -194,7 +234,7 @@ describe('predictive search loader', () => {
       args as unknown as Parameters<typeof searchLoader>[0],
     );
     expect(response).toHaveProperty(
-      'error',
+      'data.error.message',
       expect.stringMatching(/try again/i),
     );
   });
@@ -253,6 +293,7 @@ describe('catalog pagination and product loading', () => {
     const {args, context} = createArgs('/swag?cursor=cursor-12&direction=next');
     await swagLoader(args as unknown as Parameters<typeof swagLoader>[0]);
     expect(context.storefront.query).toHaveBeenCalledWith(expect.any(String), {
+      cache: publicDataCache,
       variables: {handle: 'swag', first: 12, endCursor: 'cursor-12'},
     });
   });
@@ -307,6 +348,7 @@ describe('catalog pagination and product loading', () => {
       expect(context.storefront.query).toHaveBeenCalledWith(
         expect.any(String),
         {
+          cache: publicDataCache,
           variables: {
             handle: 'drumkits',
             last: count,
@@ -323,11 +365,10 @@ describe('catalog pagination and product loading', () => {
     await loadProductDetail({
       handle: 'fixture-tee',
       request: args.request,
-      storefront: context.storefront as unknown as Parameters<
-        typeof loadProductDetail
-      >[0]['storefront'],
+      storefront: args.context.get(storefrontClientContext),
     });
     expect(context.storefront.query).toHaveBeenCalledWith(expect.any(String), {
+      cache: publicDataCache,
       variables: {
         handle: 'fixture-tee',
         selectedOptions: [{name: 'Size', value: 'Large'}],
@@ -341,9 +382,7 @@ describe('catalog pagination and product loading', () => {
       loadProductDetail({
         handle: 'missing',
         request: args.request,
-        storefront: context.storefront as unknown as Parameters<
-          typeof loadProductDetail
-        >[0]['storefront'],
+        storefront: args.context.get(storefrontClientContext),
       }),
     ).rejects.toMatchObject({status: 404});
   });

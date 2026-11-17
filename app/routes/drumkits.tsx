@@ -8,9 +8,12 @@ import {
   EMPTY_PRODUCT_CONNECTION,
   DRUMKITS_PER_PAGE,
   MOBILE_DRUMKITS_PER_PAGE,
+  getPaginationVariables,
 } from '~/components/product-listing/productListingUtils';
 import {PRODUCT_ITEM_FRAGMENT} from '~/lib/fragments';
-import {Analytics, getPaginationVariables} from '@shopify/hydrogen';
+import {gql} from '@shopify/hydrogen';
+import {storefrontClientContext, publicDataCache} from '~/lib/context';
+import {AnalyticsView} from '~/components/analytics/AnalyticsView';
 import {isProductDetailPath} from '~/lib/variants';
 
 const DRUMKITS_HANDLE = 'drumkits';
@@ -36,13 +39,19 @@ export async function loader({context, request}: Route.LoaderArgs) {
     String(MOBILE_DRUMKITS_PER_PAGE)
       ? MOBILE_DRUMKITS_PER_PAGE
       : DRUMKITS_PER_PAGE;
-  const {collection} = await context.storefront.query(DRUMKITS_QUERY, {
-    variables: {
-      handle: DRUMKITS_HANDLE,
-      ...getPaginationVariables(request, {pageBy}),
-    },
-  });
+  const {data, errors} = await context
+    .get(storefrontClientContext)
+    .graphql(DRUMKITS_QUERY, {
+      cache: publicDataCache,
+      variables: {
+        handle: DRUMKITS_HANDLE,
+        ...getPaginationVariables(request, {pageBy}),
+      },
+    });
 
+  if (errors?.length)
+    throw new Response('Collection is unavailable', {status: 502});
+  const collection = data?.collection;
   return {
     collectionAnalytics: collection
       ? {id: collection.id, handle: collection.handle}
@@ -58,7 +67,7 @@ export async function loader({context, request}: Route.LoaderArgs) {
 }
 
 export default function Drumkits() {
-  useDrumkitPageSize();
+  const isPageSizeReady = useDrumkitPageSize();
   const {collection, collectionAnalytics} = useLoaderData<typeof loader>();
   const {pathname} = useLocation();
   const products = collection.products;
@@ -94,15 +103,20 @@ export default function Drumkits() {
       </ProductListingShell>
 
       <Outlet />
-      {collectionAnalytics && !isProductDetailPath(pathname) ? (
-        <Analytics.CollectionView data={{collection: collectionAnalytics}} />
+      {collectionAnalytics &&
+      isPageSizeReady &&
+      !isProductDetailPath(pathname) ? (
+        <AnalyticsView
+          event="collection_viewed"
+          data={{collection: collectionAnalytics}}
+        />
       ) : null}
     </>
   );
 }
 
-const DRUMKITS_QUERY = `#graphql
-  ${PRODUCT_ITEM_FRAGMENT}
+const DRUMKITS_QUERY = gql(
+  `#graphql
   query Drumkits(
     $handle: String!
     $country: CountryCode
@@ -135,4 +149,6 @@ const DRUMKITS_QUERY = `#graphql
       }
     }
   }
-` as const;
+`,
+  [PRODUCT_ITEM_FRAGMENT],
+);

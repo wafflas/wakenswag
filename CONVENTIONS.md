@@ -2,11 +2,11 @@
 
 ## Stack and structure
 
-Use the versions in `package.json` and `package-lock.json`: React 18, React Router 7 framework mode, Hydrogen 2026.4, TypeScript, Tailwind 4 and npm. This is not a Next.js app. Hydrogen's peer dependencies constrain compatible router releases; upgrade them together.
+Use the versions in `package.json` and `package-lock.json`: React 19, React Router 7 framework mode, Hydrogen 2026.10, TypeScript, Tailwind 4 and npm. This is not a Next.js app. Pin all React Router packages to the same supported release; check Hydrogen's packaged migration/feature skills before upgrades.
 
 - `app/routes/`: HTTP loaders/actions, route metadata and page composition. Keep React Router filenames such as `swag.$handle.tsx` and `[robots.txt].tsx`.
 - `app/components/<feature>/`: cohesive components plus one camelCase feature utility file for stateless helpers, such as `product-detail/productDetailUtils.ts` or `cart/cartUtils.ts`. Existing feature folders use kebab-case (`product-detail`) or simple domain names (`cart`).
-- `app/lib/`: shared domain/server utilities, e.g. `productDetail.ts`, `money.ts`, `session.ts`.
+- `app/lib/`: shared domain/server utilities, e.g. `productDetail.ts`, `money.ts`, `context.ts`.
 - `app/styles/`: global defaults, Tailwind tokens/utilities, PS2 effects. Keep animation styles together.
 - `tests/`: matching component/library/route tests, shared fixtures, isolated E2E worker. Production files never import this directory.
 
@@ -44,7 +44,7 @@ These utilities contain the actual implementations, not barrel re-exports. Inter
 
 Hooks keep their `useSomething.ts` names. Context and callbacks that depend on component state, refs or effect cleanup stay with their owner. In particular, modal lifecycle and audio playback handlers stay in their existing hook/effect. `layout/` and `content/` need no empty utility file because they have no independent helpers to collect. Small styling constants used only by one component can stay there.
 
-The controller footer has two stages: `AppControllerFooter` keeps its outer footer mounted while `Suspense`/`Await` resolve the cart; `ControllerFooter` handles the three concrete Back, Search and Cart actions using the router, overlay context and Hydrogen's optimistic cart. Keep this direct flow rather than passing action-building callbacks through cart wrappers. The stable `data-modal-controls` element lets dialog focus handling find replacement buttons after cart loading. `ControllerActionCount` owns its count animation, and `ControllerSymbol` owns the shared icons.
+The controller footer has two stages: `AppControllerFooter` reads the shared Hydrogen cart store without suspending its outer footer; `ControllerFooter` handles the three concrete Back, Search and Cart actions using the router, overlay context and that cart snapshot. Keep this direct flow rather than passing action-building callbacks through cart wrappers. The stable `data-modal-controls` element lets dialog focus handling find replacement buttons after cart loading. `ControllerActionCount` owns its count animation, and `ControllerSymbol` owns the shared icons.
 
 ## Names and types
 
@@ -60,9 +60,9 @@ The controller footer has two stages: `AppControllerFooter` keeps its outer foot
 | Tests               | source/domain name plus `.test.ts(x)`     | `ProductDetail.test.tsx`, `money.test.ts` |
 | CSS classes         | existing Tailwind or `ps2-...` kebab-case | `ps2-main-menu-link`                      |
 
-Use generated Shopify query/fragment types from `storefrontapi.generated.d.ts`; use `import type` for imports that exist only at compile time. Prefer inference for obvious local values. `Pick`/`Partial` are useful for a genuine subset of an existing type; do not create a generic framework around them. No explicit `any`; unused TypeScript variables are lint errors. Prefix intentionally unused function arguments with `_`.
+Derive Shopify query types from versioned `gql()` documents with `StorefrontApi.ResultOf` and cart/search types from the server handler factories; use `import type` for imports that exist only at compile time. Prefer inference for obvious local values. `Pick`/`Partial` are useful for a genuine subset of an existing type; do not create a generic framework around them. No explicit `any`; unused TypeScript variables are lint errors. Prefix intentionally unused function arguments with `_`.
 
-After changing a GraphQL selection, run `npm run codegen`; never manually edit generated declarations. Keep fixtures checked against those same types. An `as unknown as ...` assertion is allowed at the test boundary where a deliberately partial mocked context stands in for the full Hydrogen context; do not use it to bypass application type errors.
+After changing a GraphQL selection, run `npm run codegen` (SDK GraphQL validation plus route types); keep generated query environments ignored. Keep fixtures checked against those same types. An `as unknown as ...` assertion is allowed at the test boundary where a deliberately partial mocked context stands in for the full Hydrogen context; do not use it to bypass application type errors.
 
 ## React and browser behavior
 
@@ -90,11 +90,13 @@ Use stable product/line IDs for list keys. Keep semantic links for navigation an
 
 ## Hydrogen and routing
 
-Fetch catalog/product data in loaders and mutate carts in actions. Continue using `CartForm`, `useOptimisticCart`, `useOptimisticVariant`, `getProductOptions` and `getSelectedProductOptions` from the installed Hydrogen package. Keep the request context, session/cart cookies, streamed promises, analytics/consent provider and CSP nonce handling.
+Fetch catalog/product data through `storefrontClient.graphql()` in loaders. `server.ts` builds a request-scoped client and typed React Router context; root middleware delegates `/api/cart` and `/api/predictive-search` to Hydrogen handlers. Bind UI once with `createCartComponents` / `createProductComponents` from `@shopify/hydrogen/react`. Use their providers, selectors and registered forms; keep the server drumkit rule in `cartHandlers.server.ts`. Avoid classic Hydrogen exports.
 
-Use `getPaginationVariables(request, {pageBy: PRODUCTS_PER_PAGE})` in catalog loaders. ProductListingPagination emits ordinary React Router links with matching `cursor` and `direction` parameters. This supports page flips and browser history without Hydrogen Pagination's accumulating-node behavior. Never download the entire catalog for pagination.
+The new client has no implicit query cache. Apply `publicDataCache` to public catalog/policy/shop/sitemap queries; leave carts uncached and their responses private. Preserve streamed cart initial data, the custom consent gate, per-document CSP nonce and ShopifyScripts. Analytics use the new global bus; cart deltas use `useCartAnalytics()` once inside CartProvider. Predictive suggestions use their own provider and do not publish full search-page view events.
 
-Cart forms submit to the `/cart` action without changing the current page; checkout URLs come from Shopify cart responses. Do not invent product availability, cart totals or currency conversions on the client. `formatMoney` only formats Shopify amounts. Keep EUR's existing `EURO` label; display other currencies accurately.
+Use the local `getPaginationVariables(request, {pageBy: PRODUCTS_PER_PAGE})` in catalog loaders. ProductListingPagination emits ordinary React Router links with matching `cursor` and `direction` parameters. This supports page flips and browser history without accumulating earlier pages. Never download the entire catalog for pagination.
+
+Cart forms submit to the `/api/cart` handler without changing the current page; checkout URLs come from Shopify cart responses. Do not invent product availability, cart totals or currency conversions on the client. `formatMoney` only formats Shopify amounts. Keep EUR's existing `EURO` label; display other currencies accurately.
 
 Handle nullable API data, GraphQL errors and mutation `errors` separately from successful HTTP transport. Preserve the custom `/swag/:handle` routes in canonical links, cards, search, cart and sitemaps. The Shopify collection handle is `swag`; removed `/merch` routes return 404 without a local redirect. Info sections read published Shopify policies and sanitize their HTML before rendering; Instagram and website credits are external links in Info. Unimplemented account/filter features are intentional, not invitations to add unrelated features.
 

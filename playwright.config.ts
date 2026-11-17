@@ -23,7 +23,7 @@ export default defineConfig({
   webServer: {
     command: 'npm run test:e2e:serve',
     url: 'http://localhost:4173',
-    reuseExistingServer: false,
+    reuseExistingServer: process.env.WAKENSWAG_E2E_REUSE_SERVER === '1',
     timeout: 120_000,
   },
 });

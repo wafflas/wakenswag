@@ -1,6 +1,9 @@
 import {expect, test, type Page} from '@playwright/test';
 import {AxeBuilder} from '@axe-core/playwright';
-import {installShopifyBrowserFixtures} from './fixtures';
+import {
+  installShopifyBrowserFixtures,
+  installShopifyRuntimeFixtures,
+} from './fixtures';
 
 async function openPage(page: Page, path: string) {
   await page.goto(path);
@@ -26,6 +29,7 @@ test.beforeEach(async ({page}) => {
     }
     await route.abort();
   });
+  await installShopifyRuntimeFixtures(page);
 });
 
 test('homepage navigation and important routes work', async ({page}) => {
@@ -55,15 +59,28 @@ test('cart URL redirects home and cart still opens in a modal', async ({
     expect(response.headers()['location']).toBe('/');
   }
 
-  for (const path of ['/api/cart', '/cart/101:2', '/discount/SAVE']) {
+  for (const path of ['/cart/101:2', '/discount/SAVE']) {
     const response = await page.request.get(path, {maxRedirects: 0});
     expect(response.status()).toBe(404);
     expect(response.headers()['location']).toBeUndefined();
   }
 
+  const cartApi = await page.request.get('/api/cart');
+  expect(cartApi.status()).toBe(200);
+  expect(await cartApi.json()).toEqual({cart: null});
+
   await openPage(page, '/cart');
   await expect(page).toHaveURL((url) => url.pathname === '/');
   await page.getByRole('button', {name: /Cart/}).click();
+  await expect(page.getByRole('dialog', {name: 'Shopping cart'})).toBeVisible();
+  await expect(page).toHaveURL((url) => url.pathname === '/');
+
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog', {name: 'Shopping cart'})).toHaveCount(
+    0,
+  );
+  await page.waitForFunction(() => Boolean(window.Shopify?.actions?.openCart));
+  await page.evaluate(() => window.Shopify?.actions.openCart());
   await expect(page.getByRole('dialog', {name: 'Shopping cart'})).toBeVisible();
   await expect(page).toHaveURL((url) => url.pathname === '/');
 });
@@ -670,7 +687,7 @@ test('each drumkit stays at one copy after repeat adds and direct quantity updat
   ).toHaveCount(0);
   await page.keyboard.press('Escape');
   await expect(product.getByRole('button', {name: 'In cart'})).toBeDisabled();
-  for (const [action, inputs] of [
+  for (const [, inputs] of [
     [
       'LinesAdd',
       {
@@ -684,9 +701,7 @@ test('each drumkit stays at one copy after repeat adds and direct quantity updat
       {lines: [{id: 'gid://shopify/CartLine/fixture', quantity: 9}]},
     ],
   ] as const) {
-    const response = await page.request.post('/cart.data', {
-      form: {cartFormInput: JSON.stringify({action, inputs})},
-    });
+    const response = await page.request.post('/api/cart', {data: inputs});
     expect(response.status()).toBe(200);
     await page.reload();
     await expect(product.getByRole('button', {name: 'In cart'})).toBeDisabled();
@@ -1332,7 +1347,7 @@ test('search outages have a retry action and sold-out/missing variants stay safe
   await expect(page.getByRole('alert')).toContainText('Search is unavailable');
   const retry = page.waitForRequest(
     (request) =>
-      request.url().includes('/search.data') &&
+      request.url().includes('/api/predictive-search') &&
       request.url().includes('q=outage'),
   );
   await page.getByRole('button', {name: 'Try again'}).click();
@@ -1490,7 +1505,7 @@ test('failed add-to-cart rolls back the optimistic state and permits a retry', a
   page,
 }) => {
   await openPage(page, '/swag/fixture-tee');
-  const cartRoute = /\/cart(?:\.data)?(?:\?|$)/;
+  const cartRoute = /\/api\/cart(?:\?|$)/;
   await page.route(cartRoute, (route) =>
     route.continue({
       headers: {...route.request().headers(), 'x-fixture-cart-error': 'true'},
@@ -1509,6 +1524,46 @@ test('failed add-to-cart rolls back the optimistic state and permits a retry', a
   await expect(page.getByText('Your cart is empty.')).toBeVisible();
 });
 
+test('initial cart read failures show recovery without losing the saved cart', async ({
+  page,
+}) => {
+  await openPage(page, '/swag/fixture-tee');
+  await page.getByRole('button', {name: 'Add to cart', exact: true}).click();
+  await expect(
+    page.getByRole('button', {name: 'Add to cart', exact: true}),
+  ).toBeEnabled();
+  const documentRoute = /\/swag\/fixture-tee(?:\?.*)?$/;
+  for (const mode of ['transport', 'graphql']) {
+    await page.route(documentRoute, (route) =>
+      route.continue({
+        headers: {
+          ...route.request().headers(),
+          'x-fixture-cart-read-error': mode,
+        },
+      }),
+    );
+    await page.reload();
+    await page.getByRole('button', {name: 'Cart (0)', exact: true}).click();
+    const cart = page.getByRole('dialog', {name: 'Shopping cart'});
+    await expect(cart.getByRole('alert')).toContainText(
+      'Could not load your cart',
+    );
+    await expect(cart.getByText('Your cart is empty.')).toBeHidden();
+    await page.unroute(documentRoute);
+    await cart.getByRole('link', {name: 'Reload page'}).click();
+    await page.getByRole('button', {name: 'Cart (1)', exact: true}).click();
+    await expect(
+      page
+        .getByRole('dialog', {name: 'Shopping cart'})
+        .getByText('Fixture Tee', {exact: true}),
+    ).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog', {name: 'Shopping cart'})).toHaveCount(
+      0,
+    );
+  }
+});
+
 test('a delayed old search response cannot replace a newer query', async ({
   page,
 }) => {
@@ -1522,7 +1577,7 @@ test('a delayed old search response cannot replace a newer query', async ({
   const continued = new Promise<void>((resolve) => {
     completed = resolve;
   });
-  await page.route(/\/search\.data\?.*q=old/, async (route) => {
+  await page.route(/\/api\/predictive-search\?.*q=old/, async (route) => {
     await gate;
     // React Router can abort this fetch when the newer query starts.
     await route.continue().catch(() => undefined);
@@ -1835,27 +1890,29 @@ test('reflow preserves cart controls and the complete checkout link', async ({
   ]) {
     await control.focus();
     await expect(control).toBeFocused();
-    expect(
-      await control.evaluate((element) => {
-        const box = element.getBoundingClientRect();
-        const footer = element
-          .closest('[role="dialog"]')!
-          .querySelector('[data-modal-controls]')!
-          .getBoundingClientRect();
-        return (
-          box.top >= -1 &&
-          box.bottom <= footer.top + 1 &&
-          box.left >= -1 &&
-          box.right <= innerWidth + 1 &&
-          element.contains(
-            document.elementFromPoint(
-              box.x + box.width / 2,
-              box.y + box.height / 2,
-            ),
-          )
-        );
-      }),
-    ).toBe(true);
+    await expect
+      .poll(() =>
+        control.evaluate((element) => {
+          const box = element.getBoundingClientRect();
+          const footer = element
+            .closest('[role="dialog"]')!
+            .querySelector('[data-modal-controls]')!
+            .getBoundingClientRect();
+          return (
+            box.top >= -1 &&
+            box.bottom <= footer.top + 1 &&
+            box.left >= -1 &&
+            box.right <= innerWidth + 1 &&
+            element.contains(
+              document.elementFromPoint(
+                box.x + box.width / 2,
+                box.y + box.height / 2,
+              ),
+            )
+          );
+        }),
+      )
+      .toBe(true);
   }
   await page.screenshot({
     path: test.info().outputPath('cart-reflow.png'),

@@ -1,18 +1,12 @@
 import {Suspense} from 'react';
-import {Await} from 'react-router';
-import type {CartApiQueryFragment} from 'storefrontapi.generated';
+import {Await, useRouteLoaderData} from 'react-router';
+import type {RootLoader} from '~/root';
 import {useAside} from '~/components/layout/Aside';
 import {CartMain} from './CartMain';
 import {StorefrontDialog} from '~/components/layout/StorefrontDialog';
 
-interface CartModalProps {
-  cart: Promise<CartApiQueryFragment | null>;
-}
-
-/**
- * Displays the existing Shopify cart inside a full-screen dialog.
- */
-export function CartModal({cart}: CartModalProps) {
+export function CartModal() {
+  const root = useRouteLoaderData<RootLoader>('root');
   const {close, isExiting, type, openerRef} = useAside();
   const isOpen = type === 'cart';
 
@@ -38,17 +32,12 @@ export function CartModal({cart}: CartModalProps) {
         }
       >
         <Await
-          resolve={cart}
-          errorElement={
-            <p
-              role="alert"
-              className="grid h-dvh place-items-center text-xl text-ps2-gray"
-            >
-              Could not load your cart. Close it and try again.
-            </p>
-          }
+          resolve={root?.cart}
+          errorElement={<CartMain initialLoadFailed />}
         >
-          {(resolvedCart) => <CartMain cart={resolvedCart} />}
+          {(result) => (
+            <CartMain initialLoadFailed={Boolean(result?.errors?.length)} />
+          )}
         </Await>
       </Suspense>
     </StorefrontDialog>

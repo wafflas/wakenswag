@@ -1,4 +1,21 @@
-import {Analytics, getShopAnalytics, useNonce} from '@shopify/hydrogen';
+import {
+  gql,
+  handleShopifyRoutes,
+  handleShopifyRedirects,
+} from '@shopify/hydrogen';
+import {ShopifyScripts} from '@shopify/hydrogen/react';
+import {useNonce} from '~/lib/nonce';
+import {CartProvider} from '~/lib/cart';
+import {cartHandlers} from '~/lib/cartHandlers.server';
+import {predictiveSearchHandlers} from '~/lib/predictiveSearch.server';
+import {
+  envContext,
+  storefrontClientContext,
+  routeTemplates,
+  publicDataCache,
+} from '~/lib/context';
+import {setupConsent} from '~/lib/consent';
+import {StorefrontAnalytics} from '~/components/analytics/StorefrontAnalytics';
 import {
   Outlet,
   useRouteError,
@@ -9,6 +26,7 @@ import {
   Scripts,
   ScrollRestoration,
   useRouteLoaderData,
+  useNavigate,
 } from 'react-router';
 import type {Route} from './+types/root';
 import androidChrome192 from '~/assets/favicons/android-chrome-192x192.png?url';
@@ -91,21 +109,61 @@ export function links() {
   ];
 }
 
-export function loader({context, request}: Route.LoaderArgs) {
-  const {storefront, cart, env} = context;
+export const middleware: Route.MiddlewareFunction[] = [
+  async ({context, request}, next) => {
+    const storefrontClient = context.get(storefrontClientContext);
+    const requestContext = storefrontClient.requestContext;
+    const pathname = new URL(request.url).pathname;
+    const isRemovedCommerceRoute = /^\/(?:cart\/.+|discount\/)/.test(pathname);
+    const matched = isRemovedCommerceRoute
+      ? null
+      : handleShopifyRoutes({
+          request,
+          requestContext,
+          storefrontClient,
+          routeTemplates,
+          handlers: [cartHandlers, predictiveSearchHandlers],
+        });
+    if (matched) return await matched;
+    const response = await next();
+    if (response.status === 404 && !isRemovedCommerceRoute) {
+      const redirect = await handleShopifyRedirects({
+        request,
+        storefrontClient,
+        routeTemplates,
+      });
+      if (redirect) return redirect;
+    }
+    requestContext.applyResponseHeaders(response.headers);
+    return response;
+  },
+];
+
+const SHOP_QUERY = gql(
+  `query ShopData { shop {id} localization {country {currency {isoCode}}} }`,
+);
+export async function loader({context, request}: Route.LoaderArgs) {
+  const storefront = context.get(storefrontClientContext);
+  const env = context.get(envContext);
+  const cart = cartHandlers
+    .get({request, storefrontClient: storefront})
+    .then((result) => result.data);
+  const {data, errors} = await storefront.graphql(SHOP_QUERY, {
+    cache: publicDataCache,
+  });
+  if (errors?.length || !data?.shop.id)
+    throw new Response('Store is unavailable', {status: 502});
   return {
     socialImageUrl: new URL(openGraphImage, request.url).href,
-    cart: cart.get(),
-    shop: getShopAnalytics({
-      storefront,
-      publicStorefrontId: env.PUBLIC_STOREFRONT_ID,
-    }),
-    consent: {
-      checkoutDomain: env.PUBLIC_CHECKOUT_DOMAIN || env.PUBLIC_STORE_DOMAIN,
-      storefrontAccessToken: env.PUBLIC_STOREFRONT_API_TOKEN,
-      withPrivacyBanner: false,
-      country: storefront.i18n.country,
-      language: storefront.i18n.language,
+    cart,
+    shop: {
+      shopId: data.shop.id,
+      storefrontId: env.PUBLIC_STOREFRONT_ID ?? '',
+      myshopifyDomain: env.PUBLIC_STORE_DOMAIN,
+    },
+    i18n: {
+      ...storefront.locale,
+      currency: data.localization.country.currency.isoCode,
     },
   };
 }
@@ -113,6 +171,7 @@ export function loader({context, request}: Route.LoaderArgs) {
 export function Layout({children}: {children?: React.ReactNode}) {
   useRouteFocus();
   const nonce = useNonce();
+  const navigate = useNavigate();
   const data = useRouteLoaderData<RootLoader>('root');
 
   return (
@@ -137,6 +196,22 @@ export function Layout({children}: {children?: React.ReactNode}) {
           </>
         ) : null}
         <Links />
+        {data ? (
+          <ShopifyScripts
+            shop={data.shop}
+            i18n={data.i18n}
+            nonce={nonce}
+            routes={routeTemplates}
+            navigate={(url) => {
+              void navigate(url);
+            }}
+            consent={{mode: 'custom-banner', setup: setupConsent}}
+            analytics={{
+              channel: data.shop.storefrontId ? 'hydrogen' : 'headless',
+            }}
+            shopifyAnalytics={Boolean(data.shop.storefrontId)}
+          />
+        ) : null}
       </head>
       <body>
         {children}
@@ -156,28 +231,27 @@ export default function App() {
   }
 
   return (
-    <Analytics.Provider
-      cart={data.cart}
-      shop={data.shop}
-      consent={data.consent}
-    >
+    <CartProvider initialData={data.cart}>
+      <StorefrontAnalytics />
       <ButtonSound />
-      <PageLayout
-        cart={data.cart}
-        consent={{...data.consent, locale: data.consent.language}}
-      >
+      <PageLayout>
         <Outlet />
       </PageLayout>
-    </Analytics.Provider>
+    </CartProvider>
   );
 }
 
 export function ErrorBoundary() {
   const error = useRouteError();
+  const root = useRouteLoaderData<RootLoader>('root');
   const errorStatus = isRouteErrorResponse(error) ? error.status : 500;
 
   if (errorStatus === 404) {
-    return <NotFoundPage />;
+    return (
+      <CartProvider initialData={root?.cart ?? {cart: null}}>
+        <NotFoundPage />
+      </CartProvider>
+    );
   }
 
   return (

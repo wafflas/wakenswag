@@ -25,6 +25,9 @@ export default [
   {
     ignores: [
       '**/node_modules/',
+      '**/.agents/',
+      '**/.claude/',
+      'tests/fixtures/shopify/*.js',
       '**/build/',
       '**/dist/',
       '**/*.graphql.d.ts',

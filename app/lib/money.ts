@@ -1,10 +1,7 @@
-import type {MoneyV2} from '@shopify/hydrogen/storefront-api-types';
+type DisplayMoney = {amount: string; currencyCode: string};
 
 /** Display Shopify amounts; calculations and totals remain on Shopify. */
-export function formatMoneyAmount({
-  amount,
-  currencyCode,
-}: Pick<MoneyV2, 'amount' | 'currencyCode'>) {
+export function formatMoneyAmount({amount, currencyCode}: DisplayMoney) {
   return new Intl.NumberFormat('en', {
     style: 'currency',
     currency: currencyCode,
@@ -16,6 +13,6 @@ export function formatMoneyAmount({
     .join('');
 }
 
-export function formatMoney(money: Pick<MoneyV2, 'amount' | 'currencyCode'>) {
+export function formatMoney(money: DisplayMoney) {
   return `${formatMoneyAmount(money)} ${money.currencyCode === 'EUR' ? 'EURO' : money.currencyCode}`;
 }

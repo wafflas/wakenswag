@@ -1,7 +1,9 @@
+import {useProductForm} from '~/lib/product';
+import {AnalyticsView} from '~/components/analytics/AnalyticsView';
 import {useMemo} from 'react';
-import {Image, getProductOptions} from '@shopify/hydrogen';
+import {StorefrontImage} from '~/components/shared/StorefrontImage';
 import {Link, useLocation} from 'react-router';
-import type {ProductFragment} from 'storefrontapi.generated';
+import type {ProductFragment} from '~/lib/productDetail';
 import {GenieTransition} from '~/components/animations/GenieTransition';
 import {ProductPurchaseControls} from './ProductPurchaseControls';
 import {
@@ -11,22 +13,21 @@ import {
 import {formatMoney} from '~/lib/money';
 import {
   getProductListingPath,
-  getProductPath,
+  getVariantUrl,
   isDefaultTitleOption,
 } from '~/lib/variants';
 
 interface ProductDetailProps {
   isClosing?: boolean;
   product: ProductFragment;
-  selectedVariant: ProductFragment['selectedOrFirstAvailableVariant'];
 }
 
 export function ProductDetail({
   isClosing = false,
   product,
-  selectedVariant,
 }: ProductDetailProps) {
-  const {pathname} = useLocation();
+  const {pathname, search} = useLocation();
+  const {options, selectedVariant, register} = useProductForm();
   const isDrumkit = getProductListingPath(pathname) === '/drumkits';
   const allowQuantitySelection = !isDrumkit;
   const price = selectedVariant?.price;
@@ -41,11 +42,8 @@ export function ProductDetail({
     selectedVariant,
     isDrumkit ? 'black' : undefined,
   );
-  const productOptions = getProductOptions({
-    ...product,
-    selectedOrFirstAvailableVariant: selectedVariant,
-  }).filter((option) =>
-    option.optionValues.some(
+  const productOptions = options.filter((option) =>
+    option.values.some(
       (value) => !isDefaultTitleOption({name: option.name, value: value.name}),
     ),
   );
@@ -76,6 +74,25 @@ export function ProductDetail({
       ].join(' ')}
       data-product-theme={theme.key}
     >
+      <AnalyticsView
+        event="product_viewed"
+        data={{
+          products: [
+            {
+              id: product.id,
+              title: product.title,
+              vendor: product.vendor,
+              price: selectedVariant?.price ?? {
+                amount: '0',
+                currencyCode: 'EUR',
+              },
+              variantId: selectedVariant?.id ?? '',
+              variantTitle: selectedVariant?.title ?? '',
+              quantity: 1,
+            },
+          ],
+        }}
+      />
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 z-0 opacity-90"
@@ -97,7 +114,7 @@ export function ProductDetail({
           isExiting={isClosing}
         >
           {selectedVariant?.image ? (
-            <Image
+            <StorefrontImage
               alt={
                 selectedVariant.image.altText ??
                 `${product.title} product image`
@@ -106,7 +123,6 @@ export function ProductDetail({
               data={selectedVariant.image}
               key={selectedVariant.image.id}
               loading="eager"
-              sizes="(min-width: 1024px) 288px, 208px"
             />
           ) : (
             <div aria-hidden="true" className="size-52 lg:size-72" />
@@ -167,11 +183,35 @@ export function ProductDetail({
             >
               <legend className="text-center">{option.name}</legend>
               <div className="flex flex-wrap justify-center gap-4">
-                {option.optionValues.map((value) =>
+                {option.values.map((value) =>
                   value.exists ? (
                     <Link
                       key={value.name}
-                      to={`${getProductPath(value.handle, pathname)}?${value.variantUriQuery}`}
+                      to={getVariantUrl({
+                        handle: value.handle ?? product.handle,
+                        pathname,
+                        searchParams: new URLSearchParams(search),
+                        selectedOptions: value.selectedOptions,
+                      })}
+                      onClick={(event) => {
+                        if (
+                          event.defaultPrevented ||
+                          event.button !== 0 ||
+                          event.metaKey ||
+                          event.ctrlKey ||
+                          event.shiftKey ||
+                          event.altKey ||
+                          (event.currentTarget.target &&
+                            event.currentTarget.target !== '_self') ||
+                          (value.handle && value.handle !== product.handle)
+                        )
+                          return;
+                        event.preventDefault();
+                        register('optionValue', {
+                          optionName: option.name,
+                          value: value.name,
+                        }).onClick();
+                      }}
                       aria-current={value.selected ? 'true' : undefined}
                       className={
                         value.selected

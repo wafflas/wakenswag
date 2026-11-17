@@ -6,6 +6,22 @@ beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
 
 describe('overlay exit lifecycle', () => {
+  it('routes the permanent Shopify openCart action to the current provider', async () => {
+    const first = renderHook(useAside, {wrapper: AsideProvider});
+    await act(async () => {
+      await window.Shopify?.actions.openCart();
+    });
+    expect(first.result.current.type).toBe('cart');
+    first.unmount();
+
+    const second = renderHook(useAside, {wrapper: AsideProvider});
+    expect(second.result.current.type).toBe('closed');
+    await act(async () => {
+      await window.Shopify?.actions.openCart();
+    });
+    expect(second.result.current.type).toBe('cart');
+  });
+
   it('keeps the overlay active for its fade and ignores repeated close requests', () => {
     const {result} = renderHook(useAside, {wrapper: AsideProvider});
     act(() => result.current.open('search'));

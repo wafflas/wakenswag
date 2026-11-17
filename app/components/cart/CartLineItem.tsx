@@ -1,17 +1,11 @@
 import {CartLineQuantity} from './CartLineQuantity';
 import type {CartLine, LineItemChildrenMap} from './cartUtils';
-import {Image} from '@shopify/hydrogen';
+import {StorefrontImage} from '~/components/shared/StorefrontImage';
 import {useVariantUrl} from '~/lib/variants';
 import {Link} from 'react-router';
 import {useAside} from '~/components/layout/Aside';
 import {formatMoney} from '~/lib/money';
 
-/**
- * A single line item in the cart. It displays the product image, title, price.
- * It also provides controls to update the quantity or remove the line item.
- * If the line is a parent line that has child components (like warranties or gift wrapping), they are
- * rendered nested below the parent line.
- */
 export function CartLineItem({
   line,
   childrenMap,
@@ -25,8 +19,9 @@ export function CartLineItem({
   const {close} = useAside();
   const lineItemChildren = childrenMap[id];
   const childrenLabelId = `cart-line-children-${id}`;
-  // Newly added optimistic lines do not have Shopify's calculated costs yet.
-  const totalAmount = line.cost?.totalAmount;
+  const totalAmount = id.startsWith('optimistic:')
+    ? undefined
+    : line.cost?.totalAmount;
 
   return (
     <li
@@ -46,7 +41,7 @@ export function CartLineItem({
       >
         <div className="cart-line-item-media flex h-28 w-full items-center justify-center sm:h-36">
           {image ? (
-            <Image
+            <StorefrontImage
               alt={image.altText ?? title}
               className="cart-line-item-image h-28 w-auto max-w-full object-contain sm:h-36"
               data={image}

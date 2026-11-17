@@ -1,6 +1,8 @@
+import {readFileSync} from 'node:fs';
 import type {Page} from '@playwright/test';
 
 export async function installShopifyBrowserFixtures(page: Page) {
+  await installShopifyRuntimeFixtures(page);
   // Replace external Shopify browser services; keep the real Hydrogen hooks,
   // consent gating, event queue and payload generation running locally.
   await page.route(
@@ -22,13 +24,13 @@ export async function installShopifyBrowserFixtures(page: Page) {
             preferencesProcessingAllowed: allowed,
             saleOfDataAllowed: () => false,
             currentVisitorConsent: () => ({analytics: read() || '', marketing: read() || '', preferences: read() || '', sale_of_data: 'no'}),
-            setTrackingConsent(consent, callback) {
+            setTrackingConsent(consent) {
               document.cookie = 'fixture_consent=' + (consent.analytics ? 'yes' : 'no') + '; path=/; SameSite=Lax';
               document.dispatchEvent(new CustomEvent('visitorConsentCollected', {detail: {
                 analyticsAllowed: allowed(), marketingAllowed: allowed(), preferencesAllowed: allowed(),
                 saleOfDataAllowed: false, firstPartyMarketingAllowed: allowed(), thirdPartyMarketingAllowed: allowed()
               }}));
-              callback();
+              return Promise.resolve();
             }
           };
           document.dispatchEvent(new Event('consentTrackingApiLoaded'));
@@ -54,4 +56,23 @@ export async function installShopifyBrowserFixtures(page: Page) {
       headers: {'access-control-allow-origin': '*'},
     });
   });
+}
+
+export async function installShopifyRuntimeFixtures(page: Page) {
+  for (const [url, file] of [
+    ['standard-actions.js', 'standard-actions.js'],
+    ['standard-events.js', 'standard-events.js'],
+    ['analytics/shopify.js', 'shopify-analytics.js'],
+  ]) {
+    await page.route(`https://cdn.shopify.com/storefront/${url}`, (route) =>
+      route.fulfill({
+        contentType: 'application/javascript',
+        headers: {'access-control-allow-origin': '*'},
+        body: readFileSync(
+          new URL(`../fixtures/shopify/${file}`, import.meta.url),
+          'utf8',
+        ),
+      }),
+    );
+  }
 }

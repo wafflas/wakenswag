@@ -9,7 +9,7 @@ interface StorefrontDialogProps {
   isExiting?: boolean;
   isActive?: boolean;
   onClose: () => void;
-  openerRef?: RefObject<HTMLElement>;
+  openerRef?: RefObject<HTMLElement | null>;
   title: string;
 }
 

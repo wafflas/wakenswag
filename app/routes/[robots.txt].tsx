@@ -7,9 +7,9 @@ export function loader({request}: Route.LoaderArgs) {
   return new Response(body, {
     status: 200,
     headers: {
-      'Content-Type': 'text/plain',
+      'Content-Type': 'text/plain; charset=utf-8',
 
-      'Cache-Control': `max-age=${60 * 60 * 24}`,
+      'Cache-Control': `public, max-age=${60 * 60 * 24}`,
     },
   });
 }
@@ -25,6 +25,11 @@ ${generalDisallowRules({sitemapUrl})}
 User-agent: adsbot-google
 Disallow: /cart
 Disallow: /account
+Disallow: /checkout
+Disallow: /buy/
+Disallow: /api/
+Disallow: /__shopify
+Disallow: /admin
 Disallow: /search
 Allow: /search/
 Disallow: /search/?*
@@ -55,6 +60,11 @@ Crawl-delay: 1
 function generalDisallowRules({sitemapUrl}: {sitemapUrl?: string}) {
   return `Disallow: /cart
 Disallow: /account
+Disallow: /checkout
+Disallow: /buy/
+Disallow: /api/
+Disallow: /__shopify
+Disallow: /admin
 Disallow: /collections/*sort_by*
 Disallow: /*/collections/*sort_by*
 Disallow: /collections/*+*

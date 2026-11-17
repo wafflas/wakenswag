@@ -1,6 +1,6 @@
 import {useEffect, useRef, type ReactNode} from 'react';
 import {Link, useLocation, useNavigation} from 'react-router';
-import type {ProductItemFragment} from 'storefrontapi.generated';
+import type {ProductItemFragment} from '~/lib/fragments';
 import {
   getProductListingPageUrl,
   type ProductListingConnection,

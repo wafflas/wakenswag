@@ -1,6 +1,7 @@
 // A separate worker entry: production server.ts never imports this module.
 import * as build from 'virtual:react-router/server-build';
-import {createRequestHandler} from '@shopify/hydrogen';
+import {createRequestHandler} from 'react-router';
+import type {CacheInstance} from '@shopify/hydrogen';
 import {createHydrogenRouterContext} from '~/lib/context';
 import {
   createCart,
@@ -11,6 +12,7 @@ import {
   createDrumkitCart,
 } from '../fixtures/catalog';
 
+let lastCartUpdate = Date.now();
 const carts = new Map<string, ReturnType<typeof createCart>>();
 const catalog = Array.from({length: 25}, (_, index) =>
   createProductCard(index + 1),
@@ -176,6 +178,24 @@ function query(
             ? createDrumkitVariant()
             : createVariant(size, handle !== 'sold-out'),
     });
+    if (handle === 'fixture-drumkit') {
+      const variant = createDrumkitVariant();
+      product.options = [
+        {
+          name: 'Title',
+          optionValues: [
+            {
+              name: 'Default Title',
+              firstSelectableVariant: variant,
+              swatch: null,
+            },
+          ],
+        },
+      ];
+      product.adjacentVariants = [];
+      product.encodedVariantExistence = 'v1_0';
+      product.encodedVariantAvailability = 'v1_0';
+    }
     return Promise.resolve({product});
   }
   throw new Error(
@@ -185,98 +205,139 @@ function query(
 
 export default {
   async fetch(request: Request, env: Env, executionContext: ExecutionContext) {
+    const pathname = new URL(request.url).pathname;
+    // SDK proxy routes use global fetch, rather than the injectable GraphQL client.
+    // Keep those unconfigured fixture surfaces from reaching external services.
+    if (
+      (pathname.startsWith('/api/') &&
+        !['/api/cart', '/api/predictive-search'].includes(pathname)) ||
+      pathname.startsWith('/__shopify') ||
+      pathname.startsWith('/.well-known/') ||
+      /\/cart(?:\.(?:js|json)|\/(?:add|update|change|clear)(?:\.(?:js|json))?)$/i.test(
+        pathname,
+      )
+    )
+      return Response.json(
+        {error: 'This proxy is not configured in the test fixture.'},
+        {status: 404},
+      );
+    // Execute the real Storefront client and handlers; replace only HTTP to Shopify.
+    const fixtureFetch: typeof globalThis.fetch = async (input, init) => {
+      const upstream = new Request(input, init);
+      const {query: queryText, variables = {}} = (await upstream.json()) as {
+        query: string;
+        variables?: Record<string, unknown>;
+      };
+      if (queryText.includes('Cart')) {
+        const readFault = request.headers.get('x-fixture-cart-read-error');
+        if (!queryText.includes('mutation') && readFault === 'transport')
+          throw new Error('Simulated cart read outage');
+        if (!queryText.includes('mutation') && readFault === 'graphql')
+          return Response.json({
+            data: {cart: null},
+            errors: [{message: 'Simulated private cart read error'}],
+          });
+        if (
+          request.headers.get('x-fixture-cart-error') === 'true' &&
+          queryText.includes('mutation')
+        )
+          throw new Error('Simulated cart API outage');
+        const cartId = String(variables.cartId ?? variables.id ?? '');
+        if (!queryText.includes('mutation'))
+          return Response.json({data: {cart: carts.get(cartId) ?? null}});
+        const operation = queryText.includes('cartCreate(')
+          ? 'cartCreate'
+          : queryText.includes('cartLinesAdd(')
+            ? 'cartLinesAdd'
+            : queryText.includes('cartLinesUpdate(')
+              ? 'cartLinesUpdate'
+              : queryText.includes('cartLinesRemove(')
+                ? 'cartLinesRemove'
+                : '';
+        if (!operation) throw new Error('Unsupported fixture cart mutation');
+        const lines = (variables.lines ??
+          (variables.input as {lines?: unknown[]})?.lines ??
+          []) as Array<{quantity: number; merchandiseId?: string}>;
+        const previous = carts.get(cartId);
+        const previousLine = previous?.lines.nodes[0];
+        const variantId =
+          lines[0]?.merchandiseId ?? previousLine?.merchandise.id ?? '';
+        const quantity =
+          operation === 'cartLinesRemove'
+            ? 0
+            : (lines[0]?.quantity ?? 0) +
+              (operation === 'cartLinesAdd'
+                ? (previous?.totalQuantity ?? 0)
+                : 0);
+        const drumkit = variantId.endsWith('/201');
+        const cart = drumkit
+          ? createDrumkitCart(quantity)
+          : createCart(quantity);
+        cart.id = cartId || `gid://shopify/Cart/${crypto.randomUUID()}`;
+        if (!drumkit && cart.lines.nodes[0]) {
+          const variant = createVariant(
+            variantId.endsWith('/102') ? 'Large' : 'Small',
+          );
+          const line = cart.lines.nodes[0];
+          line.merchandise = {
+            ...line.merchandise,
+            ...variant,
+            product: line.merchandise.product,
+          };
+          const amount = {
+            ...variant.price,
+            amount: String(Number(variant.price.amount) * quantity),
+          };
+          line.cost.totalAmount = amount;
+          line.cost.subtotalAmount = amount;
+          cart.cost.subtotalAmount = amount;
+          cart.cost.totalAmount = amount;
+          cart.cost.checkoutChargeAmount = amount;
+        }
+        lastCartUpdate = Math.max(lastCartUpdate + 1, Date.now());
+        cart.updatedAt = new Date(lastCartUpdate).toISOString();
+        carts.set(cart.id, cart);
+        return Response.json({
+          data: {[operation]: {cart, userErrors: [], warnings: []}},
+        });
+      }
+      if (queryText.includes('query SitemapIndex'))
+        return Response.json({data: {products: {pagesCount: {count: 1}}}});
+      if (queryText.includes('query SitemapProducts'))
+        return Response.json({
+          data: {
+            sitemap: {
+              resources: {
+                items: catalog.map((product) => ({
+                  handle: product.handle,
+                  updatedAt: '2026-11-04T00:00:00Z',
+                })),
+              },
+            },
+          },
+        });
+      if (queryText.includes('urlRedirects'))
+        return Response.json({data: {urlRedirects: {edges: []}}});
+      return Response.json({
+        data: await query(
+          queryText,
+          {variables},
+          new URL(request.url).pathname,
+        ),
+      });
+    };
+    // The inherited fixtures serve the same fictional handle in two collections.
+    // Partition their caches so those intentionally different catalogues do not contaminate each other.
+    const fixtureScope = new URL(request.url).pathname.startsWith('/drumkits')
+      ? 'drumkits'
+      : 'swag';
+    const cache = await caches.open(`hydrogen-fixture-v2-${fixtureScope}`);
     const context = await createHydrogenRouterContext(
       request,
       env,
       executionContext,
+      {fetch: fixtureFetch, cache: cache as unknown as CacheInstance},
     );
-    // This typed production context keeps Oxygen, SSR, routing and cookies real.
-    // Only the API boundary is replaced; unknown operations fail closed.
-    const rejectExternalApi = () => {
-      throw new Error(
-        'Unexpected fixture API request. Add an explicit fixture before testing this operation.',
-      );
-    };
-    Object.assign(context.storefront, {
-      query: (
-        queryText: string,
-        options?: {variables?: Record<string, unknown>},
-      ) => query(queryText, options, new URL(request.url).pathname),
-      mutate: rejectExternalApi,
-      forward: rejectExternalApi,
-      forwardMcp: rejectExternalApi,
-    });
-    let cartId = request.headers
-      .get('cookie')
-      ?.match(/fixtureCart=([^;]+)/)?.[1];
-    const saveCart = (cart: ReturnType<typeof createCart>) => {
-      cartId ??= crypto.randomUUID();
-      carts.set(cartId, cart);
-      return Promise.resolve({cart, errors: [], warnings: []});
-    };
-    Object.assign(context.cart, {
-      get: () => Promise.resolve(cartId ? (carts.get(cartId) ?? null) : null),
-      setCartId: () =>
-        new Headers({
-          'Set-Cookie': `fixtureCart=${cartId}; Path=/; HttpOnly; SameSite=Lax`,
-        }),
-      addLines: (lines: Array<{quantity: number; merchandiseId: string}>) => {
-        if (request.headers.get('x-fixture-cart-error') === 'true')
-          throw new Error('Simulated cart API outage');
-        const line = lines[0];
-        if (line.merchandiseId.endsWith('/201')) {
-          const previous = cartId ? carts.get(cartId) : null;
-          const previousQuantity =
-            previous?.lines.nodes[0]?.merchandise.id.endsWith('/201')
-              ? previous.totalQuantity
-              : 0;
-          return saveCart(createDrumkitCart(previousQuantity + line.quantity));
-        }
-        const cart = createCart(line.quantity);
-        const variant = createVariant(
-          line.merchandiseId.endsWith('/102') ? 'Large' : 'Small',
-        );
-        cart.lines.nodes[0].merchandise = {
-          ...cart.lines.nodes[0].merchandise,
-          ...variant,
-          product: cart.lines.nodes[0].merchandise.product,
-        };
-        const amount = {
-          amount: String(Number(variant.price.amount) * line.quantity),
-          currencyCode: variant.price.currencyCode,
-        };
-        cart.lines.nodes[0].cost.totalAmount = amount;
-        cart.cost.subtotalAmount = amount;
-        cart.cost.totalAmount = amount;
-        return saveCart(cart);
-      },
-      updateLines: (lines: Array<{quantity: number}>) => {
-        const previous = cartId ? carts.get(cartId) : null;
-        if (previous?.lines.nodes[0]?.merchandise.id.endsWith('/201'))
-          return saveCart(createDrumkitCart(lines[0].quantity));
-        const cart = createCart(lines[0].quantity);
-        if (previous?.lines.nodes[0]) {
-          cart.lines.nodes[0].merchandise = previous.lines.nodes[0].merchandise;
-          const amount = {
-            ...previous.cost.subtotalAmount,
-            amount: String(
-              Number(previous.lines.nodes[0].merchandise.price.amount) *
-                lines[0].quantity,
-            ),
-          };
-          cart.lines.nodes[0].cost.totalAmount = amount;
-          cart.cost.subtotalAmount = amount;
-          cart.cost.totalAmount = amount;
-        }
-        return saveCart(cart);
-      },
-      removeLines: () => saveCart(createCart(0)),
-    });
-    const handler = createRequestHandler({
-      build,
-      mode: 'development',
-      getLoadContext: () => context,
-    });
-    return handler(request);
+    return createRequestHandler(build, process.env.NODE_ENV)(request, context);
   },
 };

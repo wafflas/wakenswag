@@ -1,95 +1,66 @@
-import {CartForm} from '@shopify/hydrogen';
+import {useCart, useCartForm} from '~/lib/cart';
 import type {CartLine} from './cartUtils';
 import {getProductListingPathForProduct} from '~/lib/variants';
 
 const QUANTITY_BUTTON_CLASS_NAME =
   'ps2-controller-action border-0 bg-transparent p-0 text-inherit enabled:cursor-pointer disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-20';
 
-/** Owns quantity/removal forms, their pending state and stock limits. */
 export function CartLineQuantity({line}: {line: CartLine}) {
-  if (!line || typeof line.quantity === 'undefined') return null;
-
-  const {id: lineId, merchandise, quantity, isOptimistic} = line;
+  const {formProps, register} = useCartForm();
+  const pending = useCart((state) => state.pending.lines.has(line.id));
+  const errors = useCart((state) => state.errors.lines.get(line.id));
+  const networkErrors = useCart((state) => state.errors.network);
   const isDrumkit =
-    getProductListingPathForProduct(merchandise.product) === '/drumkits';
-  const stockLimit = merchandise.quantityAvailable ?? null;
-  const hasReachedStockLimit = stockLimit !== null && quantity >= stockLimit;
-  const shouldRemoveLine = quantity === 1;
-  const decreaseFormProps = shouldRemoveLine
-    ? {action: CartForm.ACTIONS.LinesRemove, inputs: {lineIds: [lineId]}}
-    : {
-        action: CartForm.ACTIONS.LinesUpdate,
-        inputs: {lines: [{id: lineId, quantity: Math.max(0, quantity - 1)}]},
-      };
-  // Both controls share pending state, so an update disables both forms.
-  const fetcherKey = `${CartForm.ACTIONS.LinesUpdate}-${lineId}`;
-
+    getProductListingPathForProduct(line.merchandise?.product ?? {}) ===
+    '/drumkits';
+  const stockLimit = line.merchandise?.quantityAvailable ?? null;
   return (
-    <div className="ps2-soft-copy flex items-center justify-center gap-4 text-2xl leading-none text-ps2-gray sm:text-3xl">
-      <CartForm {...decreaseFormProps} fetcherKey={fetcherKey} route="/cart">
-        {(fetcher) => (
-          <fieldset
-            disabled={fetcher.state !== 'idle'}
-            className="border-0 p-0"
-          >
-            <button
-              aria-label={
-                shouldRemoveLine ? 'Remove item' : 'Decrease quantity'
-              }
-              className={QUANTITY_BUTTON_CLASS_NAME}
-              disabled={!!isOptimistic}
-              type="submit"
-            >
-              −
-            </button>
-            {fetcher.state === 'idle' && fetcher.data?.errors?.length > 0 ? (
-              <p role="alert" className="text-sm">
-                {shouldRemoveLine
-                  ? 'Could not remove this item. Please try again.'
-                  : 'Could not update this item. Please try again.'}
-              </p>
-            ) : null}
-          </fieldset>
-        )}
-      </CartForm>
-
-      <output aria-live="polite" className="min-w-3 text-center">
-        {quantity}
+    <form
+      {...formProps()}
+      className="ps2-soft-copy flex items-center justify-center gap-4 text-2xl leading-none text-ps2-gray sm:text-3xl"
+    >
+      <button {...register('set')} />
+      <input type="hidden" {...register('lineId', {value: line.id})} />
+      <button
+        {...(line.quantity === 1 ? register('remove') : register('decrease'))}
+        type="submit"
+        aria-label={line.quantity === 1 ? 'Remove item' : 'Decrease quantity'}
+        className={QUANTITY_BUTTON_CLASS_NAME}
+        disabled={pending}
+      >
+        −
+      </button>
+      <input
+        {...register('quantity', {value: line.quantity, interactive: true})}
+        aria-label="Item quantity"
+        className="w-[2ch] min-w-3 border-0 bg-transparent p-0 text-center text-inherit"
+        disabled={pending}
+      />
+      <output aria-live="polite" className="sr-only">
+        {line.quantity}
       </output>
-
       {!isDrumkit ? (
-        <CartForm
-          fetcherKey={fetcherKey}
-          route="/cart"
-          action={CartForm.ACTIONS.LinesUpdate}
-          inputs={{lines: [{id: lineId, quantity: quantity + 1}]}}
+        <button
+          {...register('increase')}
+          type="submit"
+          aria-label={
+            stockLimit === null
+              ? 'Increase quantity'
+              : `Increase quantity (maximum ${stockLimit})`
+          }
+          className={QUANTITY_BUTTON_CLASS_NAME}
+          disabled={
+            pending || (stockLimit !== null && line.quantity >= stockLimit)
+          }
         >
-          {(fetcher) => (
-            <fieldset
-              disabled={fetcher.state !== 'idle'}
-              className="border-0 p-0"
-            >
-              <button
-                aria-label={
-                  stockLimit === null
-                    ? 'Increase quantity'
-                    : `Increase quantity (maximum ${stockLimit})`
-                }
-                className={QUANTITY_BUTTON_CLASS_NAME}
-                disabled={!!isOptimistic || hasReachedStockLimit}
-                type="submit"
-              >
-                +
-              </button>
-              {fetcher.state === 'idle' && fetcher.data?.errors?.length > 0 ? (
-                <p role="alert" className="text-sm">
-                  Could not update this item. Please try again.
-                </p>
-              ) : null}
-            </fieldset>
-          )}
-        </CartForm>
+          +
+        </button>
       ) : null}
-    </div>
+      {!pending && (errors?.userErrors.length || networkErrors.length) ? (
+        <p role="alert" className="text-sm">
+          Could not update this item. Please try again.
+        </p>
+      ) : null}
+    </form>
   );
 }

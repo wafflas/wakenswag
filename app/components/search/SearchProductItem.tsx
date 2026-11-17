@@ -1,5 +1,5 @@
 import {Link} from 'react-router';
-import {Image} from '@shopify/hydrogen';
+import {StorefrontImage} from '~/components/shared/StorefrontImage';
 import {urlWithTrackingParams} from '~/lib/search';
 import type {SearchProductCard} from './searchUtils';
 import {formatMoney} from '~/lib/money';
@@ -11,7 +11,6 @@ interface SearchProductItemProps {
   onNavigate: () => void;
 }
 
-/** A search result styled like the product entries in the cart modal. */
 export function SearchProductItem({
   product,
   term,
@@ -34,7 +33,7 @@ export function SearchProductItem({
       >
         <span className="flex h-28 w-full items-center justify-center sm:h-36">
           {product.image ? (
-            <Image
+            <StorefrontImage
               alt={product.image.altText ?? product.title}
               className="h-28 w-auto max-w-full object-contain sm:h-36"
               data={product.image}

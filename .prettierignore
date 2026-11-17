@@ -5,3 +5,8 @@ coverage/
 test-results/
 playwright-report/
 *.generated.d.ts
+
+# Unmodified Shopify browser runtime snapshots and SDK-managed skills
+tests/fixtures/shopify/*.js
+.agents/
+.claude/

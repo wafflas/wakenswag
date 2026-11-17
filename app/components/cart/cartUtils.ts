@@ -1,19 +1,33 @@
-import type {OptimisticCartLine} from '@shopify/hydrogen';
 import {cloneElement, isValidElement, type ReactNode} from 'react';
 import {getProductListingPathForProduct} from '~/lib/variants';
-import type {CartApiQueryFragment} from 'storefrontapi.generated';
+import type {CartApiQueryFragment} from '~/lib/cart';
 
-export type CartLine = OptimisticCartLine<CartApiQueryFragment>;
+export type CartLine = CartApiQueryFragment['lines']['nodes'][number];
 export type LineItemChildrenMap = {[parentId: string]: CartLine[]};
 
-/** Keep a single copy of each drumkit product, including across variants. */
-export function getDrumkitQuantityCorrections(lines: CartLine[]) {
+export function getDrumkitQuantityCorrections(
+  lines: Array<{
+    id: string;
+    quantity: number;
+    merchandise?: {
+      product: {
+        id?: string;
+        productType?: string | null;
+        collections?: {nodes: Array<{handle: string}>} | null;
+      };
+    };
+  }>,
+) {
   const seenProducts = new Set<string>();
   const updates: Array<{id: string; quantity: number}> = [];
   const removals: string[] = [];
   for (const line of lines) {
-    const product = line.merchandise.product;
-    if (getProductListingPathForProduct(product) !== '/drumkits') continue;
+    const product = line.merchandise?.product;
+    if (
+      !product?.id ||
+      getProductListingPathForProduct(product) !== '/drumkits'
+    )
+      continue;
     if (seenProducts.has(product.id)) {
       removals.push(line.id);
     } else {
@@ -24,7 +38,6 @@ export function getDrumkitQuantityCorrections(lines: CartLine[]) {
   return {updates, removals};
 }
 
-/** Returns a map of all line items and their children. */
 export function getLineItemChildrenMap(lines: CartLine[]): LineItemChildrenMap {
   const children: LineItemChildrenMap = {};
   for (const line of lines) {
@@ -34,7 +47,7 @@ export function getLineItemChildrenMap(lines: CartLine[]): LineItemChildrenMap {
       children[parentId].push(line);
     }
     if ('lineComponents' in line) {
-      const lineChildren = getLineItemChildrenMap(line.lineComponents);
+      const lineChildren = getLineItemChildrenMap(line.lineComponents ?? []);
       for (const [parentId, childIds] of Object.entries(lineChildren)) {
         if (!children[parentId]) children[parentId] = [];
         children[parentId].push(...childIds);

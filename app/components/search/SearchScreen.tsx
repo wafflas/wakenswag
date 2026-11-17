@@ -1,46 +1,29 @@
 import {useEffect, useRef, useState} from 'react';
-import {useFetcher} from 'react-router';
-import {Analytics} from '@shopify/hydrogen';
-import {type PredictiveSearchReturn} from '~/lib/search';
+import {
+  usePredictiveSearch,
+  usePredictiveSearchActions,
+} from '@shopify/hydrogen/react';
+import type {PredictiveSearchData} from '~/lib/predictiveSearch.server';
 import {normalizeSearchProduct} from './searchUtils';
 import {SearchProductItem} from './SearchProductItem';
 import {SearchInput} from '~/components/search/SearchInput';
-
-const SEARCH_ENDPOINT = '/search';
-const PREDICTIVE_LIMIT = 8;
-const DEBOUNCE_MS = 220;
 
 interface SearchScreenProps {
   onClose: () => void;
 }
 
 export function SearchScreen({onClose}: SearchScreenProps) {
-  const fetcher = useFetcher<PredictiveSearchReturn>({key: 'search'});
   const inputRef = useRef<HTMLInputElement>(null);
-  const fetcherLoadRef = useRef(fetcher.load);
-  fetcherLoadRef.current = fetcher.load;
-
   const [query, setQuery] = useState('');
-
+  const {status, result, error} = usePredictiveSearch<PredictiveSearchData>();
+  const {search, clear} = usePredictiveSearchActions();
   const trimmedQuery = query.trim();
-  const isPredictivePending = fetcher.state !== 'idle';
-
   const predictive =
-    fetcher.data?.type === 'predictive' &&
-    fetcher.data.term === trimmedQuery &&
-    trimmedQuery.length > 0
-      ? fetcher.data.result
-      : null;
-
+    result.term === trimmedQuery && status === 'success' ? result : null;
   const products = predictive?.items.products.map(normalizeSearchProduct) ?? [];
   const showEmptyPrompt = trimmedQuery.length === 0;
-  const showNoResults =
-    !isPredictivePending &&
-    predictive !== null &&
-    !fetcher.data?.error &&
-    products.length === 0;
-  const error = predictive ? fetcher.data?.error : undefined;
-  const isScanning = !showEmptyPrompt && (isPredictivePending || !predictive);
+  const showNoResults = predictive !== null && products.length === 0;
+  const isScanning = !showEmptyPrompt && status !== 'error' && !predictive;
 
   let statusMessage: string | null = null;
   if (showEmptyPrompt) {
@@ -55,20 +38,7 @@ export function SearchScreen({onClose}: SearchScreenProps) {
     inputRef.current?.focus();
   }, []);
 
-  useEffect(() => {
-    if (!trimmedQuery) return;
-
-    const timeoutId = window.setTimeout(() => {
-      const params = new URLSearchParams({
-        q: trimmedQuery,
-        limit: String(PREDICTIVE_LIMIT),
-      });
-
-      void fetcherLoadRef.current(`${SEARCH_ENDPOINT}?${params}`);
-    }, DEBOUNCE_MS);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [trimmedQuery]);
+  useEffect(() => () => clear(), [clear]);
 
   return (
     <section
@@ -103,7 +73,11 @@ export function SearchScreen({onClose}: SearchScreenProps) {
             ].join(' ')}
             enterKeyHint="search"
             name="q"
-            onChange={(event) => setQuery(event.currentTarget.value)}
+            onChange={(event) => {
+              const value = event.currentTarget.value;
+              setQuery(value);
+              void search(value);
+            }}
             placeholder="Search memory..."
             ref={inputRef}
             spellCheck={false}
@@ -132,9 +106,7 @@ export function SearchScreen({onClose}: SearchScreenProps) {
                 className="ps2-cta"
                 type="button"
                 onClick={() => {
-                  void fetcher.load(
-                    `${SEARCH_ENDPOINT}?${new URLSearchParams({q: trimmedQuery, limit: String(PREDICTIVE_LIMIT)})}`,
-                  );
+                  void search(trimmedQuery);
                 }}
               >
                 Try again
@@ -159,28 +131,6 @@ export function SearchScreen({onClose}: SearchScreenProps) {
           ) : null}
         </div>
       </div>
-
-      {trimmedQuery && predictive && !error ? (
-        <Analytics.SearchView
-          data={{
-            searchTerm: trimmedQuery,
-            searchResults: {
-              total: predictive.total,
-              items: {
-                products: {
-                  nodes: predictive.items.products,
-                  pageInfo: {
-                    hasNextPage: false,
-                    hasPreviousPage: false,
-                    startCursor: null,
-                    endCursor: null,
-                  },
-                },
-              },
-            },
-          }}
-        />
-      ) : null}
     </section>
   );
 }

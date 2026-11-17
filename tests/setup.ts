@@ -1,8 +1,13 @@
+import {mockCartRequest} from './fixtures/shopifyRuntime';
 import '@testing-library/jest-dom/vitest';
 import {cleanup} from '@testing-library/react';
-import {afterEach, vi} from 'vitest';
+import {afterEach, beforeEach, vi} from 'vitest';
 
-afterEach(cleanup);
+beforeEach(() => mockCartRequest(() => undefined));
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
@@ -17,11 +22,13 @@ Object.defineProperty(window, 'matchMedia', {
 window.scrollTo = vi.fn();
 
 // jsdom has no layout observer; real viewport prefetch runs in Playwright.
-vi.stubGlobal(
-  'IntersectionObserver',
-  class {
-    observe = vi.fn();
-    unobserve = vi.fn();
-    disconnect = vi.fn();
-  },
+beforeEach(() =>
+  vi.stubGlobal(
+    'IntersectionObserver',
+    class {
+      observe = vi.fn();
+      unobserve = vi.fn();
+      disconnect = vi.fn();
+    },
+  ),
 );

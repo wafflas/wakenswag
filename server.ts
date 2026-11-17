@@ -1,10 +1,7 @@
 import * as serverBuild from 'virtual:react-router/server-build';
-import {createRequestHandler, storefrontRedirect} from '@shopify/hydrogen';
+import {createRequestHandler} from 'react-router';
 import {createHydrogenRouterContext} from '~/lib/context';
 
-/**
- * Export a fetch handler in module format.
- */
 export default {
   async fetch(
     request: Request,
@@ -12,51 +9,15 @@ export default {
     executionContext: ExecutionContext,
   ): Promise<Response> {
     try {
-      const hydrogenContext = await createHydrogenRouterContext(
+      const context = await createHydrogenRouterContext(
         request,
         env,
         executionContext,
       );
-
-      /**
-       * Create a Hydrogen request handler that internally
-       * delegates to React Router for routing and rendering.
-       */
-      const handleRequest = createRequestHandler({
-        build: {
-          ...serverBuild,
-          allowedActionOrigins:
-            process.env.NODE_ENV === 'development'
-              ? ['*.trycloudflare.com', '*.tryhydrogen.dev']
-              : serverBuild.allowedActionOrigins,
-        },
-        mode: process.env.NODE_ENV,
-        getLoadContext: () => hydrogenContext,
-      });
-
-      const response = await handleRequest(request);
-
-      if (hydrogenContext.session.isPending) {
-        response.headers.set(
-          'Set-Cookie',
-          await hydrogenContext.session.commit(),
-        );
-      }
-
-      if (response.status === 404) {
-        /**
-         * Check for redirects only when there's a 404 from the app.
-         * If the redirect doesn't exist, then `storefrontRedirect`
-         * will pass through the 404 response.
-         */
-        return storefrontRedirect({
-          request,
-          response,
-          storefront: hydrogenContext.storefront,
-        });
-      }
-
-      return response;
+      return await createRequestHandler(serverBuild, process.env.NODE_ENV)(
+        request,
+        context,
+      );
     } catch (error) {
       console.error(error);
       return new Response('An unexpected error occurred', {status: 500});

@@ -1,18 +1,6 @@
 import type {Route} from './+types/[sitemap.xml]';
-import {getSitemapIndex} from '@shopify/hydrogen';
-
-export async function loader({
-  request,
-  context: {storefront},
-}: Route.LoaderArgs) {
-  const response = await getSitemapIndex({
-    storefront,
-    request,
-    types: ['products'],
-    customChildSitemaps: ['/sitemap-pages.xml'],
-  });
-
-  response.headers.set('Cache-Control', `max-age=${60 * 60 * 24}`);
-
-  return response;
+import {storefrontClientContext} from '~/lib/context';
+import {getProductSitemapIndex} from '~/lib/sitemap';
+export async function loader({request, context}: Route.LoaderArgs) {
+  return getProductSitemapIndex(context.get(storefrontClientContext), request);
 }

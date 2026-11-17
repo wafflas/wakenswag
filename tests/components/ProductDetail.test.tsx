@@ -4,11 +4,13 @@ import {
   type ActionFunction,
 } from 'react-router';
 import {act, render, screen, waitFor} from '@testing-library/react';
-import {CartForm} from '@shopify/hydrogen';
+import {CartProvider} from '~/lib/cart';
+import {ProductProvider} from '~/lib/product';
+import {mockCartRequest} from '../fixtures/shopifyRuntime';
 import userEvent from '@testing-library/user-event';
 import {describe, expect, it, vi} from 'vitest';
-import type {ProductFragment} from 'storefrontapi.generated';
-import {ProductDetail} from '~/components/product-detail/ProductDetail';
+import type {ProductFragment} from '~/lib/productDetail';
+import {ProductDetail as ProductDetailView} from '~/components/product-detail/ProductDetail';
 import {
   createProduct,
   createVariant,
@@ -16,12 +18,46 @@ import {
   createDrumkitCart,
 } from '../fixtures/catalog';
 
+function ProductDetail({
+  product,
+  selectedVariant,
+  cart = null,
+}: {
+  product: ProductFragment;
+  selectedVariant: ProductFragment['selectedOrFirstAvailableVariant'];
+  cart?: ReturnType<typeof createDrumkitCart> | null;
+}) {
+  const selectedProduct = {
+    ...product,
+    selectedOrFirstAvailableVariant: selectedVariant,
+  };
+  return (
+    <CartProvider initialData={{cart}}>
+      <ProductProvider product={selectedProduct}>
+        <ProductDetailView product={selectedProduct} />
+      </ProductProvider>
+    </CartProvider>
+  );
+}
+
 function renderProduct(
   available = true,
   pathname = '/',
   action?: ActionFunction,
 ) {
   const selectedVariant = createVariant('Small', available);
+  if (action)
+    mockCartRequest(async (payload) =>
+      action({
+        request: new Request('http://localhost/api/cart', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+          headers: {'content-type': 'application/json'},
+        }),
+        params: {},
+        context: {},
+      } as Parameters<ActionFunction>[0]),
+    );
   const router = createMemoryRouter(
     [
       {
@@ -43,10 +79,8 @@ function renderProduct(
 function createAddToCartAction() {
   const submittedQuantity = vi.fn();
   const action: ActionFunction = async ({request}) => {
-    const form = CartForm.getFormInput(await request.formData());
-    if (form.action === CartForm.ACTIONS.LinesAdd) {
-      submittedQuantity(form.inputs.lines[0].quantity);
-    }
+    const form = (await request.json()) as {lines: Array<{quantity: number}>};
+    submittedQuantity(form.lines[0].quantity);
     return {};
   };
   return {action, submittedQuantity};
@@ -159,7 +193,20 @@ describe('product purchase controls', () => {
     const product = createProduct({
       selectedOrFirstAvailableVariant: variant,
       adjacentVariants: [],
-      options: [],
+      options: [
+        {
+          name: 'Title',
+          optionValues: [
+            {
+              name: 'Default Title',
+              firstSelectableVariant: variant,
+              swatch: null,
+            },
+          ],
+        },
+      ],
+      encodedVariantExistence: 'v1_0',
+      encodedVariantAvailability: 'v1_0',
     });
     const router = createMemoryRouter(
       [
@@ -168,7 +215,11 @@ describe('product purchase controls', () => {
           path: '*',
           loader: () => ({cart: Promise.resolve(createDrumkitCart())}),
           element: (
-            <ProductDetail product={product} selectedVariant={variant} />
+            <ProductDetail
+              product={product}
+              selectedVariant={variant}
+              cart={createDrumkitCart()}
+            />
           ),
         },
       ],
@@ -275,6 +326,7 @@ describe('product purchase controls', () => {
     );
     const action = vi.fn(() => pending);
     const variant = createVariant();
+    mockCartRequest(() => action());
     const router = createMemoryRouter([
       {
         path: '/',

@@ -1,20 +1,10 @@
 import type {Route} from './+types/sitemap.$type.$page[.xml]';
-import {getSitemap} from '@shopify/hydrogen';
-
-export async function loader({
-  request,
-  params,
-  context: {storefront},
-}: Route.LoaderArgs) {
-  const response = await getSitemap({
-    storefront,
+import {storefrontClientContext} from '~/lib/context';
+import {getProductSitemap} from '~/lib/sitemap';
+export async function loader({request, context, params}: Route.LoaderArgs) {
+  return getProductSitemap(
+    context.get(storefrontClientContext),
     request,
     params,
-    locales: ['EN-US'],
-    getLink: ({baseUrl, handle}) => `${baseUrl}/swag/${handle}`,
-  });
-
-  response.headers.set('Cache-Control', `max-age=${60 * 60 * 24}`);
-
-  return response;
+  );
 }

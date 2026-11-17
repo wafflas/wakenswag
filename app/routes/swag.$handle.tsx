@@ -1,3 +1,4 @@
+import {storefrontClientContext} from '~/lib/context';
 import {redirect, useLoaderData} from 'react-router';
 import type {Route} from './+types/swag.$handle';
 import {ProductDetailRouteView} from '~/components/product-detail/ProductDetailRouteView';
@@ -42,7 +43,7 @@ export async function loader({context, params, request}: Route.LoaderArgs) {
   const product = await loadProductDetail({
     handle: params.handle,
     request,
-    storefront: context.storefront,
+    storefront: context.get(storefrontClientContext),
   });
 
   const listingPath = getProductListingPathForProduct(product);

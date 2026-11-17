@@ -1,23 +1,19 @@
-import {useOptimisticCart} from '@shopify/hydrogen';
-import type {CartApiQueryFragment} from 'storefrontapi.generated';
+import {useCart, useSuspenseCart} from '~/lib/cart';
+import {Link, useLocation} from 'react-router';
 import {CartLineItem} from '~/components/cart/CartLineItem';
 import {CartSummary} from './CartSummary';
 import {CartEmpty} from './CartEmpty';
 import {CartEmptyButton} from './CartEmptyButton';
 import {getLineItemChildrenMap} from './cartUtils';
 
-export type CartMainProps = {
-  cart: CartApiQueryFragment | null;
-};
-
-/**
- * The main cart component that displays the cart items and summary.
- * It is rendered inside the cart modal and uses optimistic Shopify updates.
- */
-export function CartMain({cart: originalCart}: CartMainProps) {
-  // The useOptimisticCart hook applies pending actions to the cart
-  // so the user immediately sees feedback when they modify the cart.
-  const cart = useOptimisticCart(originalCart);
+export function CartMain({
+  initialLoadFailed = false,
+}: {
+  initialLoadFailed?: boolean;
+}) {
+  const {pathname, search} = useLocation();
+  const cart = useSuspenseCart((state) => state.data);
+  const pending = useCart((state) => state.pending.cost || state.revalidating);
 
   const lines = cart?.lines?.nodes ?? [];
   const parentLines = lines.filter(
@@ -26,6 +22,7 @@ export function CartMain({cart: originalCart}: CartMainProps) {
   );
   const linesCount = parentLines.length;
   const cartHasItems = (cart?.totalQuantity ?? 0) > 0;
+  const hasLoadError = initialLoadFailed && !cart.id;
   const childrenMap = getLineItemChildrenMap(lines);
 
   return (
@@ -33,7 +30,6 @@ export function CartMain({cart: originalCart}: CartMainProps) {
       aria-labelledby="cart-information-title"
       className={[
         'cart-main',
-        // Fixed shell: only the items grid scrolls so total/checkout stay visible.
         'relative flex h-dvh w-full flex-col overflow-hidden px-3',
         'pb-16 sm:pb-18 md:pb-20',
       ].join(' ')}
@@ -53,11 +49,18 @@ export function CartMain({cart: originalCart}: CartMainProps) {
         className={[
           'cart-main-body flex min-h-0 flex-1 flex-col items-center',
           'gap-6 py-6 sm:gap-8 sm:py-8',
-          // justify-center clips both ends when content is taller than the shell.
           linesCount === 0 ? 'justify-center' : 'justify-start',
         ].join(' ')}
       >
-        <CartEmpty hidden={linesCount > 0} />
+        {hasLoadError ? (
+          <div className="ps2-soft-copy flex flex-col items-center gap-4 text-center text-lg text-ps2-muted">
+            <p role="alert">Could not load your cart. Please try again.</p>
+            <Link className="ps2-cta" reloadDocument to={pathname + search}>
+              Reload page
+            </Link>
+          </div>
+        ) : null}
+        <CartEmpty hidden={linesCount > 0 || hasLoadError} />
 
         <div
           className="flex min-h-0 w-full max-w-2xl flex-1 flex-col items-center gap-3 sm:gap-6"
@@ -66,7 +69,7 @@ export function CartMain({cart: originalCart}: CartMainProps) {
           <div className="flex w-full shrink-0 justify-end">
             <CartEmptyButton
               lineIds={lines.map((line) => line.id)}
-              disabled={!!cart?.isOptimistic}
+              disabled={Boolean(pending)}
             />
           </div>
 
