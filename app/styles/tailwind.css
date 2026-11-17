@@ -34,7 +34,7 @@
 }
 
 @utility ps2-cta {
-  color: color-mix(in oklab, var(--color-ps2-cyan) 80%, transparent);
+  color: color-mix(in oklab, var(--color-ps2-cyan) 90%, transparent);
   transition-duration: 200ms;
   transition-property: color, opacity, text-shadow;
   transition-timing-function: var(--ease-ps2);
