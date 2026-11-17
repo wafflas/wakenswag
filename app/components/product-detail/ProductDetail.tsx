@@ -95,7 +95,7 @@ export function ProductDetail({
       />
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 z-0 opacity-90"
+        className="pointer-events-none absolute inset-0 z-0 opacity-97"
         style={{
           backgroundImage: theme.gradient,
         }}
@@ -123,6 +123,7 @@ export function ProductDetail({
               data={selectedVariant.image}
               key={selectedVariant.image.id}
               loading="eager"
+              sizes="(min-width: 1024px) 288px, 208px"
             />
           ) : (
             <div aria-hidden="true" className="size-52 lg:size-72" />
