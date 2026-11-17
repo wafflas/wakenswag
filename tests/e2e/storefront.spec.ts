@@ -597,6 +597,43 @@ test('product quantity, add to cart, persisted cart and removal work', async ({
   expect(errors).toEqual([]);
 });
 
+test('checkout link navigates when its host is absent from CSP resource sources', async ({
+  page,
+}) => {
+  const checkoutUrl = 'https://checkout.example.test/cart/fixture';
+  await page.route('**/swag/fixture-tee', async (route) => {
+    const response = await route.fetch();
+    const headers = response.headers();
+    const csp = headers['content-security-policy'];
+    expect(csp).toBeTruthy();
+    // Simulate PUBLIC_CHECKOUT_DOMAIN being omitted, preserving the real nonce
+    // and all other directives from the application's document response.
+    const fallbackCsp = csp.replaceAll(
+      'https://checkout.example.test',
+      'https://fixture.myshopify.com',
+    );
+    expect(fallbackCsp).not.toContain('checkout.example.test');
+    await route.fulfill({
+      response,
+      headers: {...headers, 'content-security-policy': fallbackCsp},
+    });
+  });
+  await page.route(checkoutUrl, (route) =>
+    route.fulfill({
+      contentType: 'text/html',
+      body: '<h1>Fictional checkout handoff</h1>',
+    }),
+  );
+  await openPage(page, '/swag/fixture-tee');
+  await page.getByRole('button', {name: 'Add to cart', exact: true}).click();
+  await page.getByRole('button', {name: 'Cart (1)', exact: true}).click();
+  await page.getByRole('link', {name: 'Go to checkout'}).click();
+  await expect(page).toHaveURL(checkoutUrl);
+  await expect(
+    page.getByRole('heading', {name: 'Fictional checkout handoff'}),
+  ).toBeVisible();
+});
+
 test('cart count pops only for a quantity change, without replaying on footer mounts', async ({
   page,
 }) => {

@@ -53,13 +53,10 @@ describe('cart handlers', () => {
       ) => {
         if (options.fail) throw new Error('private upstream detail');
         if (document.includes('mutation')) {
-          const key = document.includes('cartCreate(')
-            ? 'cartCreate'
-            : document.includes('cartLinesAdd(')
-              ? 'cartLinesAdd'
-              : document.includes('cartLinesUpdate(')
-                ? 'cartLinesUpdate'
-                : 'cartLinesRemove';
+          const key = document.match(
+            /\b(cartCreate|cartLinesAdd|cartLinesUpdate|cartLinesRemove|cartNoteUpdate|cartDiscountCodesUpdate|cartAttributesUpdate)\(/,
+          )?.[1];
+          if (!key) throw new Error('Unexpected fixture cart mutation');
           const corrected =
             key === 'cartLinesUpdate' &&
             (config.variables.lines as Array<{quantity: number}>)[0]
@@ -172,15 +169,72 @@ describe('cart handlers', () => {
     },
   );
   it.each([
-    {note: 'unused'},
-    {discountCodes: ['SAVE']},
-    {attributes: []},
-    {intent: 'unknown'},
+    {body: {note: 'Gift order'}, operation: 'cartNoteUpdate'},
+    {body: {note: ''}, operation: 'cartNoteUpdate'},
+    {body: {discountCodes: ['SAVE']}, operation: 'cartDiscountCodesUpdate'},
+    {body: {discountCodes: []}, operation: 'cartDiscountCodesUpdate'},
+    {
+      body: {attributes: [{key: 'gift', value: 'yes'}]},
+      operation: 'cartAttributesUpdate',
+    },
+    {body: {attributes: []}, operation: 'cartAttributesUpdate'},
   ])(
-    'rejects unsupported UI mutations without querying Shopify: %j',
+    'accepts the SDK JSON contract for $operation: $body',
+    async ({body, operation}) => {
+      const {result, query} = await mutate(body, createCart(), {
+        cookie: 'cart=fixture',
+      });
+      expect(result.type).toBe('json');
+      expect(query.mock.calls[0][0]).toContain(`${operation}(`);
+      expect(query.mock.calls[0][1].variables).toMatchObject(body);
+      expect(new Headers(result.headers).get('Cache-Control')).toMatch(
+        /private|no-store/,
+      );
+    },
+  );
+  it.each([
+    {body: 'intent=note-update&note=Gift+order', operation: 'cartNoteUpdate'},
+    {
+      body: 'intent=discount-apply&discountCode=SAVE',
+      operation: 'cartDiscountCodesUpdate',
+    },
+    {body: 'intent=attributes-update', operation: 'cartAttributesUpdate'},
+  ])(
+    'accepts native metadata forms for $operation',
+    async ({body, operation}) => {
+      const {result, query} = await mutate(body, createCart(), {
+        native: true,
+        cookie: 'cart=fixture',
+        referer: 'https://store.example/swag',
+      });
+      expect(result).toMatchObject({type: 'redirect', location: '/swag'});
+      expect(
+        query.mock.calls.some(([document]) =>
+          document.includes(`${operation}(`),
+        ),
+      ).toBe(true);
+      expect(new Headers(result.headers).get('Cache-Control')).toMatch(
+        /private|no-store/,
+      );
+    },
+  );
+  it.each([
+    null,
+    [],
+    {},
+    {intent: 'unknown'},
+    {note: 123},
+    {discountCodes: [123]},
+    {attributes: [{key: '', value: 'yes'}]},
+    {lines: []},
+    {lines: 'invalid'},
+    {note: 'Gift order', discountCodes: ['SAVE']},
+  ])(
+    'rejects malformed or mixed SDK requests without querying Shopify: %j',
     async (body) => {
       const {result, query} = await mutate(body);
-      expect(result).toMatchObject({type: 'error', status: 400});
+      expect(result.type).toBe('error');
+      if (result.type === 'error') expect(result.status ?? 400).toBe(400);
       expect(query).not.toHaveBeenCalled();
     },
   );

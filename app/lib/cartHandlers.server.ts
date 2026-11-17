@@ -3,6 +3,7 @@ import {
   parseCartRequest,
   createCartServerHandlers,
   createShopifyRouteHandler,
+  type CartAction,
   type CartDataFromHandlers,
   type ShopifyRouteHandlerContext,
   type ShopifyRouteHandlerResult,
@@ -34,47 +35,42 @@ const post = createShopifyRouteHandler(
         .get('content-type')
         ?.includes('application/json');
       let request = context.request;
-      if (!isForm) {
-        let body: unknown;
+      if (isForm) {
+        let action: CartAction;
         try {
-          body = await request.clone().json();
+          const form = await request.clone().formData();
+          action =
+            form.get('intent') === 'empty'
+              ? {
+                  intent: 'remove',
+                  lineIds: form
+                    .getAll('lineId')
+                    .filter((id): id is string => typeof id === 'string'),
+                }
+              : (await parseCartRequest(request.clone())).action;
         } catch {
           return invalidRequest();
         }
+        // Inspect line mutation results before redirecting to enforce drumkit limits.
+        // Other native forms keep the SDK's parsing and same-origin redirects.
         if (
-          !body ||
-          typeof body !== 'object' ||
-          !('lines' in body) ||
-          !Array.isArray(body.lines) ||
-          ['note', 'discountCodes', 'attributes'].some((key) => key in body)
-        )
-          return invalidRequest();
-      }
-      if (isForm) {
-        const form = await request.clone().formData();
-        const action =
-          form.get('intent') === 'empty'
-            ? {
-                intent: 'remove' as const,
-                lineIds: form
-                  .getAll('lineId')
-                  .filter((id): id is string => typeof id === 'string'),
-              }
-            : (await parseCartRequest(request.clone())).action;
-        if (!['add', 'update', 'remove'].includes(action.intent))
-          return invalidRequest();
-        const body =
+          action.intent === 'add' ||
+          action.intent === 'update' ||
           action.intent === 'remove'
-            ? {lines: action.lineIds.map((id) => ({id, quantity: 0}))}
-            : action;
-        const headers = new Headers(request.headers);
-        headers.set('content-type', 'application/json');
-        request = new Request(request.url, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify(body),
-          signal: request.signal,
-        });
+        ) {
+          const body =
+            action.intent === 'remove'
+              ? {lines: action.lineIds.map((id) => ({id, quantity: 0}))}
+              : action;
+          const headers = new Headers(request.headers);
+          headers.set('content-type', 'application/json');
+          request = new Request(request.url, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(body),
+            signal: request.signal,
+          });
+        }
       }
       const result = await basePost({...context, request});
       const privateHeaders = new Headers(result.headers);
