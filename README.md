@@ -23,6 +23,8 @@ npm run dev
 
 Configure `.env` with `PUBLIC_STORE_DOMAIN` and either `PRIVATE_STOREFRONT_API_TOKEN` (Oxygen) or `PUBLIC_STOREFRONT_API_TOKEN`. A mock.shop domain uses a public client without a token. `PUBLIC_STOREFRONT_ID` identifies the Hydrogen storefront. `PUBLIC_CHECKOUT_DOMAIN` is optional for CSP when checkout uses another domain. Keep all credentials out of Git. For the deterministic local test store, use `npm run test:e2e:serve`; its separate fixture environment contains no credentials.
 
+With no store configuration, `npm run dev` defaults to tokenless `mock.shop`, which provides sample apparel. This fallback is limited to development and disabled when a token, storefront ID or checkout domain is already configured. Production always requires `PUBLIC_STORE_DOMAIN`. The resolved domain is shared by the client, root loader and CSP setup.
+
 `npm run dev:https` enables the SDK's HTTPS helper. Customer accounts are not implemented in this storefront; adding them requires their own handlers, session manager and Shopify configuration.
 
 ## Request and UI flow
@@ -59,6 +61,8 @@ npm run test:e2e
 ```
 
 `npm run preview` builds and runs the production Oxygen worker locally. `npm run deploy` first builds the production entry, then uploads `dist/client` and `dist/server` through Shopify CLI. The GitHub Oxygen workflow runs the quality workflow before deployment. Its current trigger includes pushes to every branch; check that workflow before pushing a review branch.
+
+Oxygen variable changes apply to new deployments. Existing deployments keep their previous values until the environment is redeployed; saving or pushing a variable alone does not update the running deployment. See [Oxygen environments and variables](https://shopify.dev/docs/storefronts/hydrogen/deploy/oxygen/environments).
 
 See [TESTING.md](TESTING.md) for fixtures, the 1,000-user local stress workload and live-integration limits.
 

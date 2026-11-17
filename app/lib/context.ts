@@ -33,8 +33,18 @@ export async function createHydrogenRouterContext(
   executionContext: ExecutionContext,
   options: {fetch?: typeof globalThis.fetch; cache?: CacheInstance} = {},
 ) {
-  if (!env.PUBLIC_STORE_DOMAIN)
-    throw new Error('PUBLIC_STORE_DOMAIN is not set');
+  const hasStoreConfiguration = Boolean(
+    env.PRIVATE_STOREFRONT_API_TOKEN ||
+    env.PUBLIC_STOREFRONT_API_TOKEN ||
+    env.PUBLIC_STOREFRONT_ID ||
+    env.PUBLIC_CHECKOUT_DOMAIN,
+  );
+  const storeDomain =
+    env.PUBLIC_STORE_DOMAIN ||
+    (process.env.NODE_ENV === 'development' && !hasStoreConfiguration
+      ? 'mock.shop'
+      : undefined);
+  if (!storeDomain) throw new Error('PUBLIC_STORE_DOMAIN is not set');
   const cache = options.cache ?? (await caches.open('hydrogen-2026-10'));
   const waitUntil = executionContext.waitUntil.bind(executionContext);
   const buyerIp =
@@ -47,7 +57,7 @@ export async function createHydrogenRouterContext(
     buyerContext ??
     createShopifyRequestContext({request, i18n: storefrontI18n});
   const config = {
-    storeDomain: env.PUBLIC_STORE_DOMAIN,
+    storeDomain,
     storefrontId: env.PUBLIC_STOREFRONT_ID,
     cache: cache as unknown as CacheInstance,
     waitUntil,
@@ -78,7 +88,7 @@ export async function createHydrogenRouterContext(
     });
   }
   const context = new RouterContextProvider();
-  context.set(envContext, env);
+  context.set(envContext, {...env, PUBLIC_STORE_DOMAIN: storeDomain});
   context.set(storefrontClientContext, storefrontClient);
   return context;
 }

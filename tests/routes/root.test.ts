@@ -1,6 +1,27 @@
 import {createRouteContext} from '../fixtures/routeContext';
 import {describe, expect, it, vi} from 'vitest';
-import {loader, meta} from '~/root';
+import {createElement} from 'react';
+import {render, screen} from '@testing-library/react';
+import {createMemoryRouter, RouterProvider} from 'react-router';
+import {ErrorBoundary, loader, meta} from '~/root';
+
+describe('root server error screen', () => {
+  it('renders safely without a CartProvider or cart/search controls', () => {
+    const router = createMemoryRouter(
+      [{id: 'root', path: '/', errorElement: createElement(ErrorBoundary)}],
+      {
+        hydrationData: {
+          errors: {root: new Error('Private upstream details')},
+        },
+      },
+    );
+    render(createElement(RouterProvider, {router}));
+    expect(screen.getByRole('heading', {name: 'Oops'})).toBeVisible();
+    expect(screen.getByRole('heading', {name: '500'})).toBeVisible();
+    expect(screen.queryByRole('button', {name: /Cart|Search/})).toBeNull();
+    expect(screen.queryByText('Private upstream details')).toBeNull();
+  });
+});
 
 describe('root error metadata', () => {
   it('leaves normal page metadata to the matched route', () => {

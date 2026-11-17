@@ -23,14 +23,14 @@ Vitest 4.1.12 supports the installed Vite 8. A separate `vitest.config.ts` avoid
 
 ## Unit, component and route tests
 
-- `tests/lib/`: variant URLs/default options, description extraction, product themes, search normalization/tracking, safe redirects and money/currency precision.
+- `tests/lib/`: variant URLs/default options, description extraction, product themes, search normalization/tracking, safe redirects and money/currency precision. Request-context tests cover the unconfigured development mock.shop fallback, explicit production configuration and trusted buyer-IP handling.
 - `tests/lib/cartUtils.test.ts` and `tests/lib/componentUtils.test.ts`: cart-child grouping/pending content, controller navigation, cursor URL preservation and typing/sound target helpers. Existing description/theme/search tests import their consolidated feature utility modules directly.
 - `tests/components/`: real purchase controls, stock/disabled/missing-variant states, pending submissions and recoverable cart errors inside a real memory data router.
 - `tests/components/ButtonSound.test.tsx`: audio stays uninitialized until a click/key press, the first activation waits for decoding, StrictMode does not create startup audio engines, and unmount aborts downloads and prevents late playback.
 - `tests/components/CartLineQuantity.test.tsx`: remove/decrease/increase actions, line identity, stock limits, numeric quantity editing, shared pending state and failure recovery after component simplification.
 - `tests/components/ControllerFooter.test.tsx`: home/product/ordinary-page Back behavior, Search/Cart controls, pending and failed cart loading, optimistic quantity rollback, opening Cart before a pending add has a calculated price and focus restoration when the cart resolves during an open Search dialog. Transport failures and GraphQL error envelopes show a safe message and a full-page reload link instead of a false empty cart. Uses real router/provider/modal components rather than mocking their hooks.
 - `tests/components/Aside.test.tsx`: overlay exit timing, repeated-close requests, cancellation when another overlay opens, reduced motion and timer cleanup on unmount. The permanent Shopify `openCart` handler dispatches a DOM event to the currently mounted provider, including after a remount. Existing route-exit tests cover the shared timer through navigation too.
-- `tests/routes/`: real loaders/handlers with typed React Router contexts and a mocked GraphQL boundary; cart dispatch/cookies/redirects/failures, search boundaries, pagination variables, selected options, 404 and permalink validation.
+- `tests/routes/`: real loaders/handlers with typed React Router contexts and a mocked GraphQL boundary; cart dispatch/cookies/redirects/failures, search boundaries, pagination variables, selected options, 404 and permalink validation. The generic root error screen also renders in a real memory router without a CartProvider: it shows safe error text and no cart/search controls.
 - `tests/fixtures/catalog.ts`: query-type-compatible fictional product, variants, cards and cart. There are in-stock, unavailable and missing-variant states; E2E adds a 25-product catalog for multiple pages.
 
 Example from the product component test:

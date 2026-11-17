@@ -96,6 +96,8 @@ Fetch catalog/product data through `storefrontClient.graphql()` in loaders. `ser
 
 The new client has no implicit query cache. Apply `publicDataCache` to public catalog/policy/shop/sitemap queries; leave carts uncached and their responses private. Preserve streamed cart initial data, the custom consent gate, per-document CSP nonce and ShopifyScripts. Analytics use the new global bus; cart deltas use `useCartAnalytics()` once inside CartProvider. Predictive suggestions use their own provider and do not publish full search-page view events.
 
+The tokenless mock.shop default applies only to a completely unconfigured development environment. Production and partially configured stores require an explicit domain. Pass the resolved domain through `envContext` so server rendering, ShopifyScripts and CSP use the same store as the client. Keep the non-404 root error screen independent of cart state; it renders no controller footer or commerce dialogs.
+
 Use the local `getPaginationVariables(request, {pageBy: PRODUCTS_PER_PAGE})` in catalog loaders. ProductListingPagination emits ordinary React Router links with matching `cursor` and `direction` parameters. This supports page flips and browser history without accumulating earlier pages. Never download the entire catalog for pagination.
 
 Cart forms submit to the `/api/cart` handler without changing the current page; checkout URLs come from Shopify cart responses. Do not invent product availability, cart totals or currency conversions on the client. `formatMoney` only formats Shopify amounts. Keep EUR's existing `EURO` label; display other currencies accurately.

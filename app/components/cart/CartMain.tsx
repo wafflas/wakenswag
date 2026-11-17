@@ -22,7 +22,7 @@ export function CartMain({
   );
   const linesCount = parentLines.length;
   const cartHasItems = (cart?.totalQuantity ?? 0) > 0;
-  const hasLoadError = initialLoadFailed && !cart.id;
+  const hasLoadError = initialLoadFailed && !cart?.id;
   const childrenMap = getLineItemChildrenMap(lines);
 
   return (
