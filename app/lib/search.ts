@@ -1,35 +1,7 @@
-import type {PredictiveSearchQuery} from 'storefrontapi.generated';
+import type {PredictiveSearchData} from './predictiveSearch.server';
 
-export type SearchProductNode = NonNullable<
-  PredictiveSearchQuery['predictiveSearch']
->['products'][number];
-
-type PredictiveSearchItems = {
-  products: SearchProductNode[];
-  queries: Array<{
-    text: string;
-  }>;
-};
-
-export type PredictiveSearchReturn = {
-  type: 'predictive';
-  term: string;
-  result: {total: number; items: PredictiveSearchItems};
-  error?: string;
-};
-
-/**
- * Returns the empty state of a predictive search result to reset the search state.
- */
-export function getEmptyPredictiveSearchResult(): PredictiveSearchReturn['result'] {
-  return {
-    total: 0,
-    items: {
-      products: [],
-      queries: [],
-    },
-  };
-}
+export type SearchProductNode =
+  PredictiveSearchData['items']['products'][number];
 
 interface UrlWithTrackingParams {
   baseUrl: string;

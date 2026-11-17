@@ -1,4 +1,4 @@
-import {useEffect} from 'react';
+import {useEffect, useState} from 'react';
 import {useLocation, useSearchParams} from 'react-router';
 import {
   DRUMKITS_PER_PAGE,
@@ -10,6 +10,7 @@ export function useDrumkitPageSize() {
   const {pathname} = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const pageSize = searchParams.get('pageSize');
+  const [expectedPageSize, setExpectedPageSize] = useState<string | null>(null);
 
   useEffect(() => {
     if (pathname !== '/drumkits' && pathname !== '/drumkits/') return;
@@ -18,6 +19,7 @@ export function useDrumkitPageSize() {
       const nextSize = String(
         desktop.matches ? DRUMKITS_PER_PAGE : MOBILE_DRUMKITS_PER_PAGE,
       );
+      setExpectedPageSize(nextSize);
       if ((pageSize ?? String(DRUMKITS_PER_PAGE)) === nextSize) return;
 
       setSearchParams(
@@ -38,4 +40,9 @@ export function useDrumkitPageSize() {
     desktop.addEventListener('change', syncPageSize);
     return () => desktop.removeEventListener('change', syncPageSize);
   }, [pageSize, pathname, setSearchParams]);
+
+  return (
+    expectedPageSize !== null &&
+    (pageSize ?? String(DRUMKITS_PER_PAGE)) === expectedPageSize
+  );
 }

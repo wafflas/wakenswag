@@ -9,10 +9,7 @@ import {
   getProductDetailTheme,
 } from '~/components/product-detail/productDetailUtils';
 import {normalizeSearchProduct} from '~/components/search/searchUtils';
-import {
-  getEmptyPredictiveSearchResult,
-  urlWithTrackingParams,
-} from '~/lib/search';
+import {urlWithTrackingParams} from '~/lib/search';
 import {createProduct, createVariant} from '../fixtures/catalog';
 
 describe('product detail route detection', () => {
@@ -151,10 +148,6 @@ describe('predictive search data', () => {
     expect(
       normalizeSearchProduct({id: '1', handle: 'tee', title: 'Tee'}),
     ).toMatchObject({category: 'SWAG', image: null, price: null});
-    expect(getEmptyPredictiveSearchResult()).toEqual({
-      total: 0,
-      items: {products: [], queries: []},
-    });
   });
   it('recognizes a drumkit collection even when Shopify product type is empty', () => {
     expect(

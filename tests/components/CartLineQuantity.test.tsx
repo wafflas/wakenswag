@@ -5,7 +5,9 @@ import {
 } from 'react-router';
 import {render, screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import {CartForm} from '@shopify/hydrogen';
+import {parseCartRequest} from '@shopify/hydrogen';
+import {CartProvider} from '~/lib/cart';
+import {mockCartRequest} from '../fixtures/shopifyRuntime';
 import {describe, expect, it, vi} from 'vitest';
 import {CartLineQuantity} from '~/components/cart/CartLineQuantity';
 import type {CartLine} from '~/components/cart/cartUtils';
@@ -15,8 +17,30 @@ function renderQuantity(
   line: CartLine,
   action: (args: ActionFunctionArgs) => unknown = () => ({}),
 ) {
+  mockCartRequest((payload) =>
+    action({
+      request: new Request('http://localhost/api/cart', {
+        method: 'POST',
+        headers: {'content-type': 'application/json'},
+        body: JSON.stringify(payload),
+      }),
+      params: {},
+      context: {},
+    } as ActionFunctionArgs),
+  );
   const router = createMemoryRouter([
-    {path: '/', element: <CartLineQuantity line={line} />},
+    {
+      path: '/',
+      element: (
+        <CartProvider
+          initialData={{
+            cart: {...createCart(line.quantity), lines: {nodes: [line]}},
+          }}
+        >
+          <CartLineQuantity line={line} />
+        </CartProvider>
+      ),
+    },
     {path: '/cart', action},
   ]);
   return render(<RouterProvider router={router} />);
@@ -24,8 +48,8 @@ function renderQuantity(
 
 describe('cart line quantity controls', () => {
   it.each([
-    [1, 'Remove item', CartForm.ACTIONS.LinesRemove],
-    [2, 'Decrease quantity', CartForm.ACTIONS.LinesUpdate],
+    [1, 'Remove item', 'remove'],
+    [2, 'Decrease quantity', 'update'],
   ] as const)(
     'submits the correct action when decreasing quantity %s',
     async (quantity, label, expectedAction) => {
@@ -33,17 +57,16 @@ describe('cart line quantity controls', () => {
       const submitted = vi.fn();
       const line = createCart(quantity).lines.nodes[0];
       renderQuantity(line, async ({request}) => {
-        submitted(CartForm.getFormInput(await request.formData()));
+        submitted((await parseCartRequest(request)).action);
         return {};
       });
       await user.click(screen.getByRole('button', {name: label}));
       await waitFor(() => expect(submitted).toHaveBeenCalledOnce());
       expect(submitted).toHaveBeenCalledWith({
-        action: expectedAction,
-        inputs:
-          quantity === 1
-            ? {lineIds: [line.id]}
-            : {lines: [{id: line.id, quantity: 1}]},
+        intent: expectedAction,
+        ...(quantity === 1
+          ? {lineIds: [`${line.id}?cart=fixture`]}
+          : {lines: [{id: `${line.id}?cart=fixture`, quantity: 1}]}),
       });
     },
   );
@@ -53,14 +76,14 @@ describe('cart line quantity controls', () => {
     const line = createCart(1).lines.nodes[0];
     const submitted = vi.fn();
     renderQuantity(line, async ({request}) => {
-      submitted(CartForm.getFormInput(await request.formData()));
+      submitted((await parseCartRequest(request)).action);
       return {};
     });
     await user.click(screen.getByRole('button', {name: /Increase quantity/}));
     await waitFor(() =>
       expect(submitted).toHaveBeenCalledWith({
-        action: CartForm.ACTIONS.LinesUpdate,
-        inputs: {lines: [{id: line.id, quantity: 2}]},
+        intent: 'update',
+        lines: [{id: `${line.id}?cart=fixture`, quantity: 2}],
       }),
     );
   });
@@ -75,12 +98,12 @@ describe('cart line quantity controls', () => {
     ).toBeEnabled();
   });
 
-  it('disables both controls for an optimistic line', () => {
-    renderQuantity({...createCart(1).lines.nodes[0], isOptimistic: true});
-    expect(screen.getByRole('button', {name: 'Remove item'})).toBeDisabled();
-    expect(
-      screen.getByRole('button', {name: /Increase quantity/}),
-    ).toBeDisabled();
+  it('exposes an editable quantity field with numeric input hints', () => {
+    renderQuantity(createCart(2).lines.nodes[0]);
+    expect(screen.getByRole('textbox', {name: 'Item quantity'})).toHaveValue(
+      '2',
+    );
+    expect(screen.getByRole('textbox')).toHaveAttribute('inputmode', 'numeric');
   });
 
   it('shares pending state between controls and permits retry after failure', async () => {
@@ -100,7 +123,7 @@ describe('cart line quantity controls', () => {
     finish();
     await waitFor(() =>
       expect(
-        screen.getByText('Could not remove this item. Please try again.'),
+        screen.getByText('Could not update this item. Please try again.'),
       ).toBeVisible(),
     );
     expect(remove).toBeEnabled();

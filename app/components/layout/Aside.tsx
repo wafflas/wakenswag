@@ -18,11 +18,12 @@ type AsideContextValue = {
   isExiting: boolean;
   open: (mode: AsideType) => void;
   close: () => void;
-  openerRef: RefObject<HTMLElement>;
+  openerRef: RefObject<HTMLElement | null>;
   inputMode: 'keyboard' | 'pointer';
 };
 
 const AsideContext = createContext<AsideContextValue | null>(null);
+const OPEN_CART_EVENT = 'wakenswag:open-cart';
 
 export function AsideProvider({children}: {children: ReactNode}) {
   const [type, setType] = useState<AsideType>('closed');
@@ -52,6 +53,29 @@ export function AsideProvider({children}: {children: ReactNode}) {
     setType(mode);
     setIsExiting(false);
   }, []);
+
+  useEffect(() => {
+    const handleOpenCart = () => open('cart');
+    const configureOpenCart = () => {
+      window.Shopify?.actions?.openCart.configure({
+        // Standard Actions keeps this handler for the document's lifetime.
+        // Dispatch through the DOM so it never retains an unmounted provider.
+        handler: async () => {
+          document.dispatchEvent(new Event(OPEN_CART_EVENT));
+        },
+      });
+    };
+    document.addEventListener(OPEN_CART_EVENT, handleOpenCart);
+    configureOpenCart();
+    document.addEventListener('DOMContentLoaded', configureOpenCart, {
+      once: true,
+    });
+    return () => {
+      document.removeEventListener(OPEN_CART_EVENT, handleOpenCart);
+      document.removeEventListener('DOMContentLoaded', configureOpenCart);
+    };
+  }, [open]);
+
   const close = useCallback(() => {
     if (type !== 'closed') setIsExiting(true);
   }, [type]);

@@ -1,11 +1,13 @@
-import {ServerRouter} from 'react-router';
+import {
+  ServerRouter,
+  type RouterContextProvider,
+  type EntryContext,
+} from 'react-router';
 import {isbot} from 'isbot';
 import {renderToReadableStream} from 'react-dom/server';
-import {
-  createContentSecurityPolicy,
-  type HydrogenRouterContextProvider,
-} from '@shopify/hydrogen';
-import type {EntryContext} from 'react-router';
+import {createContentSecurityPolicy} from '@shopify/hydrogen';
+import {NonceProvider} from '~/lib/nonce';
+import {envContext} from '~/lib/context';
 import {RouteFocusProvider} from '~/components/layout/RouteFocusProvider';
 
 export default async function handleRequest(
@@ -13,18 +15,19 @@ export default async function handleRequest(
   responseStatusCode: number,
   responseHeaders: Headers,
   reactRouterContext: EntryContext,
-  context: HydrogenRouterContextProvider,
+  context: RouterContextProvider,
 ) {
-  const {nonce, header, NonceProvider} = createContentSecurityPolicy({
+  const env = context.get(envContext);
+  const csp = createContentSecurityPolicy({
     shop: {
-      checkoutDomain:
-        context.env.PUBLIC_CHECKOUT_DOMAIN || context.env.PUBLIC_STORE_DOMAIN,
-      storeDomain: context.env.PUBLIC_STORE_DOMAIN,
+      checkoutDomain: env.PUBLIC_CHECKOUT_DOMAIN || env.PUBLIC_STORE_DOMAIN,
+      storeDomain: env.PUBLIC_STORE_DOMAIN,
     },
   });
 
+  const {nonce} = csp;
   const body = await renderToReadableStream(
-    <NonceProvider>
+    <NonceProvider value={nonce}>
       <RouteFocusProvider>
         <ServerRouter
           context={reactRouterContext}
@@ -48,7 +51,7 @@ export default async function handleRequest(
   }
 
   responseHeaders.set('Content-Type', 'text/html');
-  responseHeaders.set('Content-Security-Policy', header);
+  csp.applyResponseHeaders(responseHeaders);
 
   return new Response(body, {
     headers: responseHeaders,

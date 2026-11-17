@@ -1,60 +1,46 @@
 import {act, fireEvent, render, screen} from '@testing-library/react';
 import {MemoryRouter} from 'react-router';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
-import type {CustomerPrivacy, CustomerPrivacyApiProps} from '@shopify/hydrogen';
 import {CookieConsentBanner} from '~/components/privacy/CookieConsentBanner';
 import {AsideProvider} from '~/components/layout/Aside';
 
 const privacy = vi.hoisted(() => ({
-  props: {} as CustomerPrivacyApiProps,
+  consentStatus: 'loaded',
+  saves: [] as Array<{resolve: () => void; reject: (error: Error) => void}>,
   shouldShowBanner: vi.fn(() => true),
-  currentVisitorConsent: vi.fn<CustomerPrivacy['currentVisitorConsent']>(
-    () => ({
-      analytics: '',
-      marketing: '',
-      preferences: '',
-      sale_of_data: '',
-    }),
-  ),
+  currentVisitorConsent: vi.fn(() => ({
+    analytics: '',
+    marketing: '',
+    preferences: '',
+    sale_of_data: '',
+  })),
   setTrackingConsent: vi.fn(),
-}));
-
-vi.mock('@shopify/hydrogen', () => ({
-  useCustomerPrivacy: (props: CustomerPrivacyApiProps) => {
-    privacy.props = props;
-    return {customerPrivacy: privacy};
-  },
 }));
 
 function renderBanner(path = '/') {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <AsideProvider>
-        <CookieConsentBanner
-          consent={{
-            checkoutDomain: 'checkout.example',
-            storefrontAccessToken: 'fixture',
-          }}
-        />
+        <CookieConsentBanner />
       </AsideProvider>
     </MemoryRouter>,
   );
 }
 
 function ready() {
-  act(() => privacy.props.onReady?.());
+  Object.defineProperty(window.Shopify, 'customerPrivacy', {
+    value: privacy,
+    writable: true,
+    configurable: true,
+  });
+  void act(() => {
+    document.dispatchEvent(new Event('wakenswag:consent-ready'));
+  });
 }
 
 function collectConsent() {
-  act(() => {
-    privacy.props.onVisitorConsentCollected?.({
-      analyticsAllowed: false,
-      firstPartyMarketingAllowed: false,
-      marketingAllowed: false,
-      preferencesAllowed: false,
-      saleOfDataAllowed: false,
-      thirdPartyMarketingAllowed: false,
-    });
+  void act(() => {
+    document.dispatchEvent(new Event('visitorConsentCollected'));
   });
 }
 
@@ -66,7 +52,14 @@ beforeEach(() => {
     preferences: '',
     sale_of_data: '',
   });
-  privacy.setTrackingConsent.mockReset();
+  if (window.Shopify) Reflect.deleteProperty(window.Shopify, 'customerPrivacy');
+  privacy.saves.length = 0;
+  privacy.setTrackingConsent.mockReset().mockImplementation(
+    () =>
+      new Promise<void>((resolve, reject) => {
+        privacy.saves.push({resolve, reject});
+      }),
+  );
 });
 
 afterEach(() => {
@@ -81,7 +74,7 @@ describe('custom cookie consent banner', () => {
     expect(screen.queryByRole('region')).not.toBeInTheDocument();
     ready();
     expect(screen.queryByRole('region')).not.toBeInTheDocument();
-    expect(privacy.props.withPrivacyBanner).toBe(false);
+    expect(privacy.shouldShowBanner).toHaveBeenCalled();
   });
 
   it('leaves a product dialog in control of the screen', () => {
@@ -119,7 +112,7 @@ describe('custom cookie consent banner', () => {
 
   it.each([true, false])(
     'saves optional consent as %s and closes only after success',
-    (accepted) => {
+    async (accepted) => {
       vi.useFakeTimers();
       renderBanner();
       ready();
@@ -128,23 +121,20 @@ describe('custom cookie consent banner', () => {
           name: accepted ? 'Accept optional' : 'Reject optional',
         }),
       );
-      expect(privacy.setTrackingConsent).toHaveBeenCalledWith(
-        {
-          analytics: accepted,
-          marketing: accepted,
-          preferences: accepted,
-          sale_of_data: false,
-        },
-        expect.any(Function),
-      );
+      expect(privacy.setTrackingConsent).toHaveBeenCalledWith({
+        analytics: accepted,
+        marketing: accepted,
+        preferences: accepted,
+        sale_of_data: false,
+      });
       expect(screen.getByRole('status')).toHaveTextContent(
         'Saving your choice',
       );
       expect(
         screen.getByRole('button', {name: 'Accept optional'}),
       ).toBeDisabled();
-      act(() => {
-        privacy.setTrackingConsent.mock.calls[0][1]();
+      await act(async () => {
+        privacy.saves[0].resolve();
       });
       expect(screen.getByRole('region')).toHaveClass('anim-fade-out');
       expect(
@@ -164,20 +154,22 @@ describe('custom cookie consent banner', () => {
     },
   );
 
-  it('keeps failed choices visible and permits retry', () => {
+  it('keeps failed choices visible and permits retry', async () => {
     vi.useFakeTimers();
     renderBanner();
     ready();
-    privacy.setTrackingConsent.mockImplementationOnce((_, finish) =>
-      finish({error: 'Network error'}),
+    privacy.setTrackingConsent.mockRejectedValueOnce(
+      new Error('Network error'),
     );
-    fireEvent.click(screen.getByRole('button', {name: 'Reject optional'}));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', {name: 'Reject optional'}));
+    });
     expect(screen.getByRole('alert')).toHaveTextContent('could not be saved');
     expect(screen.getByRole('region')).toHaveClass('anim-fade-in');
     fireEvent.click(screen.getByRole('button', {name: 'Reject optional'}));
     expect(privacy.setTrackingConsent).toHaveBeenCalledTimes(2);
-    act(() => {
-      privacy.setTrackingConsent.mock.calls[1][1]();
+    await act(async () => {
+      privacy.saves[0].resolve();
     });
     act(() => {
       vi.advanceTimersByTime(300);
@@ -232,7 +224,7 @@ describe('custom cookie consent banner', () => {
     expect(screen.getByRole('region')).toHaveClass('anim-fade-in');
   });
 
-  it('ignores late save callbacks and clears its timer on unmount', () => {
+  it('ignores late save callbacks and clears its timer on unmount', async () => {
     vi.useFakeTimers();
     const view = renderBanner();
     ready();
@@ -241,15 +233,15 @@ describe('custom cookie consent banner', () => {
       vi.advanceTimersByTime(8000);
     });
     expect(screen.getByRole('alert')).toHaveTextContent('could not be saved');
-    act(() => {
-      privacy.setTrackingConsent.mock.calls[0][1]();
+    await act(async () => {
+      privacy.saves[0].resolve();
     });
     expect(screen.getByRole('region')).toBeVisible();
     act(() => screen.getByRole('button', {name: 'Reject optional'}).click());
     view.unmount();
     expect(vi.getTimerCount()).toBe(0);
-    act(() => {
-      privacy.setTrackingConsent.mock.calls[1][1]();
+    await act(async () => {
+      privacy.saves[1].resolve();
     });
   });
 });

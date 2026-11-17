@@ -1,11 +1,6 @@
-import {useEffect, useState} from 'react';
-import {useRouteLoaderData} from 'react-router';
-import {useOptimisticCart} from '@shopify/hydrogen';
-import type {RootLoader} from '~/root';
-import type {
-  CartApiQueryFragment,
-  ProductFragment,
-} from 'storefrontapi.generated';
+import {useState} from 'react';
+import {useCart} from '~/lib/cart';
+import type {ProductFragment} from '~/lib/productDetail';
 import {AddToCartButton} from '~/components/cart/AddToCartButton';
 
 export function ProductPurchaseControls({
@@ -16,30 +11,11 @@ export function ProductPurchaseControls({
   allowQuantitySelection?: boolean;
 }) {
   const [requestedQuantity, setQuantity] = useState(1);
-  const root = useRouteLoaderData<RootLoader>('root');
-  const cartPromise = root?.cart;
-  const [resolvedCart, setResolvedCart] = useState<CartApiQueryFragment | null>(
-    null,
-  );
-  const cart = useOptimisticCart(resolvedCart);
-  useEffect(() => {
-    if (!cartPromise) return;
-    let active = true;
-    void cartPromise
-      .then((cart) => {
-        if (active) setResolvedCart(cart);
-      })
-      .catch(() => {
-        if (active) setResolvedCart(null);
-      });
-    return () => {
-      active = false;
-    };
-  }, [cartPromise]);
+  const cart = useCart((state) => state.data);
   const isInCart =
     !allowQuantitySelection &&
     cart?.lines?.nodes.some(
-      (line) => line.merchandise.product.id === selectedVariant?.product.id,
+      (line) => line.merchandise?.product.id === selectedVariant?.product.id,
     );
   const stockLimit = selectedVariant?.quantityAvailable ?? null;
 
@@ -60,17 +36,7 @@ export function ProductPurchaseControls({
           'cursor-pointer border-0 bg-transparent p-0',
         ].join(' ')}
         disabled={!selectedVariant || !isAvailable || isInCart}
-        lines={
-          selectedVariant
-            ? [
-                {
-                  merchandiseId: selectedVariant.id,
-                  quantity,
-                  selectedVariant,
-                },
-              ]
-            : []
-        }
+        quantity={quantity}
       >
         <span
           className={['ps2-soft-copy text-2xl leading-none lg:text-3xl'].join(

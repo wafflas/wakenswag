@@ -6,9 +6,12 @@ import {useProductListingSelection} from '~/components/product-listing/useProduc
 import {
   EMPTY_PRODUCT_CONNECTION,
   PRODUCTS_PER_PAGE,
+  getPaginationVariables,
 } from '~/components/product-listing/productListingUtils';
 import {PRODUCT_ITEM_FRAGMENT} from '~/lib/fragments';
-import {Analytics, getPaginationVariables} from '@shopify/hydrogen';
+import {gql} from '@shopify/hydrogen';
+import {storefrontClientContext, publicDataCache} from '~/lib/context';
+import {AnalyticsView} from '~/components/analytics/AnalyticsView';
 import {isProductDetailPath} from '~/lib/variants';
 
 const SWAG_HANDLE = 'swag';
@@ -29,13 +32,19 @@ export const meta: Route.MetaFunction = () => [
 ];
 
 export async function loader({context, request}: Route.LoaderArgs) {
-  const {collection} = await context.storefront.query(SWAG_QUERY, {
-    variables: {
-      handle: SWAG_HANDLE,
-      ...getPaginationVariables(request, {pageBy: PRODUCTS_PER_PAGE}),
-    },
-  });
+  const {data, errors} = await context
+    .get(storefrontClientContext)
+    .graphql(SWAG_QUERY, {
+      cache: publicDataCache,
+      variables: {
+        handle: SWAG_HANDLE,
+        ...getPaginationVariables(request, {pageBy: PRODUCTS_PER_PAGE}),
+      },
+    });
 
+  if (errors?.length)
+    throw new Response('Collection is unavailable', {status: 502});
+  const collection = data?.collection;
   return {
     products: collection?.products ?? EMPTY_PRODUCT_CONNECTION,
     collectionAnalytics: collection
@@ -77,13 +86,17 @@ export default function Swag() {
 
       <Outlet />
       {collectionAnalytics && !isProductDetailPath(pathname) ? (
-        <Analytics.CollectionView data={{collection: collectionAnalytics}} />
+        <AnalyticsView
+          event="collection_viewed"
+          data={{collection: collectionAnalytics}}
+        />
       ) : null}
     </>
   );
 }
 
-const SWAG_QUERY = `#graphql
+const SWAG_QUERY = gql(
+  `#graphql
   query Swag(
     $handle: String!
     $country: CountryCode
@@ -115,5 +128,6 @@ const SWAG_QUERY = `#graphql
     }
   }
 
-  ${PRODUCT_ITEM_FRAGMENT}
-` as const;
+`,
+  [PRODUCT_ITEM_FRAGMENT],
+);

@@ -1,10 +1,11 @@
+import {createRouteContext} from '../fixtures/routeContext';
 import {describe, expect, it, vi} from 'vitest';
 import {loader} from '~/routes/info.$section';
 
 function loadSection(section: string, query = vi.fn()) {
   return loader({
     params: {section},
-    context: {storefront: {query}},
+    context: createRouteContext(query).context,
   } as unknown as Parameters<typeof loader>[0]);
 }
 

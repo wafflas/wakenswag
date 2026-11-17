@@ -1,3 +1,5 @@
+import {gql} from '@shopify/hydrogen';
+import {storefrontClientContext, publicDataCache} from '~/lib/context';
 import {Link, useLoaderData, useRevalidator} from 'react-router';
 import sanitizeHtml from 'sanitize-html';
 import type {Route} from './+types/info.$section';
@@ -26,8 +28,13 @@ export async function loader({context, params}: Route.LoaderArgs) {
   const {title, field} = SECTIONS[section as keyof typeof SECTIONS];
 
   try {
-    const {shop} = await context.storefront.query(INFO_POLICIES_QUERY);
-    const policy = shop[field];
+    const {data, errors} = await context
+      .get(storefrontClientContext)
+      .graphql(INFO_POLICIES_QUERY, {cache: publicDataCache});
+    if (errors?.length)
+      throw new Response('Policy is unavailable', {status: 502});
+    const shop = data?.shop;
+    const policy = shop?.[field];
     // Allow ordinary policy formatting, removing scripts and unsafe URLs.
     const body = policy?.body ? sanitizeHtml(policy.body) : null;
     return {section, title, body, failed: false};
@@ -91,7 +98,7 @@ export default function InfoSection() {
   );
 }
 
-const INFO_POLICIES_QUERY = `#graphql
+const INFO_POLICIES_QUERY = gql(`#graphql
   query InfoPolicies {
     shop {
       privacyPolicy { body }
@@ -99,4 +106,4 @@ const INFO_POLICIES_QUERY = `#graphql
       refundPolicy { body }
     }
   }
-` as const;
+`);

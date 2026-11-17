@@ -1,18 +1,12 @@
 import {useCallback} from 'react';
-import {
-  Analytics,
-  getAdjacentAndFirstAvailableVariants,
-  useOptimisticVariant,
-  useSelectedOptionInUrlParam,
-} from '@shopify/hydrogen';
-import {useLocation, useNavigate, useRouteLoaderData} from 'react-router';
-import type {RootLoader} from '~/root';
+import {ProductProvider} from '~/lib/product';
+import {useLocation, useNavigate} from 'react-router';
 import {CartModal} from '~/components/cart/CartModal';
 import {SearchModal} from '~/components/search/SearchModal';
 import {useAside} from '~/components/layout/Aside';
-import type {ProductFragment} from 'storefrontapi.generated';
+import type {ProductFragment} from '~/lib/productDetail';
 import {useProductExitTransition} from '~/components/animations/RouteFadeTransition';
-import {getProductListingPath, isDefaultTitleOption} from '~/lib/variants';
+import {getProductListingPath, getVariantUrl} from '~/lib/variants';
 import {ProductDetail} from './ProductDetail';
 import {StorefrontDialog} from '~/components/layout/StorefrontDialog';
 
@@ -26,9 +20,8 @@ export function ProductDetailRouteView({
   productUrl,
 }: ProductDetailRouteViewProps) {
   const navigate = useNavigate();
-  const root = useRouteLoaderData<RootLoader>('root');
   const {type} = useAside();
-  const {pathname} = useLocation();
+  const {pathname, search} = useLocation();
   const listingPath = getProductListingPath(pathname);
   const closeProduct = useCallback(() => {
     void navigate(listingPath);
@@ -36,16 +29,7 @@ export function ProductDetailRouteView({
 
   const isExiting = useProductExitTransition();
 
-  const selectedVariant = useOptimisticVariant(
-    product.selectedOrFirstAvailableVariant,
-    getAdjacentAndFirstAvailableVariants(product),
-  );
-
-  const urlSelectedOptions = (selectedVariant?.selectedOptions ?? []).filter(
-    (option) => !isDefaultTitleOption(option),
-  );
-
-  useSelectedOptionInUrlParam(urlSelectedOptions);
+  const selectedVariant = product.selectedOrFirstAvailableVariant;
 
   const structuredData = {
     '@context': 'https://schema.org',
@@ -81,44 +65,39 @@ export function ProductDetailRouteView({
   );
 
   return (
-    <StorefrontDialog
-      title={product.title}
-      onClose={closeProduct}
-      isActive={type === 'closed'}
-      className="fixed inset-0 z-40 overflow-auto"
-      isExiting={isExiting}
-      key={product.handle}
+    <ProductProvider
+      product={product}
+      onSelect={(result) => {
+        void navigate(
+          getVariantUrl({
+            handle: result.selectedVariant?.product.handle ?? product.handle,
+            pathname,
+            searchParams: new URLSearchParams(search),
+            selectedOptions: result.selectedOptions,
+          }),
+          {replace: true, preventScrollReset: true},
+        );
+      }}
     >
-      <ProductDetail
-        isClosing={isExiting}
-        product={product}
-        selectedVariant={selectedVariant}
-      />
+      <StorefrontDialog
+        title={product.title}
+        onClose={closeProduct}
+        isActive={type === 'closed'}
+        className="fixed inset-0 z-40 overflow-auto"
+        isExiting={isExiting}
+        key={product.handle}
+      >
+        <ProductDetail isClosing={isExiting} product={product} />
 
-      <Analytics.ProductView
-        data={{
-          products: [
-            {
-              id: product.id,
-              title: product.title,
-              price: selectedVariant?.price.amount ?? '0',
-              vendor: product.vendor,
-              variantId: selectedVariant?.id ?? '',
-              variantTitle: selectedVariant?.title ?? '',
-              quantity: 1,
-            },
-          ],
-        }}
-      />
-
-      <script
-        dangerouslySetInnerHTML={{
-          __html: safeStructuredData,
-        }}
-        type="application/ld+json"
-      />
-      <SearchModal />
-      {root ? <CartModal cart={root.cart} /> : null}
-    </StorefrontDialog>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: safeStructuredData,
+          }}
+          type="application/ld+json"
+        />
+        <SearchModal />
+        <CartModal />
+      </StorefrontDialog>
+    </ProductProvider>
   );
 }

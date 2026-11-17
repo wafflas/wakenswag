@@ -1,3 +1,4 @@
+import {createRouteContext} from '../fixtures/routeContext';
 import {describe, expect, it, vi} from 'vitest';
 import {meta as productMeta} from '~/routes/swag.$handle';
 import {meta as swagMeta} from '~/routes/swag';
@@ -82,7 +83,7 @@ describe('custom storefront SEO', () => {
       .mockResolvedValue({products: {pagesCount: {count: 1}}});
     const response = await sitemapIndex({
       request,
-      context: {storefront: {query}},
+      context: createRouteContext(query).context,
     } as unknown as Parameters<typeof sitemapIndex>[0]);
     const xml = await response.text();
     expect(xml).toContain('https://store.example/sitemap/products/1.xml');
@@ -107,7 +108,7 @@ describe('custom storefront SEO', () => {
     const response = await productSitemap({
       request: new Request('https://store.example/sitemap/products/1.xml'),
       params: {type: 'products', page: '1'},
-      context: {storefront: {query}},
+      context: createRouteContext(query).context,
     } as unknown as Parameters<typeof productSitemap>[0]);
     const xml = await response.text();
     expect(xml).toContain('<loc>https://store.example/swag/fixture-tee</loc>');

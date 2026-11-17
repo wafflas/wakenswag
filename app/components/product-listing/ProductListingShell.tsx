@@ -44,7 +44,7 @@ export function ProductListingShell({
   const location = useLocation();
   const isProductDetailRoute = isProductDetailPath(location.pathname);
   const wasProductDetailRouteRef = useRef(isProductDetailRoute);
-  const loadingTimerRef = useRef<number>();
+  const loadingTimerRef = useRef<number | undefined>(undefined);
   const [isShowingLoadingScreen, setIsShowingLoadingScreen] = useState(
     () => !isProductDetailRoute,
   );

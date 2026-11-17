@@ -1,15 +1,16 @@
-import type {CartApiQueryFragment} from 'storefrontapi.generated';
-import {type OptimisticCart} from '@shopify/hydrogen';
+import type {CartApiQueryFragment} from '~/lib/cart';
+import {useCart} from '~/lib/cart';
 import {formatMoneyAmount} from '~/lib/money';
 
 type CartSummaryProps = {
-  cart: OptimisticCart<CartApiQueryFragment | null>;
+  cart: CartApiQueryFragment | null;
 };
 
 export function CartSummary({cart}: CartSummaryProps) {
   const subtotal = cart?.cost?.subtotalAmount;
   const checkoutUrl = cart?.checkoutUrl;
-  const isCalculating = !!cart?.isOptimistic || !checkoutUrl;
+  const pending = useCart((state) => state.pending.cost || state.revalidating);
+  const isCalculating = pending || !checkoutUrl;
 
   return (
     <div className="cart-main-summary ps2-soft-copy flex flex-col items-center gap-2 text-center text-xl leading-none">

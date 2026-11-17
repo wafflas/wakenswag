@@ -1,7 +1,5 @@
 import {useCallback} from 'react';
-import type {CustomerPrivacyApiProps} from '@shopify/hydrogen';
 import {useLocation, useRouteError, type BlockerFunction} from 'react-router';
-import type {CartApiQueryFragment} from 'storefrontapi.generated';
 import {RouteFadeTransition} from '~/components/animations/RouteFadeTransition';
 import {CartModal} from '~/components/cart/CartModal';
 import {AppControllerFooter} from '~/components/controller/AppControllerFooter';
@@ -11,8 +9,6 @@ import {AsideProvider} from './Aside';
 import {isProductDetailPath} from '~/lib/variants';
 
 interface PageLayoutProps {
-  cart: Promise<CartApiQueryFragment | null>;
-  consent?: CustomerPrivacyApiProps;
   children?: React.ReactNode;
 }
 
@@ -21,7 +17,7 @@ interface PageLayoutProps {
  *
  * Owns the global dialogs, controller footer and menu/policy route transitions.
  */
-export function PageLayout({children = null, cart, consent}: PageLayoutProps) {
+export function PageLayout({children = null}: PageLayoutProps) {
   const {pathname} = useLocation();
   const routeError = useRouteError();
   const isProductRoute = isProductDetailPath(pathname) && !routeError;
@@ -49,11 +45,11 @@ export function PageLayout({children = null, cart, consent}: PageLayoutProps) {
         {!isProductRoute ? (
           <>
             <SearchModal />
-            <CartModal cart={cart} />
+            <CartModal />
           </>
         ) : null}
-        <AppControllerFooter cart={cart} />
-        {consent ? <CookieConsentBanner consent={consent} /> : null}
+        <AppControllerFooter />
+        <CookieConsentBanner />
       </RouteFadeTransition>
     </AsideProvider>
   );

@@ -1,4 +1,4 @@
-import type {ProductFragment} from 'storefrontapi.generated';
+import type {ProductFragment} from '~/lib/productDetail';
 
 export interface ProductDetailTheme {
   key: string;

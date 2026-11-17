@@ -1,0 +1,760 @@
+{
+  "recordedOn": "2026-11-17",
+  "branch": "migration/hydrogen-2026-10",
+  "hydrogenVersion": "2026.10.3",
+  "reactVersion": "19.2.7",
+  "reactRouterVersion": "7.18.5",
+  "interpretation": "The 1000-user runs failed. These are local production fixture measurements on the same laptop as the generator, not production Oxygen capacity or live Shopify rate-limit tests.",
+  "notes": [
+    "Measurements below preserve the original output, including its model wording. rampSeconds is authoritative: 0 means immediate startup; nonzero values spread users over that interval.",
+    "All three runs abandon the cart after a failed journey because a failed mutation response does not prove the server rejected the mutation. The burst output predates that behavior being described in the model string.",
+    "Observed HTTP 500 stack traces originated in Miniflare.dispatchFetch / the MiniOxygen preview proxy with TypeError: fetch failed. The underlying cause remains unconfirmed.",
+    "No quantity assertion failures occurred in successful responses. Transport and HTTP errors still make the workload fail.",
+    "Different fixture and harness behavior prevents a controlled comparison with pre-migration throughput."
+  ],
+  "runs": [
+    {
+      "name": "burst-1000",
+      "measurement": {
+        "startedAt": "2026-11-17T16:32:20.911Z",
+        "finishedAt": "2026-11-17T16:33:32.236Z",
+        "origin": "http://localhost:4173",
+        "environment": "Local production build in MiniOxygen using the existing tests/e2e/server.ts fixture. No live Shopify API, CDN, checkout, browser rendering or production Oxygen.",
+        "model": "Closed workload: one sequential HTTP journey per virtual user, independent cart cookies, 200\u2013600 ms think time per step, all users start together. 80% physical products, 20% drumkits. Each cycle has 10 requests; issued journeys finish after the duration.",
+        "users": 1000,
+        "peakUsers": 1000,
+        "peakInFlight": 1000,
+        "requestedDurationSeconds": 60,
+        "rampSeconds": 0,
+        "elapsedSeconds": 71.32,
+        "requests": 51122,
+        "failures": 2744,
+        "requestFailurePercent": 5.368,
+        "completedJourneys": 4269,
+        "failedJourneys": 2744,
+        "independentCartCookies": 1000,
+        "issuedCartCookies": 2021,
+        "averageRequestsPerSecond": 716.75,
+        "latency": {
+          "requests": 51122,
+          "failures": 2744,
+          "p50Ms": 845.53,
+          "p95Ms": 1762.14,
+          "p99Ms": 2308.72,
+          "maxMs": 2481.28,
+          "statuses": {
+            "0": 399,
+            "200": 48378,
+            "500": 2345
+          }
+        },
+        "routes": {
+          "home": {
+            "requests": 7013,
+            "failures": 1406,
+            "p50Ms": 807.03,
+            "p95Ms": 1722.26,
+            "p99Ms": 1846.85,
+            "maxMs": 2278.75,
+            "statuses": {
+              "0": 399,
+              "200": 5607,
+              "500": 1007
+            }
+          },
+          "collection": {
+            "requests": 5607,
+            "failures": 315,
+            "p50Ms": 1147.87,
+            "p95Ms": 2247.77,
+            "p99Ms": 2340.94,
+            "maxMs": 2481.28,
+            "statuses": {
+              "200": 5292,
+              "500": 315
+            }
+          },
+          "product": {
+            "requests": 5292,
+            "failures": 204,
+            "p50Ms": 1187.29,
+            "p95Ms": 2325.37,
+            "p99Ms": 2456.09,
+            "maxMs": 2480.04,
+            "statuses": {
+              "200": 5088,
+              "500": 204
+            }
+          },
+          "search": {
+            "requests": 5088,
+            "failures": 131,
+            "p50Ms": 976.41,
+            "p95Ms": 1836.64,
+            "p99Ms": 2283.92,
+            "maxMs": 2464.69,
+            "statuses": {
+              "200": 4957,
+              "500": 131
+            }
+          },
+          "cart-add": {
+            "requests": 4957,
+            "failures": 112,
+            "p50Ms": 811.84,
+            "p95Ms": 1675.35,
+            "p99Ms": 1837.95,
+            "maxMs": 2190.5,
+            "statuses": {
+              "200": 4845,
+              "500": 112
+            }
+          },
+          "cart-read-after-add": {
+            "requests": 4845,
+            "failures": 98,
+            "p50Ms": 744.81,
+            "p95Ms": 1638.73,
+            "p99Ms": 1802.42,
+            "maxMs": 1935.99,
+            "statuses": {
+              "200": 4747,
+              "500": 98
+            }
+          },
+          "cart-update": {
+            "requests": 4747,
+            "failures": 101,
+            "p50Ms": 706.79,
+            "p95Ms": 1635.18,
+            "p99Ms": 1735.18,
+            "maxMs": 1920.86,
+            "statuses": {
+              "200": 4646,
+              "500": 101
+            }
+          },
+          "cart-read-after-update": {
+            "requests": 4646,
+            "failures": 122,
+            "p50Ms": 670.89,
+            "p95Ms": 1652.25,
+            "p99Ms": 1779.65,
+            "maxMs": 1919.37,
+            "statuses": {
+              "200": 4524,
+              "500": 122
+            }
+          },
+          "cart-remove": {
+            "requests": 4524,
+            "failures": 121,
+            "p50Ms": 719.22,
+            "p95Ms": 1669.42,
+            "p99Ms": 1788.55,
+            "maxMs": 1940.44,
+            "statuses": {
+              "200": 4403,
+              "500": 121
+            }
+          },
+          "cart-read-after-remove": {
+            "requests": 4403,
+            "failures": 134,
+            "p50Ms": 761.34,
+            "p95Ms": 1697.8,
+            "p99Ms": 1834,
+            "maxMs": 1937.16,
+            "statuses": {
+              "200": 4269,
+              "500": 134
+            }
+          }
+        },
+        "generatorEventLoopP95Ms": 20.94,
+        "generatorMaxRssMB": 270.75,
+        "errorCounts": {
+          "ECONNRESET": 396,
+          "EPIPE": 3,
+          "home: HTTP 500": 1007,
+          "collection: HTTP 500": 315,
+          "product: HTTP 500": 204,
+          "search: HTTP 500": 131,
+          "cart-read-after-remove: HTTP 500": 134,
+          "cart-remove: HTTP 500": 121,
+          "cart-read-after-update: HTTP 500": 122,
+          "cart-read-after-add: HTTP 500": 98,
+          "cart-update: HTTP 500": 101,
+          "cart-add: HTTP 500": 112
+        },
+        "errors": [
+          {
+            "user": 257,
+            "step": "home",
+            "status": 0,
+            "message": ""
+          },
+          {
+            "user": 258,
+            "step": "home",
+            "status": 0,
+            "message": ""
+          },
+          {
+            "user": 259,
+            "step": "home",
+            "status": 0,
+            "message": ""
+          },
+          {
+            "user": 260,
+            "step": "home",
+            "status": 0,
+            "message": ""
+          },
+          {
+            "user": 261,
+            "step": "home",
+            "status": 0,
+            "message": ""
+          },
+          {
+            "user": 263,
+            "step": "home",
+            "status": 0,
+            "message": ""
+          },
+          {
+            "user": 262,
+            "step": "home",
+            "status": 0,
+            "message": ""
+          },
+          {
+            "user": 264,
+            "step": "home",
+            "status": 0,
+            "message": ""
+          },
+          {
+            "user": 265,
+            "step": "home",
+            "status": 0,
+            "message": ""
+          },
+          {
+            "user": 266,
+            "step": "home",
+            "status": 0,
+            "message": ""
+          },
+          {
+            "user": 267,
+            "step": "home",
+            "status": 0,
+            "message": ""
+          },
+          {
+            "user": 268,
+            "step": "home",
+            "status": 0,
+            "message": ""
+          },
+          {
+            "user": 269,
+            "step": "home",
+            "status": 0,
+            "message": ""
+          },
+          {
+            "user": 270,
+            "step": "home",
+            "status": 0,
+            "message": ""
+          },
+          {
+            "user": 271,
+            "step": "home",
+            "status": 0,
+            "message": ""
+          },
+          {
+            "user": 272,
+            "step": "home",
+            "status": 0,
+            "message": ""
+          },
+          {
+            "user": 273,
+            "step": "home",
+            "status": 0,
+            "message": ""
+          },
+          {
+            "user": 274,
+            "step": "home",
+            "status": 0,
+            "message": ""
+          },
+          {
+            "user": 275,
+            "step": "home",
+            "status": 0,
+            "message": ""
+          },
+          {
+            "user": 276,
+            "step": "home",
+            "status": 0,
+            "message": ""
+          }
+        ]
+      }
+    },
+    {
+      "name": "ramp-1000",
+      "measurement": {
+        "startedAt": "2026-11-17T16:33:49.104Z",
+        "finishedAt": "2026-11-17T16:35:08.370Z",
+        "origin": "http://localhost:4173",
+        "environment": "Local production build in MiniOxygen using the existing tests/e2e/server.ts fixture. No live Shopify API, CDN, checkout, browser rendering or production Oxygen.",
+        "model": "Closed workload: one sequential HTTP journey per virtual user, independent cart cookies, 200\u2013600 ms think time per step, all users start together. 80% physical products, 20% drumkits. Each cycle has 10 requests; failed journeys abandon their cart before restarting; issued journeys finish after the duration.",
+        "users": 1000,
+        "peakUsers": 1000,
+        "peakInFlight": 845,
+        "requestedDurationSeconds": 60,
+        "rampSeconds": 10,
+        "elapsedSeconds": 79.27,
+        "requests": 55125,
+        "failures": 3724,
+        "requestFailurePercent": 6.756,
+        "completedJourneys": 4205,
+        "failedJourneys": 3724,
+        "independentCartCookies": 1000,
+        "issuedCartCookies": 2695,
+        "averageRequestsPerSecond": 695.45,
+        "latency": {
+          "requests": 55125,
+          "failures": 3724,
+          "p50Ms": 834.29,
+          "p95Ms": 1847.54,
+          "p99Ms": 1929.71,
+          "maxMs": 2028.86,
+          "statuses": {
+            "200": 51401,
+            "500": 3724
+          }
+        },
+        "routes": {
+          "home": {
+            "requests": 7929,
+            "failures": 1290,
+            "p50Ms": 852.51,
+            "p95Ms": 1890.46,
+            "p99Ms": 1968.68,
+            "maxMs": 2028.86,
+            "statuses": {
+              "200": 6639,
+              "500": 1290
+            }
+          },
+          "collection": {
+            "requests": 6639,
+            "failures": 537,
+            "p50Ms": 990.34,
+            "p95Ms": 1885.84,
+            "p99Ms": 1969.02,
+            "maxMs": 2020.03,
+            "statuses": {
+              "200": 6102,
+              "500": 537
+            }
+          },
+          "product": {
+            "requests": 6102,
+            "failures": 424,
+            "p50Ms": 1012.72,
+            "p95Ms": 1871.49,
+            "p99Ms": 1968.46,
+            "maxMs": 2015.55,
+            "statuses": {
+              "200": 5678,
+              "500": 424
+            }
+          },
+          "search": {
+            "requests": 5678,
+            "failures": 342,
+            "p50Ms": 967.45,
+            "p95Ms": 1827.46,
+            "p99Ms": 1913,
+            "maxMs": 1992.29,
+            "statuses": {
+              "200": 5336,
+              "500": 342
+            }
+          },
+          "cart-add": {
+            "requests": 5336,
+            "failures": 273,
+            "p50Ms": 854.62,
+            "p95Ms": 1815.47,
+            "p99Ms": 1909.99,
+            "maxMs": 2016.64,
+            "statuses": {
+              "200": 5063,
+              "500": 273
+            }
+          },
+          "cart-read-after-add": {
+            "requests": 5063,
+            "failures": 223,
+            "p50Ms": 818.74,
+            "p95Ms": 1814.47,
+            "p99Ms": 1911.48,
+            "maxMs": 2020.87,
+            "statuses": {
+              "200": 4840,
+              "500": 223
+            }
+          },
+          "cart-update": {
+            "requests": 4840,
+            "failures": 160,
+            "p50Ms": 794.67,
+            "p95Ms": 1796.71,
+            "p99Ms": 1904.77,
+            "maxMs": 2000.77,
+            "statuses": {
+              "200": 4680,
+              "500": 160
+            }
+          },
+          "cart-read-after-update": {
+            "requests": 4680,
+            "failures": 175,
+            "p50Ms": 763.32,
+            "p95Ms": 1764.33,
+            "p99Ms": 1896.54,
+            "maxMs": 2020.74,
+            "statuses": {
+              "200": 4505,
+              "500": 175
+            }
+          },
+          "cart-remove": {
+            "requests": 4505,
+            "failures": 152,
+            "p50Ms": 749.86,
+            "p95Ms": 1780.61,
+            "p99Ms": 1902.33,
+            "maxMs": 2011.13,
+            "statuses": {
+              "200": 4353,
+              "500": 152
+            }
+          },
+          "cart-read-after-remove": {
+            "requests": 4353,
+            "failures": 148,
+            "p50Ms": 745.73,
+            "p95Ms": 1810.68,
+            "p99Ms": 1923.08,
+            "maxMs": 2018.94,
+            "statuses": {
+              "200": 4205,
+              "500": 148
+            }
+          }
+        },
+        "generatorEventLoopP95Ms": 20.96,
+        "generatorMaxRssMB": 249.55,
+        "errorCounts": {
+          "cart-read-after-update: HTTP 500": 175,
+          "product: HTTP 500": 424,
+          "cart-add: HTTP 500": 273,
+          "home: HTTP 500": 1290,
+          "cart-read-after-remove: HTTP 500": 148,
+          "collection: HTTP 500": 537,
+          "search: HTTP 500": 342,
+          "cart-remove: HTTP 500": 152,
+          "cart-read-after-add: HTTP 500": 223,
+          "cart-update: HTTP 500": 160
+        },
+        "errors": [
+          {
+            "user": 249,
+            "step": "cart-read-after-update",
+            "status": 500,
+            "message": "cart-read-after-update: HTTP 500"
+          },
+          {
+            "user": 597,
+            "step": "product",
+            "status": 500,
+            "message": "product: HTTP 500"
+          },
+          {
+            "user": 311,
+            "step": "cart-read-after-update",
+            "status": 500,
+            "message": "cart-read-after-update: HTTP 500"
+          },
+          {
+            "user": 54,
+            "step": "cart-add",
+            "status": 500,
+            "message": "cart-add: HTTP 500"
+          },
+          {
+            "user": 722,
+            "step": "home",
+            "status": 500,
+            "message": "home: HTTP 500"
+          },
+          {
+            "user": 68,
+            "step": "cart-read-after-remove",
+            "status": 500,
+            "message": "cart-read-after-remove: HTTP 500"
+          },
+          {
+            "user": 643,
+            "step": "collection",
+            "status": 500,
+            "message": "collection: HTTP 500"
+          },
+          {
+            "user": 131,
+            "step": "home",
+            "status": 500,
+            "message": "home: HTTP 500"
+          },
+          {
+            "user": 207,
+            "step": "cart-read-after-update",
+            "status": 500,
+            "message": "cart-read-after-update: HTTP 500"
+          },
+          {
+            "user": 118,
+            "step": "cart-read-after-update",
+            "status": 500,
+            "message": "cart-read-after-update: HTTP 500"
+          },
+          {
+            "user": 550,
+            "step": "search",
+            "status": 500,
+            "message": "search: HTTP 500"
+          },
+          {
+            "user": 204,
+            "step": "cart-remove",
+            "status": 500,
+            "message": "cart-remove: HTTP 500"
+          },
+          {
+            "user": 281,
+            "step": "cart-read-after-add",
+            "status": 500,
+            "message": "cart-read-after-add: HTTP 500"
+          },
+          {
+            "user": 612,
+            "step": "collection",
+            "status": 500,
+            "message": "collection: HTTP 500"
+          },
+          {
+            "user": 178,
+            "step": "cart-read-after-remove",
+            "status": 500,
+            "message": "cart-read-after-remove: HTTP 500"
+          },
+          {
+            "user": 358,
+            "step": "cart-update",
+            "status": 500,
+            "message": "cart-update: HTTP 500"
+          },
+          {
+            "user": 557,
+            "step": "product",
+            "status": 500,
+            "message": "product: HTTP 500"
+          },
+          {
+            "user": 551,
+            "step": "product",
+            "status": 500,
+            "message": "product: HTTP 500"
+          },
+          {
+            "user": 365,
+            "step": "cart-read-after-add",
+            "status": 500,
+            "message": "cart-read-after-add: HTTP 500"
+          },
+          {
+            "user": 99,
+            "step": "cart-add",
+            "status": 500,
+            "message": "cart-add: HTTP 500"
+          }
+        ]
+      }
+    },
+    {
+      "name": "diagnostic-100",
+      "measurement": {
+        "startedAt": "2026-11-17T16:36:16.073Z",
+        "finishedAt": "2026-11-17T16:36:46.958Z",
+        "origin": "http://localhost:4173",
+        "environment": "Local production build in MiniOxygen using the existing tests/e2e/server.ts fixture. No live Shopify API, CDN, checkout, browser rendering or production Oxygen.",
+        "model": "Closed workload: one sequential HTTP journey per virtual user, independent cart cookies, 200\u2013600 ms think time per step, all users start together. 80% physical products, 20% drumkits. Each cycle has 10 requests; failed journeys abandon their cart before restarting; issued journeys finish after the duration.",
+        "users": 100,
+        "peakUsers": 100,
+        "peakInFlight": 51,
+        "requestedDurationSeconds": 20,
+        "rampSeconds": 5,
+        "elapsedSeconds": 30.88,
+        "requests": 6810,
+        "failures": 0,
+        "requestFailurePercent": 0,
+        "completedJourneys": 681,
+        "failedJourneys": 0,
+        "independentCartCookies": 100,
+        "issuedCartCookies": 100,
+        "averageRequestsPerSecond": 220.5,
+        "latency": {
+          "requests": 6810,
+          "failures": 0,
+          "p50Ms": 2.12,
+          "p95Ms": 17.79,
+          "p99Ms": 44.82,
+          "maxMs": 165.22,
+          "statuses": {
+            "200": 6810
+          }
+        },
+        "routes": {
+          "home": {
+            "requests": 681,
+            "failures": 0,
+            "p50Ms": 2.42,
+            "p95Ms": 16.86,
+            "p99Ms": 44.01,
+            "maxMs": 146.8,
+            "statuses": {
+              "200": 681
+            }
+          },
+          "collection": {
+            "requests": 681,
+            "failures": 0,
+            "p50Ms": 3.55,
+            "p95Ms": 20.73,
+            "p99Ms": 55.53,
+            "maxMs": 165.22,
+            "statuses": {
+              "200": 681
+            }
+          },
+          "product": {
+            "requests": 681,
+            "failures": 0,
+            "p50Ms": 4.24,
+            "p95Ms": 21.68,
+            "p99Ms": 40.06,
+            "maxMs": 152.44,
+            "statuses": {
+              "200": 681
+            }
+          },
+          "search": {
+            "requests": 681,
+            "failures": 0,
+            "p50Ms": 1.05,
+            "p95Ms": 16,
+            "p99Ms": 44.67,
+            "maxMs": 123.02,
+            "statuses": {
+              "200": 681
+            }
+          },
+          "cart-add": {
+            "requests": 681,
+            "failures": 0,
+            "p50Ms": 1.24,
+            "p95Ms": 18.37,
+            "p99Ms": 98.05,
+            "maxMs": 150.12,
+            "statuses": {
+              "200": 681
+            }
+          },
+          "cart-read-after-add": {
+            "requests": 681,
+            "failures": 0,
+            "p50Ms": 1.59,
+            "p95Ms": 18.21,
+            "p99Ms": 37.25,
+            "maxMs": 108.26,
+            "statuses": {
+              "200": 681
+            }
+          },
+          "cart-update": {
+            "requests": 681,
+            "failures": 0,
+            "p50Ms": 1.28,
+            "p95Ms": 15.24,
+            "p99Ms": 35.62,
+            "maxMs": 142.15,
+            "statuses": {
+              "200": 681
+            }
+          },
+          "cart-read-after-update": {
+            "requests": 681,
+            "failures": 0,
+            "p50Ms": 1.64,
+            "p95Ms": 18.15,
+            "p99Ms": 66.37,
+            "maxMs": 159.03,
+            "statuses": {
+              "200": 681
+            }
+          },
+          "cart-remove": {
+            "requests": 681,
+            "failures": 0,
+            "p50Ms": 1.34,
+            "p95Ms": 14.21,
+            "p99Ms": 36.23,
+            "maxMs": 86.93,
+            "statuses": {
+              "200": 681
+            }
+          },
+          "cart-read-after-remove": {
+            "requests": 681,
+            "failures": 0,
+            "p50Ms": 1.69,
+            "p95Ms": 15.78,
+            "p99Ms": 66.38,
+            "maxMs": 158,
+            "statuses": {
+              "200": 681
+            }
+          }
+        },
+        "generatorEventLoopP95Ms": 21.23,
+        "generatorMaxRssMB": 112.36,
+        "errorCounts": {},
+        "errors": []
+      }
+    }
+  ]
+}

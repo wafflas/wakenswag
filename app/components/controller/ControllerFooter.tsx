@@ -1,7 +1,6 @@
 import type {MouseEvent} from 'react';
-import {useOptimisticCart} from '@shopify/hydrogen';
 import {useLocation, useNavigate} from 'react-router';
-import type {CartApiQueryFragment} from 'storefrontapi.generated';
+import type {CartApiQueryFragment} from '~/lib/cart';
 import {useAside} from '~/components/layout/Aside';
 import {ControllerActionCount} from './ControllerActionCount';
 import {ControllerSymbol} from './ControllerSymbol';
@@ -20,7 +19,7 @@ interface ControllerFooterProps {
 }
 
 export function ControllerFooter({cart, isCartReady}: ControllerFooterProps) {
-  const optimisticCart = useOptimisticCart(cart);
+  const optimisticCart = cart;
   const {pathname} = useLocation();
   const navigate = useNavigate();
   const {close, open, type} = useAside();

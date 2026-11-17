@@ -1,12 +1,9 @@
-import {Link, useRouteLoaderData} from 'react-router';
-import type {RootLoader} from '~/root';
+import {Link} from 'react-router';
 import {PageLayout} from '~/components/layout/PageLayout';
 
 export function NotFoundPage() {
-  const rootData = useRouteLoaderData<RootLoader>('root');
-
   return (
-    <PageLayout cart={rootData?.cart ?? Promise.resolve(null)}>
+    <PageLayout>
       <div
         className={[
           'relative isolate flex min-h-dvh flex-col items-center justify-center',

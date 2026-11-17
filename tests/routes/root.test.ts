@@ -1,5 +1,27 @@
+import {createRouteContext} from '../fixtures/routeContext';
 import {describe, expect, it, vi} from 'vitest';
-import {loader, meta} from '~/root';
+import {createElement} from 'react';
+import {render, screen} from '@testing-library/react';
+import {createMemoryRouter, RouterProvider} from 'react-router';
+import {ErrorBoundary, loader, meta} from '~/root';
+
+describe('root server error screen', () => {
+  it('renders safely without a CartProvider or cart/search controls', () => {
+    const router = createMemoryRouter(
+      [{id: 'root', path: '/', errorElement: createElement(ErrorBoundary)}],
+      {
+        hydrationData: {
+          errors: {root: new Error('Private upstream details')},
+        },
+      },
+    );
+    render(createElement(RouterProvider, {router}));
+    expect(screen.getByRole('heading', {name: 'Oops'})).toBeVisible();
+    expect(screen.getByRole('heading', {name: '500'})).toBeVisible();
+    expect(screen.queryByRole('button', {name: /Cart|Search/})).toBeNull();
+    expect(screen.queryByText('Private upstream details')).toBeNull();
+  });
+});
 
 describe('root error metadata', () => {
   it('leaves normal page metadata to the matched route', () => {
@@ -28,44 +50,33 @@ describe('root error metadata', () => {
   });
 });
 
-describe('root consent configuration', () => {
-  it.each([
-    {
-      checkoutDomain: 'checkout.example.test',
-      expected: 'checkout.example.test',
-    },
-    {checkoutDomain: undefined, expected: 'fixture.myshopify.com'},
-    {checkoutDomain: '', expected: 'fixture.myshopify.com'},
-  ])(
-    'uses $expected when checkoutDomain is "$checkoutDomain"',
-    async ({checkoutDomain, expected}) => {
-      const result = loader({
-        request: new Request('http://localhost:3000/info'),
-        context: {
-          env: {
-            PUBLIC_CHECKOUT_DOMAIN: checkoutDomain,
-            PUBLIC_STORE_DOMAIN: 'fixture.myshopify.com',
-            PUBLIC_STOREFRONT_API_TOKEN: 'fixture-public-token',
-            PUBLIC_STOREFRONT_ID: '0',
-          },
-          cart: {get: vi.fn().mockResolvedValue(null)},
-          storefront: {
-            i18n: {country: 'US', language: 'EN'},
-            CacheLong: vi.fn(),
-            query: vi.fn().mockResolvedValue({
-              shop: {id: 'gid://shopify/Shop/1'},
-              localization: {
-                language: {isoCode: 'EN'},
-                country: {currency: {isoCode: 'USD'}},
-              },
-            }),
-          },
-        },
+describe('root storefront configuration', () => {
+  it.each(['0', '123', undefined])(
+    'passes storefront ID %s and the request locale to ShopifyScripts',
+    async (storefrontId) => {
+      const query = vi.fn().mockResolvedValue({
+        shop: {id: 'gid://shopify/Shop/1'},
+        localization: {country: {currency: {isoCode: 'EUR'}}},
+      });
+      const {context} = createRouteContext(query, {
+        PUBLIC_STORE_DOMAIN: 'fixture.myshopify.com',
+        PUBLIC_STOREFRONT_ID: storefrontId,
+      });
+      const result = await loader({
+        request: new Request('https://store.example/info'),
+        context,
       } as unknown as Parameters<typeof loader>[0]);
-
-      expect(result.consent.checkoutDomain).toBe(expected);
-      expect(result.consent.withPrivacyBanner).toBe(false);
-      await result.shop;
+      expect(result.shop).toEqual({
+        shopId: 'gid://shopify/Shop/1',
+        storefrontId: storefrontId ?? '',
+        myshopifyDomain: 'fixture.myshopify.com',
+      });
+      expect(result.i18n).toMatchObject({
+        language: 'EN',
+        country: 'US',
+        currency: 'EUR',
+      });
+      expect(await result.cart).toEqual({cart: null});
     },
   );
 });

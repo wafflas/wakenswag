@@ -1,7 +1,8 @@
+import {formatMoney} from '~/lib/money';
 import {useId} from 'react';
 import {Link, useLocation} from 'react-router';
-import {Image, Money} from '@shopify/hydrogen';
-import type {ProductItemFragment} from 'storefrontapi.generated';
+import {StorefrontImage} from '~/components/shared/StorefrontImage';
+import type {ProductItemFragment} from '~/lib/fragments';
 import {getProductListingPath, getProductPath} from '~/lib/variants';
 import {getProductDescriptionBullets} from '~/components/product-detail/productDetailUtils';
 
@@ -67,7 +68,7 @@ export function ProductItem({
       ) : null}
 
       {image ? (
-        <Image
+        <StorefrontImage
           alt=""
           aspectRatio={isDrumkit ? undefined : '1/1'}
           className={imageClassName}
@@ -96,7 +97,7 @@ export function ProductItem({
       <span className="sr-only">
         {product.title}
         {isSelected ? ', selected' : ''},{' '}
-        <Money data={product.priceRange.minVariantPrice} />
+        {formatMoney(product.priceRange.minVariantPrice)}
       </span>
     </Link>
   );

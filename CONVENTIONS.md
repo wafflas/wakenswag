@@ -2,11 +2,11 @@
 
 ## Stack and structure
 
-Use the versions in `package.json` and `package-lock.json`: React 18, React Router 7 framework mode, Hydrogen 2026.4, TypeScript, Tailwind 4 and npm. This is not a Next.js app. Hydrogen's peer dependencies constrain compatible router releases; upgrade them together.
+Use the versions in `package.json` and `package-lock.json`: React 19, React Router 7 framework mode, Hydrogen 2026.10, TypeScript, Tailwind 4 and npm. This is not a Next.js app. Pin all React Router packages to the same supported release; check Hydrogen's packaged migration/feature skills before upgrades.
 
 - `app/routes/`: HTTP loaders/actions, route metadata and page composition. Keep React Router filenames such as `swag.$handle.tsx` and `[robots.txt].tsx`.
 - `app/components/<feature>/`: cohesive components plus one camelCase feature utility file for stateless helpers, such as `product-detail/productDetailUtils.ts` or `cart/cartUtils.ts`. Existing feature folders use kebab-case (`product-detail`) or simple domain names (`cart`).
-- `app/lib/`: shared domain/server utilities, e.g. `productDetail.ts`, `money.ts`, `session.ts`.
+- `app/lib/`: shared domain/server utilities, e.g. `productDetail.ts`, `money.ts`, `context.ts`.
 - `app/styles/`: global defaults, Tailwind tokens/utilities, PS2 effects. Keep animation styles together.
 - `tests/`: matching component/library/route tests, shared fixtures, isolated E2E worker. Production files never import this directory.
 
@@ -20,16 +20,16 @@ For example, `ProductPurchaseControls.tsx` owns quantity and purchase behavior, 
 
 Use one `<feature>Utils.ts` module per component folder when independent helpers exist. Files and functions use camelCase, shared types use PascalCase, and true static constants use UPPER_SNAKE_CASE.
 
-| Utility module                           | Responsibility                                                    |
-| ---------------------------------------- | ----------------------------------------------------------------- |
-| `animations/animationUtils.ts`           | Animation durations, fade class mappings and related type         |
-| `cart/cartUtils.ts`                      | Shared cart types, child-line grouping and pending submit content |
-| `controller/controllerUtils.ts`          | Back destinations for home, product and other routes              |
-| `home/homeUtils.ts`                      | Keyboard typing-target detection                                  |
-| `product-detail/productDetailUtils.ts`   | Product themes and description parsing                            |
-| `product-listing/productListingUtils.ts` | Listing constants, shared data types and pagination URLs          |
-| `search/searchUtils.ts`                  | Search product normalization and shared search card types         |
-| `shared/sharedUtils.ts`                  | Interactive-element lookup for interface sounds                   |
+| Utility module                           | Responsibility                                                  |
+| ---------------------------------------- | --------------------------------------------------------------- |
+| `animations/animationUtils.ts`           | Animation durations, fade class mappings and related type       |
+| `cart/cartUtils.ts`                      | Cart types, child lines, drumkit corrections and submit content |
+| `controller/controllerUtils.ts`          | Back destinations for home, product and other routes            |
+| `home/homeUtils.ts`                      | Keyboard typing-target detection                                |
+| `product-detail/productDetailUtils.ts`   | Product themes and description parsing                          |
+| `product-listing/productListingUtils.ts` | Listing constants, shared data types and pagination URLs        |
+| `search/searchUtils.ts`                  | Search product normalization and shared search card types       |
+| `shared/sharedUtils.ts`                  | Interactive-element lookup for interface sounds                 |
 
 Components import named helpers directly:
 
@@ -44,14 +44,14 @@ These utilities contain the actual implementations, not barrel re-exports. Inter
 
 Hooks keep their `useSomething.ts` names. Context and callbacks that depend on component state, refs or effect cleanup stay with their owner. In particular, modal lifecycle and audio playback handlers stay in their existing hook/effect. `layout/` and `content/` need no empty utility file because they have no independent helpers to collect. Small styling constants used only by one component can stay there.
 
-The controller footer has two stages: `AppControllerFooter` keeps its outer footer mounted while `Suspense`/`Await` resolve the cart; `ControllerFooter` handles the three concrete Back, Search and Cart actions using the router, overlay context and Hydrogen's optimistic cart. Keep this direct flow rather than passing action-building callbacks through cart wrappers. The stable `data-modal-controls` element lets dialog focus handling find replacement buttons after cart loading. `ControllerActionCount` owns its count animation, and `ControllerSymbol` owns the shared icons.
+The controller footer has two stages: `AppControllerFooter` reads the shared Hydrogen cart store without suspending its outer footer; `ControllerFooter` handles the three concrete Back, Search and Cart actions using the router, overlay context and that cart snapshot. Keep this direct flow rather than passing action-building callbacks through cart wrappers. The stable `data-modal-controls` element lets dialog focus handling find replacement buttons after cart loading. `ControllerActionCount` owns its count animation, and `ControllerSymbol` owns the shared icons.
 
 ## Names and types
 
 | Item                | Convention                                | Repository example                        |
 | ------------------- | ----------------------------------------- | ----------------------------------------- |
 | Components/files    | PascalCase                                | `ProductDetail.tsx`, `CartLineItem.tsx`   |
-| Hooks               | camelCase, `use` prefix                   | `useModalDialog`, `useVariantUrl`         |
+| Hooks               | camelCase, `use` prefix                   | `useRouteFocus`, `useDrumkitPageSize`     |
 | Utilities/functions | camelCase, descriptive verb               | `formatMoney`, `loadProductDetail`        |
 | Booleans            | is/has/can/should                         | `isExiting`, `hasReachedStockLimit`       |
 | Static constants    | UPPER_SNAKE_CASE                          | `PRODUCTS_PER_PAGE`                       |
@@ -60,9 +60,9 @@ The controller footer has two stages: `AppControllerFooter` keeps its outer foot
 | Tests               | source/domain name plus `.test.ts(x)`     | `ProductDetail.test.tsx`, `money.test.ts` |
 | CSS classes         | existing Tailwind or `ps2-...` kebab-case | `ps2-main-menu-link`                      |
 
-Use generated Shopify query/fragment types from `storefrontapi.generated.d.ts`; use `import type` for imports that exist only at compile time. Prefer inference for obvious local values. `Pick`/`Partial` are useful for a genuine subset of an existing type; do not create a generic framework around them. No explicit `any`; unused TypeScript variables are lint errors. Prefix intentionally unused function arguments with `_`.
+Derive Shopify query types from versioned `gql()` documents with `StorefrontApi.ResultOf` and cart/search types from the server handler factories; use `import type` for imports that exist only at compile time. Prefer inference for obvious local values. `Pick`/`Partial` are useful for a genuine subset of an existing type; do not create a generic framework around them. No explicit `any`; unused TypeScript variables are lint errors. Prefix intentionally unused function arguments with `_`.
 
-After changing a GraphQL selection, run `npm run codegen`; never manually edit generated declarations. Keep fixtures checked against those same types. An `as unknown as ...` assertion is allowed at the test boundary where a deliberately partial mocked context stands in for the full Hydrogen context; do not use it to bypass application type errors.
+After changing a GraphQL selection, run `npm run codegen` (SDK GraphQL validation plus route types); keep generated query environments ignored. Keep fixtures checked against those same types. An `as unknown as ...` assertion is allowed at the test boundary where a deliberately partial mocked context stands in for the full Hydrogen context; do not use it to bypass application type errors.
 
 ## React and browser behavior
 
@@ -78,7 +78,9 @@ This excerpt omits the other required props. `?.` safely reads a property when t
 
 Use state for values that affect rendering. Use refs for persistent mutable browser references/history, such as a dialog element, opener or visited-page set. Updating `.current` does not render the component. Avoid `useMemo`/`useCallback` unless their stable identity or measured work matters; stable `open`/`close` callbacks prevent dialog effects from unnecessarily restarting.
 
-Effects synchronize browser systems: focus, scroll locking, audio, timers and event listeners. Return cleanup that restores previous values, removes listeners and clears timers. Reuse `useModalDialog` for full-screen dialogs; it preserves HUD actions, traps focus, makes background siblings inert and restores focus after closing. Do not add another document-level Escape listener to those dialogs.
+Effects synchronize browser systems: focus, scroll locking, audio, timers and event listeners. Return cleanup that restores previous values, removes listeners and clears timers. Reuse `StorefrontDialog` for full-screen dialogs. It uses the existing Radix Dialog primitive for modal focus/scroll behavior, keeps the active controller footer inside the dialog and restores a usable opener after closing. Do not add a second custom focus trap or document-level Escape listener.
+
+Ordinary pathname navigation uses `useRouteFocus` and `[data-route-focus]` headings after the route fade. Query-only updates preserve focus, and returning from a product dialog leaves opener restoration to the dialog. Keep these two responsibilities separate.
 
 `AsideProvider` keeps Search/Cart active while `isExiting` drives `FadeTransition`'s 300 ms overlay fade-out. All close paths share this state; keep focus containment and scroll locking active until the exit finishes. `useExiting` shares timer cleanup and reduced-motion handling with `useRouteExitTransition`. Opening another overlay cancels the pending close. Only `RouteFadeTransition` installs a router blocker.
 
@@ -90,11 +92,21 @@ Use stable product/line IDs for list keys. Keep semantic links for navigation an
 
 ## Hydrogen and routing
 
-Fetch catalog/product data in loaders and mutate carts in actions. Continue using `CartForm`, `useOptimisticCart`, `useOptimisticVariant`, `getProductOptions` and `getSelectedProductOptions` from the installed Hydrogen package. Keep the request context, session/cart cookies, streamed promises, analytics/consent provider and CSP nonce handling.
+Fetch catalog/product data through `storefrontClient.graphql()` in loaders. `server.ts` builds a request-scoped client and typed React Router context; root middleware delegates `/api/cart` and `/api/predictive-search` to Hydrogen handlers. Bind UI once with `createCartComponents` / `createProductComponents` from `@shopify/hydrogen/react`. Use their providers, selectors and registered forms; keep the server drumkit rule in `cartHandlers.server.ts`. Avoid classic Hydrogen exports.
 
-Use `getPaginationVariables(request, {pageBy: PRODUCTS_PER_PAGE})` in catalog loaders. ProductListingPagination emits ordinary React Router links with matching `cursor` and `direction` parameters. This supports page flips and browser history without Hydrogen Pagination's accumulating-node behavior. Never download the entire catalog for pagination.
+The new client has no implicit query cache. Apply `publicDataCache` to public catalog/policy/shop/sitemap queries; leave carts uncached and their responses private. Preserve streamed cart initial data, the custom consent gate, per-document CSP nonce and ShopifyScripts. Analytics use the new global bus; cart deltas use `useCartAnalytics()` once inside CartProvider. Predictive suggestions use their own provider and do not publish full search-page view events.
 
-Cart forms submit to the `/cart` action without changing the current page; checkout URLs come from Shopify cart responses. Do not invent product availability, cart totals or currency conversions on the client. `formatMoney` only formats Shopify amounts. Keep EUR's existing `EURO` label; display other currencies accurately.
+The tokenless mock.shop default applies only to a completely unconfigured development environment. Production and partially configured stores require an explicit domain. Pass the resolved domain through `envContext` so server rendering, ShopifyScripts and CSP use the same store as the client. Keep the non-404 root error screen independent of cart state; it renders no controller footer or commerce dialogs.
+
+Use the local `getPaginationVariables(request, {pageBy: PRODUCTS_PER_PAGE})` in catalog loaders. ProductListingPagination emits ordinary React Router links with matching `cursor` and `direction` parameters. This supports page flips and browser history without accumulating earlier pages. Never download the entire catalog for pagination.
+
+Cart forms submit to the `/api/cart` handler without changing the current page; checkout URLs come from Shopify cart responses. Do not invent product availability, cart totals or currency conversions on the client. `formatMoney` only formats Shopify amounts. Keep EUR's existing `EURO` label; display other currencies accurately.
+
+The storefront keeps a modal-only cart: `/cart` redirects home. An initial cart transport/GraphQL failure shows a safe error and reload link rather than a false empty cart. Seed `CartProvider` with the full `{cart, errors?}` handler envelope; the SDK normalizes a null cart to an empty cart object whose `id` is null. `AsideProvider` connects Shopify's permanent `openCart` action through a DOM event to the currently mounted provider; its event listeners are removed on unmount.
+
+Keep the SDK's `/api/cart` request contract: a JSON request changes exactly one of `lines`, `note`, `discountCodes` or `attributes`. Let the SDK validate these fields rather than limiting the endpoint to controls currently visible in the UI. Native line forms are normalized to JSON so the drumkit correction can inspect the mutation result before redirecting; native metadata forms use the SDK directly. This endpoint support does not add note/discount/attribute controls to the storefront.
+
+Search is predictive, with no separate results page. `SearchModal` configures `PredictiveSearchProvider` with a 220 ms debounce, a limit of 8 and PRODUCT/QUERY types. `SearchScreen` submits input through the SDK actions and displays products only when the returned term matches the current trimmed input. It clears pending search on unmount and renders loading, empty and retry states. `predictiveSearch.server.ts` owns the handler and custom product fragment; `/search` is a resource alias. Keep this flow rather than copying a separate classic fetcher/query recipe into the UI.
 
 Handle nullable API data, GraphQL errors and mutation `errors` separately from successful HTTP transport. Preserve the custom `/swag/:handle` routes in canonical links, cards, search, cart and sitemaps. The Shopify collection handle is `swag`; removed `/merch` routes return 404 without a local redirect. Info sections read published Shopify policies and sanitize their HTML before rendering; Instagram and website credits are external links in Info. Unimplemented account/filter features are intentional, not invitations to add unrelated features.
 

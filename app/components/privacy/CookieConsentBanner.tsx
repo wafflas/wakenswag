@@ -1,7 +1,3 @@
-import {
-  useCustomerPrivacy,
-  type CustomerPrivacyApiProps,
-} from '@shopify/hydrogen';
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {useLocation} from 'react-router';
 import {isProductDetailPath} from '~/lib/variants';
@@ -12,11 +8,7 @@ import {
 import {useExiting} from '~/components/animations/useExiting';
 import {useAside} from '~/components/layout/Aside';
 
-export function CookieConsentBanner({
-  consent,
-}: {
-  consent: CustomerPrivacyApiProps;
-}) {
+export function CookieConsentBanner() {
   const {pathname} = useLocation();
   const {type: asideType} = useAside();
   const [initialized, setInitialized] = useState(false);
@@ -25,12 +17,24 @@ export function CookieConsentBanner({
   const [isExiting, setIsExiting] = useState(false);
   const [error, setError] = useState('');
   const pendingRequest = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const {customerPrivacy} = useCustomerPrivacy({
-    ...consent,
-    withPrivacyBanner: false,
-    onReady: () => setInitialized(true),
-    onVisitorConsentCollected: () => setIsExiting(true),
-  });
+  const customerPrivacy =
+    typeof window !== 'undefined' ? window.Shopify?.customerPrivacy : undefined;
+  useEffect(() => {
+    const ready = () =>
+      setInitialized(
+        window.Shopify?.customerPrivacy?.consentStatus === 'loaded',
+      );
+    const collected = () => setIsExiting(true);
+    ready();
+    document.addEventListener('wakenswag:consent-ready', ready);
+    document.addEventListener('consentTrackingApiLoaded', ready);
+    document.addEventListener('visitorConsentCollected', collected);
+    return () => {
+      document.removeEventListener('wakenswag:consent-ready', ready);
+      document.removeEventListener('consentTrackingApiLoaded', ready);
+      document.removeEventListener('visitorConsentCollected', collected);
+    };
+  }, []);
   const finishExit = useCallback(() => {
     setRequired(false);
     setIsExiting(false);
@@ -94,15 +98,15 @@ export function CookieConsentBanner({
     }
 
     try {
-      customerPrivacy.setTrackingConsent(
-        {
+      void customerPrivacy
+        .setTrackingConsent({
           analytics: accepted,
           marketing: accepted,
           preferences: accepted,
           sale_of_data: false,
-        },
-        finish,
-      );
+        })
+        .then(() => finish())
+        .catch(() => finish({error: 'Consent request failed'}));
     } catch {
       finish({error: 'Consent request failed'});
     }

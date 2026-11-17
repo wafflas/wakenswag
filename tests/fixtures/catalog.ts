@@ -1,7 +1,5 @@
-import type {
-  CartApiQueryFragment,
-  ProductFragment,
-} from 'storefrontapi.generated';
+import type {CartApiQueryFragment} from '~/lib/cart';
+import type {ProductFragment} from '~/lib/productDetail';
 
 export function createVariant(size = 'Small', availableForSale = true) {
   return {
@@ -98,6 +96,7 @@ export function createCart(quantity = 1): CartApiQueryFragment {
               quantity,
               attributes: [],
               parentRelationship: null,
+              sellingPlanAllocation: null,
               merchandise: {
                 ...variant,
                 requiresShipping: true,
@@ -111,6 +110,7 @@ export function createCart(quantity = 1): CartApiQueryFragment {
               },
               cost: {
                 totalAmount: amount,
+                subtotalAmount: amount,
                 amountPerQuantity: variant.price,
                 compareAtAmountPerQuantity: null,
               },
@@ -119,10 +119,9 @@ export function createCart(quantity = 1): CartApiQueryFragment {
         : [],
     },
     cost: {
+      checkoutChargeAmount: amount,
       subtotalAmount: amount,
       totalAmount: amount,
-      totalTaxAmount: null,
-      totalDutyAmount: null,
     },
     discountCodes: [],
     appliedGiftCards: [],
@@ -173,5 +172,6 @@ export function createDrumkitCart(quantity = 1): CartApiQueryFragment {
   }
   cart.cost.subtotalAmount = amount;
   cart.cost.totalAmount = amount;
+  cart.cost.checkoutChargeAmount = amount;
   return cart;
 }

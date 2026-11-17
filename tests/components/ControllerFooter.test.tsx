@@ -13,14 +13,20 @@ import {
   within,
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import {describe, expect, it} from 'vitest';
-import type {CartApiQueryFragment} from 'storefrontapi.generated';
+import {describe, expect, it, vi} from 'vitest';
+import {
+  CartProvider,
+  type CartApiQueryFragment,
+  useCartActions,
+} from '~/lib/cart';
+import {ProductProvider} from '~/lib/product';
+import {mockCartRequest} from '../fixtures/shopifyRuntime';
 import {AddToCartButton} from '~/components/cart/AddToCartButton';
 import {CartModal} from '~/components/cart/CartModal';
 import {AppControllerFooter} from '~/components/controller/AppControllerFooter';
 import {AsideProvider} from '~/components/layout/Aside';
 import {SearchModal} from '~/components/search/SearchModal';
-import {createCart, createVariant} from '../fixtures/catalog';
+import {createCart, createProduct} from '../fixtures/catalog';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -47,6 +53,17 @@ function renderFooter({
   inDialog?: boolean;
   getCart?: () => Promise<CartApiQueryFragment | null>;
 } = {}) {
+  mockCartRequest((payload) =>
+    action({
+      request: new Request('http://localhost/api/cart', {
+        method: 'POST',
+        headers: {'content-type': 'application/json'},
+        body: JSON.stringify(payload),
+      }),
+      params: {},
+      context: {},
+    } as ActionFunctionArgs),
+  );
   const router = createMemoryRouter(
     [
       {
@@ -55,13 +72,18 @@ function renderFooter({
         loader: () => ({cart: getCart ? getCart() : cart}),
         hydrateFallbackElement: <></>,
         element: (
-          <AsideProvider>
-            {children}
-            <AppControllerFooter
-              cart={getCart ? undefined : cart}
-              inDialog={inDialog}
-            />
-          </AsideProvider>
+          <CartProvider
+            initialData={(getCart ? getCart() : cart)?.then((value) => ({
+              cart: value,
+            }))}
+          >
+            <ProductProvider product={createProduct()}>
+              <AsideProvider>
+                {children}
+                <AppControllerFooter inDialog={inDialog} />
+              </AsideProvider>
+            </ProductProvider>
+          </CartProvider>
         ),
         children: [{path: '*', element: null}],
       },
@@ -193,7 +215,7 @@ describe('controller footer', () => {
   it('keeps actions usable when loading the cart fails', async () => {
     const user = userEvent.setup();
     const pendingCart = deferred<CartApiQueryFragment | null>();
-    renderFooter({cart: pendingCart.promise});
+    renderFooter({cart: pendingCart.promise, children: <CartModal />});
     await screen.findByRole('button', {name: 'Cart'});
 
     await act(async () => pendingCart.reject(new Error('Cart unavailable')));
@@ -202,16 +224,70 @@ describe('controller footer', () => {
     await user.click(screen.getByRole('button', {name: 'Back'}));
     expect(await screen.findByRole('button', {name: 'Search'})).toBeVisible();
     expect(screen.getByRole('button', {name: 'Cart (0)'})).toBeVisible();
+    await user.click(screen.getByRole('button', {name: 'Cart (0)'}));
+    expect(
+      await screen.findByText('Could not load your cart. Please try again.'),
+    ).toBeVisible();
+    expect(screen.getByRole('link', {name: 'Reload page'})).toHaveAttribute(
+      'href',
+      '/',
+    );
+  });
+
+  it('shows a safe reload action when Shopify reports an initial cart read error', async () => {
+    const user = userEvent.setup();
+    const cart = Promise.resolve({
+      cart: null,
+      errors: [{message: 'Private upstream details'}],
+    });
+    const router = createMemoryRouter([
+      {
+        id: 'root',
+        path: '/',
+        loader: () => ({cart}),
+        element: (
+          <CartProvider initialData={cart}>
+            <AsideProvider>
+              <CartModal />
+              <AppControllerFooter />
+            </AsideProvider>
+          </CartProvider>
+        ),
+      },
+    ]);
+    render(<RouterProvider router={router} />);
+    await user.click(await screen.findByRole('button', {name: 'Cart (0)'}));
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Could not load your cart',
+    );
+    expect(
+      screen.queryByText('Private upstream details'),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('link', {name: 'Reload page'})).toHaveAttribute(
+      'href',
+      '/',
+    );
+    expect(screen.getByText('Your cart is empty.')).not.toBeVisible();
   });
 
   it('keeps the last quantity while a refreshed cart is pending and pops for its actual change', async () => {
     const refreshedCart = deferred<CartApiQueryFragment | null>();
     let cart = Promise.resolve<CartApiQueryFragment | null>(createCart(2));
-    const router = renderFooter({getCart: () => cart});
+    const refresh = {current: () => {}};
+    function RefreshControl() {
+      refresh.current = useCartActions().refresh;
+      return null;
+    }
+    renderFooter({cart, children: <RefreshControl />});
     await screen.findByRole('button', {name: 'Cart (2)'});
     const count = screen.getByText('(2)');
     cart = refreshedCart.promise;
-    await act(async () => router.revalidate());
+    mockCartRequest(() => undefined);
+    const fetch = vi.fn(() =>
+      refreshedCart.promise.then((cart) => Response.json({cart})),
+    );
+    vi.stubGlobal('fetch', fetch);
+    act(() => refresh.current());
     expect(screen.getByText('(2)')).toBe(count);
     expect(count.className).not.toContain('animate-[ping_');
 
@@ -288,7 +364,7 @@ describe('controller footer', () => {
       children: (
         <>
           <SearchModal />
-          <CartModal cart={cart} />
+          <CartModal />
         </>
       ),
     });
@@ -319,24 +395,13 @@ describe('controller footer', () => {
     const user = userEvent.setup();
     const pendingAction = deferred<{errors: Array<{message: string}>}>();
     const cart = Promise.resolve(createCart(0));
-    const variant = createVariant();
     renderFooter({
       cart,
       action: () => pendingAction.promise,
       children: (
         <>
-          <AddToCartButton
-            lines={[
-              {
-                merchandiseId: variant.id,
-                quantity: 1,
-                selectedVariant: variant,
-              },
-            ]}
-          >
-            Add to cart
-          </AddToCartButton>
-          <CartModal cart={cart} />
+          <AddToCartButton quantity={1}>Add to cart</AddToCartButton>
+          <CartModal />
         </>
       ),
     });
@@ -350,25 +415,18 @@ describe('controller footer', () => {
     await act(async () =>
       pendingAction.resolve({errors: [{message: 'Cart update failed'}]}),
     );
-    expect(await screen.findByText('Your cart is empty.')).toBeVisible();
+    await waitFor(() =>
+      expect(screen.getByText('Your cart is empty.')).toBeVisible(),
+    );
   });
 
   it('shows the optimistic cart quantity during submission and restores it after failure', async () => {
     const user = userEvent.setup();
     const pendingAction = deferred<{errors: Array<{message: string}>}>();
-    const variant = createVariant();
     renderFooter({
       cart: Promise.resolve(createCart(1)),
       action: () => pendingAction.promise,
-      children: (
-        <AddToCartButton
-          lines={[
-            {merchandiseId: variant.id, quantity: 2, selectedVariant: variant},
-          ]}
-        >
-          Add to cart
-        </AddToCartButton>
-      ),
+      children: <AddToCartButton quantity={2}>Add to cart</AddToCartButton>,
     });
     await screen.findByRole('button', {name: 'Cart (1)'});
     expect(screen.getByText('(1)').className).not.toContain('animate-[ping_');

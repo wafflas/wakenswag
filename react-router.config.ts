@@ -1,13 +1,8 @@
 import type {Config} from '@react-router/dev/config';
-import {hydrogenPreset} from '@shopify/hydrogen/react-router-preset';
-
-/**
- * React Router framework configuration for Hydrogen
- *
- * This configuration uses the official Hydrogen preset to provide optimal
- * React Router settings for Shopify Oxygen deployment. The preset enables
- * validated performance optimizations while ensuring compatibility.
- */
 export default {
-  presets: [hydrogenPreset()],
+  buildDirectory: 'dist',
+  ssr: true,
+  // Allow Cloudflare quick tunnels for local demos (Origin ≠ localhost).
+  allowedActionOrigins: ['*.trycloudflare.com'],
+  future: {v8_middleware: true},
 } satisfies Config;
